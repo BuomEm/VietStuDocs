@@ -137,7 +137,9 @@ if(!file_exists($file_path)) {
         <main class="flex-1 min-h-screen flex items-center justify-center p-6">
             <div class="card bg-base-100 shadow-xl max-w-2xl w-full">
                 <div class="card-body text-center">
-                    <i class="fa-solid fa-folder-open text-6xl text-base-content/50 mb-4"></i>
+                    <div class="flex justify-center mb-4">
+                        <i class="fa-solid fa-folder-open text-6xl text-base-content/50"></i>
+                    </div>
                     <h1 class="text-3xl font-bold mb-4">File Not Found</h1>
                     <p class="text-base-content/70 mb-6">
                         The document file has been removed or is missing from the server.
