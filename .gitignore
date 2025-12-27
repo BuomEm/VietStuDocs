@@ -3,3 +3,4 @@ vendor/
 *.zip
 *.pdf
 config/db.php
+.env
