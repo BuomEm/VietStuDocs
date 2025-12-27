@@ -23,8 +23,24 @@ if($_SERVER["REQUEST_METHOD"] != "POST" || !isset($_FILES['file'])) {
 
 $user_id = getCurrentUserId();
 $file = $_FILES['file'];
+$document_name = !empty($_POST['document_name']) ? trim($_POST['document_name']) : '';
 $description = !empty($_POST['description']) ? mysqli_real_escape_string($conn, trim($_POST['description'])) : '';
 $is_public = !empty($_POST['is_public']) && $_POST['is_public'] == 1 ? 1 : 0;
+
+// Validate document name (required, minimum 40 characters)
+if(empty($document_name)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Tên tài liệu là bắt buộc']);
+    mysqli_close($conn);
+    exit;
+}
+
+if(mb_strlen($document_name) < 40) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Tên tài liệu phải có ít nhất 40 ký tự (hiện tại: ' . mb_strlen($document_name) . ' ký tự)']);
+    mysqli_close($conn);
+    exit;
+}
 
 // Validate description (required)
 if(empty($description)) {
@@ -62,7 +78,8 @@ if(!$upload_result['success']) {
 }
 
 // Insert into database with 'pending' status
-$original_name = mysqli_real_escape_string($conn, $upload_result['original_name']);
+// Use the user-provided document name instead of original filename
+$original_name = mysqli_real_escape_string($conn, $document_name);
 $file_name = $upload_result['file_name'];
 
 // NEW: Insert with status='pending' - awaiting admin review

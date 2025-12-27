@@ -214,6 +214,12 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
 
     let selectedFiles = [];
     let fileCategories = {}; // Store selected categories for each file
+    
+    // Helper function to get filename without extension
+    function getFileNameWithoutExtension(filename) {
+        const lastDot = filename.lastIndexOf('.');
+        return lastDot > 0 ? filename.substring(0, lastDot) : filename;
+    }
 
     // Click to select
     dragDropArea.addEventListener('click', () => fileInput.click());
@@ -262,6 +268,16 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                         
                         <div class="form-control mb-4">
                             <label class="label">
+                                <span class="label-text font-semibold">Tên Tài Liệu <span class="text-error">*</span> <small class="text-base-content/70">(Tối thiểu 40 ký tự)</small></span>
+                            </label>
+                            <input type="text" class="input input-bordered fileName" data-index="${index}" placeholder="Nhập tên tài liệu (tối thiểu 40 ký tự)..." value="${getFileNameWithoutExtension(file.name)}" required>
+                            <label class="label">
+                                <span class="label-text-alt text-base-content/70" id="name-length-${index}">0 ký tự</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-control mb-4">
+                            <label class="label">
                                 <span class="label-text font-semibold">Description <span class="text-error">*</span></span>
                             </label>
                             <input type="text" class="input input-bordered fileDescription" data-index="${index}" placeholder="Nhập mô tả tài liệu..." required>
@@ -288,12 +304,44 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             fileList.classList.add('hidden');
         }
         
-        // Add event listeners to remove error highlighting
+        // Add event listeners to remove error highlighting and update character count
         setTimeout(() => {
             document.querySelectorAll('.fileDescription').forEach(input => {
                 input.addEventListener('input', function() {
                     this.classList.remove('input-error');
                 });
+            });
+            
+            // Add character count and validation for file names
+            document.querySelectorAll('.fileName').forEach(input => {
+                const index = input.getAttribute('data-index');
+                const lengthLabel = document.getElementById(`name-length-${index}`);
+                
+                input.addEventListener('input', function() {
+                    const length = this.value.length;
+                    if(lengthLabel) {
+                        lengthLabel.textContent = `${length} ký tự`;
+                        if(length < 40) {
+                            lengthLabel.classList.add('text-error');
+                            lengthLabel.classList.remove('text-success');
+                        } else {
+                            lengthLabel.classList.remove('text-error');
+                            lengthLabel.classList.add('text-success');
+                        }
+                    }
+                    this.classList.remove('input-error');
+                });
+                
+                // Initial character count
+                const initialLength = input.value.length;
+                if(lengthLabel) {
+                    lengthLabel.textContent = `${initialLength} ký tự`;
+                    if(initialLength < 40) {
+                        lengthLabel.classList.add('text-error');
+                    } else {
+                        lengthLabel.classList.add('text-success');
+                    }
+                }
             });
         }, 100);
     }
@@ -409,14 +457,31 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             return;
         }
 
-        // Validate description and categories for each file
+        // Validate description, file name, and categories for each file
         let validationErrors = [];
         let firstErrorElement = null;
         
         for(let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
+            const fileName = document.querySelector(`.fileName[data-index="${i}"]`)?.value || '';
             const description = document.querySelector(`.fileDescription[data-index="${i}"]`)?.value || '';
             const categories = fileCategories[i] || [];
+            
+            if(!fileName.trim()) {
+                validationErrors.push(`📄 ${file.name}: Chưa nhập tên tài liệu`);
+                const nameInput = document.querySelector(`.fileName[data-index="${i}"]`);
+                if(nameInput) {
+                    nameInput.classList.add('input-error');
+                    if(!firstErrorElement) firstErrorElement = nameInput;
+                }
+            } else if(fileName.trim().length < 40) {
+                validationErrors.push(`📄 ${file.name}: Tên tài liệu phải có ít nhất 40 ký tự (hiện tại: ${fileName.trim().length} ký tự)`);
+                const nameInput = document.querySelector(`.fileName[data-index="${i}"]`);
+                if(nameInput) {
+                    nameInput.classList.add('input-error');
+                    if(!firstErrorElement) firstErrorElement = nameInput;
+                }
+            }
             
             if(!description.trim()) {
                 validationErrors.push(`📄 ${file.name}: Chưa nhập mô tả`);
@@ -469,12 +534,13 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
 
         for(let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
+            const fileName = document.querySelector(`.fileName[data-index="${i}"]`)?.value || '';
             const description = document.querySelector(`.fileDescription[data-index="${i}"]`)?.value || '';
             const isPublic = document.querySelector(`.filePrivacy[data-index="${i}"]`)?.checked ? 1 : 0;
             const categories = fileCategories[i] || [];
 
             try {
-                await uploadFileSequential(file, description, isPublic, categories, i, selectedFiles.length);
+                await uploadFileSequential(file, fileName, description, isPublic, categories, i, selectedFiles.length);
                 successCount++;
             } catch(error) {
                 failCount++;
@@ -503,10 +569,11 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         }
     });
 
-    function uploadFileSequential(file, description, isPublic, categories, index, total) {
+    function uploadFileSequential(file, fileName, description, isPublic, categories, index, total) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('document_name', fileName);
             formData.append('description', description);
             formData.append('is_public', isPublic);
             
