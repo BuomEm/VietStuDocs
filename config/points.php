@@ -12,9 +12,10 @@ function getUserPoints($user_id) {
         return mysqli_fetch_assoc($result);
     }
     
-    // If user doesn't have points record, create one with starting balance
-    // mysqli_query($conn, "INSERT INTO user_points (user_id, current_points, total_earned) VALUES ($user_id, 100, 100)");
-    return ['current_points' => 100, 'total_earned' => 100, 'total_spent' => 0];
+    // If user doesn't have points record, create one with zero balance
+    // Users start with 0 points and only earn when their documents are purchased
+    mysqli_query($conn, "INSERT INTO user_points (user_id, current_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0)");
+    return ['current_points' => 0, 'total_earned' => 0, 'total_spent' => 0];
 }
 
 function addPoints($user_id, $points, $reason, $document_id = null) {
@@ -219,11 +220,8 @@ function approveDocument($document_id, $admin_id, $points, $notes = '') {
         return false;
     }
 
-    // Award points to document owner the first time it becomes approved
-    // (avoid double-adding points if already approved before)
-    if($previous_status !== 'approved' && $owner_id > 0 && $points > 0) {
-        addPoints($owner_id, $points, 'Tài liệu của bạn đã được duyệt ', $document_id);
-    }
+    // Points are NOT awarded when document is approved
+    // Points are only awarded when the document is purchased by another user
 
     return true;
 }
@@ -353,6 +351,13 @@ function purchaseDocument($buyer_id, $document_id) {
         // Rollback: refund points if sale record fails
         addPoints($buyer_id, $points_to_pay, "Hoàn tiền do lỗi ghi nhận giao dịch", $document_id);
         return ['success' => false, 'message' => 'Không thể ghi nhận giao dịch. Điểm đã được hoàn lại.'];
+    }
+    
+    // Award points to seller (document owner) when document is purchased
+    $seller_id = $doc['user_id'];
+    $doc_name = mysqli_real_escape_string($conn, $doc['original_name']);
+    if($seller_id > 0 && $points_to_pay > 0) {
+        addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id);
     }
     
     // Notify admin (optional, don't fail if this fails)

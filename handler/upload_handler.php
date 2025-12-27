@@ -174,10 +174,10 @@ while($admin = mysqli_fetch_assoc($admins)) {
                         VALUES ({$admin['id']}, 'new_document', $doc_id, 'New document submitted for review: " . addslashes($original_name) . "')");
 }
 
-// Initialize user points if not exists
+// Initialize user points if not exists (start with 0 points)
 $points_check = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM user_points WHERE user_id=$user_id"));
 if(!$points_check) {
-    mysqli_query($conn, "INSERT INTO user_points (user_id, current_points, total_earned) VALUES ($user_id, 100, 100)");
+    mysqli_query($conn, "INSERT INTO user_points (user_id, current_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0)");
 }
 
 mysqli_close($conn);
