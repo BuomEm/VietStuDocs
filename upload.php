@@ -362,7 +362,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 
                 <!-- Lớp (for phổ thông) -->
                 <div class="form-control hidden" id="grade-container-${fileIndex}">
-                    <div class="cascade-arrow">↓</div>
+                    <!-- <div class="cascade-arrow">↓</div> -->
                     <label class="label py-1">
                         <span class="label-text">Lớp</span>
                     </label>
@@ -375,7 +375,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 
                 <!-- Môn học (for phổ thông) -->
                 <div class="form-control hidden" id="subject-container-${fileIndex}">
-                    <div class="cascade-arrow">↓</div>
+                    <!-- <div class="cascade-arrow">↓</div> -->
                     <label class="label py-1">
                         <span class="label-text">Môn học</span>
                     </label>
@@ -388,7 +388,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 
                 <!-- Nhóm ngành (for đại học) -->
                 <div class="form-control hidden" id="major-group-container-${fileIndex}">
-                    <div class="cascade-arrow">↓</div>
+                    <!-- <div class="cascade-arrow">↓</div> -->
                     <label class="label py-1">
                         <span class="label-text">Nhóm ngành</span>
                     </label>
@@ -401,7 +401,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 
                 <!-- Ngành học (for đại học) -->
                 <div class="form-control hidden" id="major-container-${fileIndex}">
-                    <div class="cascade-arrow">↓</div>
+                    <!-- <div class="cascade-arrow">↓</div> -->
                     <label class="label py-1">
                         <span class="label-text">Ngành học</span>
                     </label>
@@ -414,7 +414,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 
                 <!-- Loại tài liệu -->
                 <div class="form-control hidden" id="doc-type-container-${fileIndex}">
-                    <div class="cascade-arrow">↓</div>
+                    <!-- <div class="cascade-arrow">↓</div> -->
                     <label class="label py-1">
                         <span class="label-text">Loại tài liệu</span>
                     </label>

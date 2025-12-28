@@ -157,7 +157,7 @@ $current_page = 'dashboard';
                                 
                                 <!-- Lớp (for phổ thông) -->
                                 <div class="form-control mb-3 hidden" id="grade_container">
-                                    <div class="text-center text-primary text-xs my-1">↓</div>
+                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
                                     <label class="label py-1">
                                         <span class="label-text text-xs uppercase font-semibold text-primary">Lớp</span>
                                     </label>
@@ -168,7 +168,7 @@ $current_page = 'dashboard';
                                 
                                 <!-- Môn học (for phổ thông) -->
                                 <div class="form-control mb-3 hidden" id="subject_container">
-                                    <div class="text-center text-primary text-xs my-1">↓</div>
+                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
                                     <label class="label py-1">
                                         <span class="label-text text-xs uppercase font-semibold text-primary">Môn học</span>
                                     </label>
@@ -179,7 +179,7 @@ $current_page = 'dashboard';
                                 
                                 <!-- Nhóm ngành (for đại học) -->
                                 <div class="form-control mb-3 hidden" id="major_group_container">
-                                    <div class="text-center text-primary text-xs my-1">↓</div>
+                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
                                     <label class="label py-1">
                                         <span class="label-text text-xs uppercase font-semibold text-primary">Nhóm ngành</span>
                                     </label>
@@ -190,7 +190,7 @@ $current_page = 'dashboard';
                                 
                                 <!-- Ngành học (for đại học) -->
                                 <div class="form-control mb-3 hidden" id="major_container">
-                                    <div class="text-center text-primary text-xs my-1">↓</div>
+                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
                                     <label class="label py-1">
                                         <span class="label-text text-xs uppercase font-semibold text-primary">Ngành học</span>
                                     </label>
@@ -201,7 +201,7 @@ $current_page = 'dashboard';
                                 
                                 <!-- Loại tài liệu -->
                                 <div class="form-control mb-3 hidden" id="doc_type_container">
-                                    <div class="text-center text-primary text-xs my-1">↓</div>
+                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
                                     <label class="label py-1">
                                         <span class="label-text text-xs uppercase font-semibold text-primary">Loại tài liệu</span>
                                     </label>
