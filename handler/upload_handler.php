@@ -50,19 +50,54 @@ if(empty($description)) {
     exit;
 }
 
-// Get and validate categories (required)
-$categories = [];
-if (!empty($_POST['categories'])) {
-    $categories_json = $_POST['categories'];
-    $categories = json_decode($categories_json, true);
-    if (!is_array($categories)) {
-        $categories = [];
+// Get and validate category data (required - new cascade format)
+$category_data = null;
+if (!empty($_POST['category_data'])) {
+    $category_data = json_decode($_POST['category_data'], true);
+}
+
+// Validate category data
+if (empty($category_data) || empty($category_data['education_level'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Vui lòng chọn cấp học']);
+    mysqli_close($conn);
+    exit;
+}
+
+$education_level = $category_data['education_level'];
+$is_pho_thong = in_array($education_level, ['tieu_hoc', 'thcs', 'thpt']);
+
+if ($is_pho_thong) {
+    if (empty($category_data['grade_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Vui lòng chọn lớp']);
+        mysqli_close($conn);
+        exit;
+    }
+    if (empty($category_data['subject_code'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Vui lòng chọn môn học']);
+        mysqli_close($conn);
+        exit;
+    }
+} else {
+    if (empty($category_data['major_group_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Vui lòng chọn nhóm ngành']);
+        mysqli_close($conn);
+        exit;
+    }
+    if (empty($category_data['major_code'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Vui lòng chọn ngành học']);
+        mysqli_close($conn);
+        exit;
     }
 }
 
-if(empty($categories)) {
+if (empty($category_data['doc_type_code'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 category']);
+    echo json_encode(['success' => false, 'message' => 'Vui lòng chọn loại tài liệu']);
     mysqli_close($conn);
     exit;
 }
@@ -179,9 +214,17 @@ if (file_exists($file_path)) {
     }
 }
 
-// Add categories to document
-if (!empty($categories)) {
-    addDocumentCategories($doc_id, $categories);
+// Save document category (new cascade format)
+if ($category_data) {
+    saveDocumentCategory(
+        $doc_id,
+        $category_data['education_level'],
+        $category_data['grade_id'] ?? null,
+        $category_data['subject_code'] ?? null,
+        $category_data['major_group_id'] ?? null,
+        $category_data['major_code'] ?? null,
+        $category_data['doc_type_code']
+    );
 }
 
 // Create admin notification for new document

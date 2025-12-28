@@ -1,0 +1,794 @@
+{
+  "success": true,
+  "data": {
+    "total_levels": 3,
+    "levels": [
+      {
+        "id": 1,
+        "name": "Tiểu học",
+        "code": "TH",
+        "grades": [
+          {
+            "id": 1,
+            "name": "Lớp 1",
+            "code": "L1",
+            "subjects": [
+              {
+                "id": 1,
+                "name": "Tiếng Việt",
+                "code": "TV"
+              },
+              {
+                "id": 2,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 3,
+                "name": "Đạo đức",
+                "code": "DD"
+              },
+              {
+                "id": 4,
+                "name": "Tự nhiên và Xã hội",
+                "code": "TNXH"
+              },
+              {
+                "id": 5,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 6,
+                "name": "Tin học và Công nghệ",
+                "code": "TIN"
+              },
+              {
+                "id": 7,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 8,
+                "name": "Nghệ thuật (Âm nhạc, Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 9,
+                "name": "Hoạt động trải nghiệm",
+                "code": "HDTN"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "name": "Lớp 2",
+            "code": "L2",
+            "subjects": [
+              {
+                "id": 1,
+                "name": "Tiếng Việt",
+                "code": "TV"
+              },
+              {
+                "id": 2,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 3,
+                "name": "Đạo đức",
+                "code": "DD"
+              },
+              {
+                "id": 4,
+                "name": "Tự nhiên và Xã hội",
+                "code": "TNXH"
+              },
+              {
+                "id": 5,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 6,
+                "name": "Tin học và Công nghệ",
+                "code": "TIN"
+              },
+              {
+                "id": 7,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 8,
+                "name": "Nghệ thuật (Âm nhạc, Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 9,
+                "name": "Hoạt động trải nghiệm",
+                "code": "HDTN"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "name": "Lớp 3",
+            "code": "L3",
+            "subjects": [
+              {
+                "id": 1,
+                "name": "Tiếng Việt",
+                "code": "TV"
+              },
+              {
+                "id": 2,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 3,
+                "name": "Đạo đức",
+                "code": "DD"
+              },
+              {
+                "id": 4,
+                "name": "Tự nhiên và Xã hội",
+                "code": "TNXH"
+              },
+              {
+                "id": 5,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 6,
+                "name": "Tin học và Công nghệ",
+                "code": "TIN"
+              },
+              {
+                "id": 7,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 8,
+                "name": "Nghệ thuật (Âm nhạc, Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 9,
+                "name": "Hoạt động trải nghiệm",
+                "code": "HDTN"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "name": "Lớp 4",
+            "code": "L4",
+            "subjects": [
+              {
+                "id": 1,
+                "name": "Tiếng Việt",
+                "code": "TV"
+              },
+              {
+                "id": 2,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 3,
+                "name": "Đạo đức",
+                "code": "DD"
+              },
+              {
+                "id": 4,
+                "name": "Tự nhiên và Xã hội",
+                "code": "TNXH"
+              },
+              {
+                "id": 5,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 6,
+                "name": "Tin học và Công nghệ",
+                "code": "TIN"
+              },
+              {
+                "id": 7,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 8,
+                "name": "Nghệ thuật (Âm nhạc, Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 9,
+                "name": "Hoạt động trải nghiệm",
+                "code": "HDTN"
+              },
+              {
+                "id": 10,
+                "name": "Khoa học",
+                "code": "KH"
+              },
+              {
+                "id": 11,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "name": "Lớp 5",
+            "code": "L5",
+            "subjects": [
+              {
+                "id": 1,
+                "name": "Tiếng Việt",
+                "code": "TV"
+              },
+              {
+                "id": 2,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 3,
+                "name": "Đạo đức",
+                "code": "DD"
+              },
+              {
+                "id": 4,
+                "name": "Tự nhiên và Xã hội",
+                "code": "TNXH"
+              },
+              {
+                "id": 5,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 6,
+                "name": "Tin học và Công nghệ",
+                "code": "TIN"
+              },
+              {
+                "id": 7,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 8,
+                "name": "Nghệ thuật (Âm nhạc, Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 9,
+                "name": "Hoạt động trải nghiệm",
+                "code": "HDTN"
+              },
+              {
+                "id": 10,
+                "name": "Khoa học",
+                "code": "KH"
+              },
+              {
+                "id": 11,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "THCS",
+        "code": "THCS",
+        "grades": [
+          {
+            "id": 6,
+            "name": "Lớp 6",
+            "code": "L6",
+            "subjects": [
+              {
+                "id": 12,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 13,
+                "name": "Toán học (Đại số và Hình học)",
+                "code": "TOAN"
+              },
+              {
+                "id": 14,
+                "name": "Tiếng Anh (Ngoại ngữ 1 – Global Success/Friends…)",
+                "code": "TA"
+              },
+              {
+                "id": 15,
+                "name": "Khoa học tự nhiên (Vật lí – Hóa học – Sinh học)",
+                "code": "KHTN"
+              },
+              {
+                "id": 16,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              },
+              {
+                "id": 17,
+                "name": "Giáo dục công dân",
+                "code": "GDCD"
+              },
+              {
+                "id": 18,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 19,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 20,
+                "name": "Nghệ thuật (Âm nhạc hoặc Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 21,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 22,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "name": "Lớp 7",
+            "code": "L7",
+            "subjects": [
+              {
+                "id": 12,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 13,
+                "name": "Toán học (Đại số và Hình học)",
+                "code": "TOAN"
+              },
+              {
+                "id": 14,
+                "name": "Tiếng Anh (Ngoại ngữ 1 – Global Success/Friends…)",
+                "code": "TA"
+              },
+              {
+                "id": 15,
+                "name": "Khoa học tự nhiên (Vật lí – Hóa học – Sinh học)",
+                "code": "KHTN"
+              },
+              {
+                "id": 16,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              },
+              {
+                "id": 17,
+                "name": "Giáo dục công dân",
+                "code": "GDCD"
+              },
+              {
+                "id": 18,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 19,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 20,
+                "name": "Nghệ thuật (Âm nhạc hoặc Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 21,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 22,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          },
+          {
+            "id": 8,
+            "name": "Lớp 8",
+            "code": "L8",
+            "subjects": [
+              {
+                "id": 12,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 13,
+                "name": "Toán học (Đại số và Hình học)",
+                "code": "TOAN"
+              },
+              {
+                "id": 14,
+                "name": "Tiếng Anh (Ngoại ngữ 1 – Global Success/Friends…)",
+                "code": "TA"
+              },
+              {
+                "id": 15,
+                "name": "Khoa học tự nhiên (Vật lí – Hóa học – Sinh học)",
+                "code": "KHTN"
+              },
+              {
+                "id": 16,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              },
+              {
+                "id": 17,
+                "name": "Giáo dục công dân",
+                "code": "GDCD"
+              },
+              {
+                "id": 18,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 19,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 20,
+                "name": "Nghệ thuật (Âm nhạc hoặc Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 21,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 22,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          },
+          {
+            "id": 9,
+            "name": "Lớp 9",
+            "code": "L9",
+            "subjects": [
+              {
+                "id": 12,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 13,
+                "name": "Toán học (Đại số và Hình học)",
+                "code": "TOAN"
+              },
+              {
+                "id": 14,
+                "name": "Tiếng Anh (Ngoại ngữ 1 – Global Success/Friends…)",
+                "code": "TA"
+              },
+              {
+                "id": 15,
+                "name": "Khoa học tự nhiên (Vật lí – Hóa học – Sinh học)",
+                "code": "KHTN"
+              },
+              {
+                "id": 16,
+                "name": "Lịch sử và Địa lí",
+                "code": "LS-DL"
+              },
+              {
+                "id": 17,
+                "name": "Giáo dục công dân",
+                "code": "GDCD"
+              },
+              {
+                "id": 18,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 19,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 20,
+                "name": "Nghệ thuật (Âm nhạc hoặc Mĩ thuật)",
+                "code": "NT"
+              },
+              {
+                "id": 21,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 22,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "THPT",
+        "code": "THPT",
+        "grades": [
+          {
+            "id": 10,
+            "name": "Lớp 10",
+            "code": "L10",
+            "subjects": [
+              {
+                "id": 23,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 24,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 25,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 26,
+                "name": "Vật lí",
+                "code": "VL"
+              },
+              {
+                "id": 27,
+                "name": "Hóa học",
+                "code": "HH"
+              },
+              {
+                "id": 28,
+                "name": "Sinh học",
+                "code": "SH"
+              },
+              {
+                "id": 29,
+                "name": "Lịch sử",
+                "code": "LS"
+              },
+              {
+                "id": 30,
+                "name": "Địa lí",
+                "code": "DL"
+              },
+              {
+                "id": 31,
+                "name": "Giáo dục Kinh tế và Pháp luật",
+                "code": "GDKT-PL"
+              },
+              {
+                "id": 32,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 33,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 34,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 35,
+                "name": "Giáo dục Quốc phòng và An ninh",
+                "code": "GDQP-AN"
+              },
+              {
+                "id": 36,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          },
+          {
+            "id": 11,
+            "name": "Lớp 11",
+            "code": "L11",
+            "subjects": [
+              {
+                "id": 23,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 24,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 25,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 26,
+                "name": "Vật lí",
+                "code": "VL"
+              },
+              {
+                "id": 27,
+                "name": "Hóa học",
+                "code": "HH"
+              },
+              {
+                "id": 28,
+                "name": "Sinh học",
+                "code": "SH"
+              },
+              {
+                "id": 29,
+                "name": "Lịch sử",
+                "code": "LS"
+              },
+              {
+                "id": 30,
+                "name": "Địa lí",
+                "code": "DL"
+              },
+              {
+                "id": 31,
+                "name": "Giáo dục Kinh tế và Pháp luật",
+                "code": "GDKT-PL"
+              },
+              {
+                "id": 32,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 33,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 34,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 35,
+                "name": "Giáo dục Quốc phòng và An ninh",
+                "code": "GDQP-AN"
+              },
+              {
+                "id": 36,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          },
+          {
+            "id": 12,
+            "name": "Lớp 12",
+            "code": "L12",
+            "subjects": [
+              {
+                "id": 23,
+                "name": "Toán học",
+                "code": "TOAN"
+              },
+              {
+                "id": 24,
+                "name": "Ngữ văn",
+                "code": "NV"
+              },
+              {
+                "id": 25,
+                "name": "Tiếng Anh (Ngoại ngữ 1)",
+                "code": "TA"
+              },
+              {
+                "id": 26,
+                "name": "Vật lí",
+                "code": "VL"
+              },
+              {
+                "id": 27,
+                "name": "Hóa học",
+                "code": "HH"
+              },
+              {
+                "id": 28,
+                "name": "Sinh học",
+                "code": "SH"
+              },
+              {
+                "id": 29,
+                "name": "Lịch sử",
+                "code": "LS"
+              },
+              {
+                "id": 30,
+                "name": "Địa lí",
+                "code": "DL"
+              },
+              {
+                "id": 31,
+                "name": "Giáo dục Kinh tế và Pháp luật",
+                "code": "GDKT-PL"
+              },
+              {
+                "id": 32,
+                "name": "Tin học",
+                "code": "TIN"
+              },
+              {
+                "id": 33,
+                "name": "Công nghệ",
+                "code": "CN"
+              },
+              {
+                "id": 34,
+                "name": "Giáo dục thể chất",
+                "code": "GDTC"
+              },
+              {
+                "id": 35,
+                "name": "Giáo dục Quốc phòng và An ninh",
+                "code": "GDQP-AN"
+              },
+              {
+                "id": 36,
+                "name": "Hoạt động trải nghiệm, hướng nghiệp",
+                "code": "HDTN-HN"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "last_updated": "2025-01-27",
+    "version": "1.0",
+    "description": "API danh sách môn học theo cấp học và lớp học"
+  }
+}
+

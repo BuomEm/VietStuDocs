@@ -224,14 +224,9 @@ if(isset($_GET['download'])) {
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
-                    // Get doc_type category
-                    $doc_categories = getDocumentCategoriesGrouped($doc_id);
-                    $doc_type = '';
-                    if(isset($doc_categories['doc_type']) && !empty($doc_categories['doc_type'])) {
-                        $doc_type = htmlspecialchars($doc_categories['doc_type'][0]['name']);
-                    } else {
-                        $doc_type = 'Other';
-                    }
+                    // Get category info
+                    $doc_category = getDocumentCategoryWithNames($doc_id);
+                    $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Other';
                     
                     // Determine file types
                     $is_pdf = ($ext === 'pdf');
@@ -482,14 +477,9 @@ if(isset($_GET['download'])) {
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
-                    // Get doc_type category
-                    $doc_categories = getDocumentCategoriesGrouped($doc_id);
-                    $doc_type = '';
-                    if(isset($doc_categories['doc_type']) && !empty($doc_categories['doc_type'])) {
-                        $doc_type = htmlspecialchars($doc_categories['doc_type'][0]['name']);
-                    } else {
-                        $doc_type = 'Other';
-                    }
+                    // Get category info
+                    $doc_category = getDocumentCategoryWithNames($doc_id);
+                    $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Other';
                     
                     // Determine file types
                     $is_pdf = ($ext === 'pdf');

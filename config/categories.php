@@ -1,61 +1,523 @@
 <?php
-// Categories Management Functions
+/**
+ * Categories Management Functions V2
+ * Cascade selection: Cấp học → Lớp/Nhóm ngành → Môn học/Ngành → Loại tài liệu
+ */
 
 require_once __DIR__ . '/db.php';
 
+// =====================================================
+// CONSTANTS - Education Levels
+// =====================================================
+
+define('EDUCATION_LEVELS', [
+    'tieu_hoc' => ['name' => 'Tiểu học', 'code' => 'TH', 'type' => 'pho_thong'],
+    'thcs' => ['name' => 'THCS', 'code' => 'THCS', 'type' => 'pho_thong'],
+    'thpt' => ['name' => 'THPT', 'code' => 'THPT', 'type' => 'pho_thong'],
+    'dai_hoc' => ['name' => 'Đại học', 'code' => 'DH', 'type' => 'dai_hoc']
+]);
+
+// =====================================================
+// JSON DATA LOADERS
+// =====================================================
+
 /**
- * Get all categories by type
- * @param string $type - field, subject, level, curriculum, doc_type
- * @param bool $active_only - only get active categories
- * @return array
+ * Load JSON file from API directory
  */
-function getCategoriesByType($type, $active_only = true) {
-    global $conn;
-    $type = mysqli_real_escape_string($conn, $type);
-    
-    $where = "type = '$type'";
-    if($active_only) {
-        $where .= " AND is_active = 1";
+function loadJsonApi($filename) {
+    $path = __DIR__ . '/../API/' . $filename;
+    if (!file_exists($path)) {
+        error_log("API file not found: $path");
+        return null;
     }
-    
-    $query = "SELECT * FROM categories WHERE $where ORDER BY sort_order ASC, name ASC";
-    $result = mysqli_query($conn, $query);
-    
-    $categories = [];
-    while($row = mysqli_fetch_assoc($result)) {
-        $categories[] = $row;
-    }
-    
-    return $categories;
+    $content = file_get_contents($path);
+    $data = json_decode($content, true);
+    return $data['data'] ?? $data;
 }
 
 /**
- * Get all categories grouped by type
- * @param bool $active_only
- * @return array
+ * Get subjects data from mon-hoc.json
  */
-function getAllCategoriesGrouped($active_only = true) {
-    $types = ['field', 'subject', 'level', 'curriculum', 'doc_type'];
-    $grouped = [];
-    
-    foreach($types as $type) {
-        $grouped[$type] = getCategoriesByType($type, $active_only);
+function getSubjectsData() {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = loadJsonApi('mon-hoc.json');
+    }
+    return $cache;
+}
+
+/**
+ * Get majors data from nganh-hoc.json
+ */
+function getMajorsData() {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = loadJsonApi('nganh-hoc.json');
+    }
+    return $cache;
+}
+
+/**
+ * Get document types from loai-tai-lieu.json
+ */
+function getDocTypesData() {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = loadJsonApi('loai-tai-lieu.json');
+    }
+    return $cache;
+}
+
+// =====================================================
+// EDUCATION LEVELS
+// =====================================================
+
+/**
+ * Get all education levels
+ */
+function getEducationLevels() {
+    $levels = [];
+    foreach (EDUCATION_LEVELS as $code => $info) {
+        $levels[] = [
+            'code' => $code,
+            'name' => $info['name'],
+            'type' => $info['type']
+        ];
+    }
+    return $levels;
+}
+
+/**
+ * Get education level info by code
+ */
+function getEducationLevelInfo($level_code) {
+    return EDUCATION_LEVELS[$level_code] ?? null;
+}
+
+/**
+ * Check if education level is "pho_thong" type
+ */
+function isPhoThong($level_code) {
+    $info = getEducationLevelInfo($level_code);
+    return $info && $info['type'] === 'pho_thong';
+}
+
+// =====================================================
+// GRADES (For phổ thông levels)
+// =====================================================
+
+/**
+ * Get grades by education level
+ */
+function getGradesByLevel($level_code) {
+    $data = getSubjectsData();
+    if (!$data || !isset($data['levels'])) {
+        return [];
     }
     
-    return $grouped;
+    $level_map = [
+        'tieu_hoc' => 1, // id in JSON
+        'thcs' => 2,
+        'thpt' => 3
+    ];
+    
+    $level_id = $level_map[$level_code] ?? null;
+    if (!$level_id) {
+        return [];
+    }
+    
+    foreach ($data['levels'] as $level) {
+        if ($level['id'] == $level_id) {
+            return $level['grades'] ?? [];
+        }
+    }
+    
+    return [];
+}
+
+/**
+ * Get grade info by level and grade_id
+ */
+function getGradeInfo($level_code, $grade_id) {
+    $grades = getGradesByLevel($level_code);
+    foreach ($grades as $grade) {
+        if ($grade['id'] == $grade_id) {
+            return $grade;
+        }
+    }
+    return null;
+}
+
+// =====================================================
+// SUBJECTS (For phổ thông levels)
+// =====================================================
+
+/**
+ * Get subjects by education level and grade_id
+ */
+function getSubjectsByGrade($level_code, $grade_id) {
+    $grades = getGradesByLevel($level_code);
+    foreach ($grades as $grade) {
+        if ($grade['id'] == $grade_id) {
+            return $grade['subjects'] ?? [];
+        }
+    }
+    return [];
+}
+
+/**
+ * Get subject info by code and grade
+ */
+function getSubjectInfo($level_code, $grade_id, $subject_code) {
+    $subjects = getSubjectsByGrade($level_code, $grade_id);
+    foreach ($subjects as $subject) {
+        if ($subject['code'] == $subject_code) {
+            return $subject;
+        }
+    }
+    return null;
+}
+
+/**
+ * Get subject name by code (search all grades)
+ */
+function getSubjectNameByCode($subject_code) {
+    $data = getSubjectsData();
+    if (!$data || !isset($data['levels'])) {
+        return $subject_code;
+    }
+    
+    foreach ($data['levels'] as $level) {
+        foreach ($level['grades'] ?? [] as $grade) {
+            foreach ($grade['subjects'] ?? [] as $subject) {
+                if ($subject['code'] == $subject_code) {
+                    return $subject['name'];
+                }
+            }
+        }
+    }
+    
+    return $subject_code;
+}
+
+// =====================================================
+// MAJOR GROUPS (For đại học)
+// =====================================================
+
+/**
+ * Get all major groups (nhóm ngành)
+ */
+function getMajorGroups() {
+    $data = getMajorsData();
+    if (!$data || !isset($data['groups'])) {
+        return [];
+    }
+    
+    $groups = [];
+    foreach ($data['groups'] as $group) {
+        $groups[] = [
+            'id' => $group['id'],
+            'name' => $group['name'],
+            'code' => $group['code']
+        ];
+    }
+    
+    return $groups;
+}
+
+/**
+ * Get major group info by ID
+ */
+function getMajorGroupInfo($group_id) {
+    $data = getMajorsData();
+    if (!$data || !isset($data['groups'])) {
+        return null;
+    }
+    
+    foreach ($data['groups'] as $group) {
+        if ($group['id'] == $group_id) {
+            return $group;
+        }
+    }
+    
+    return null;
+}
+
+// =====================================================
+// MAJORS (For đại học)
+// =====================================================
+
+/**
+ * Get majors by group ID
+ */
+function getMajorsByGroup($group_id) {
+    $data = getMajorsData();
+    if (!$data || !isset($data['groups'])) {
+        return [];
+    }
+    
+    foreach ($data['groups'] as $group) {
+        if ($group['id'] == $group_id) {
+            return $group['majors'] ?? [];
+        }
+    }
+    
+    return [];
+}
+
+/**
+ * Get major info by code
+ */
+function getMajorInfo($major_code) {
+    $data = getMajorsData();
+    if (!$data || !isset($data['groups'])) {
+        return null;
+    }
+    
+    foreach ($data['groups'] as $group) {
+        foreach ($group['majors'] ?? [] as $major) {
+            if ($major['code'] == $major_code) {
+                return array_merge($major, ['group_id' => $group['id'], 'group_name' => $group['name']]);
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Get major name by code
+ */
+function getMajorNameByCode($major_code) {
+    $info = getMajorInfo($major_code);
+    return $info ? $info['name'] : $major_code;
+}
+
+// =====================================================
+// DOCUMENT TYPES
+// =====================================================
+
+/**
+ * Get document types by education level type
+ */
+function getDocTypes($level_code) {
+    $data = getDocTypesData();
+    if (!$data) {
+        return [];
+    }
+    
+    $level_info = getEducationLevelInfo($level_code);
+    if (!$level_info) {
+        return [];
+    }
+    
+    $type = $level_info['type'];
+    return $data[$type] ?? [];
+}
+
+/**
+ * Get document type name by code
+ */
+function getDocTypeName($doc_type_code, $level_code = null) {
+    $data = getDocTypesData();
+    if (!$data) {
+        return $doc_type_code;
+    }
+    
+    // Search in both types
+    foreach (['pho_thong', 'dai_hoc'] as $type) {
+        foreach ($data[$type] ?? [] as $doc_type) {
+            if ($doc_type['code'] == $doc_type_code) {
+                return $doc_type['name'];
+            }
+        }
+    }
+    
+    return $doc_type_code;
+}
+
+// =====================================================
+// DOCUMENT CATEGORIES (Database Operations)
+// =====================================================
+
+/**
+ * Save document category
+ */
+function saveDocumentCategory($document_id, $education_level, $grade_id = null, $subject_code = null, $major_group_id = null, $major_code = null, $doc_type_code = null) {
+    global $conn;
+    
+    $document_id = intval($document_id);
+    $education_level = mysqli_real_escape_string($conn, $education_level);
+    $grade_id = $grade_id ? intval($grade_id) : 'NULL';
+    $subject_code = $subject_code ? "'" . mysqli_real_escape_string($conn, $subject_code) . "'" : 'NULL';
+    $major_group_id = $major_group_id ? intval($major_group_id) : 'NULL';
+    $major_code = $major_code ? "'" . mysqli_real_escape_string($conn, $major_code) . "'" : 'NULL';
+    $doc_type_code = mysqli_real_escape_string($conn, $doc_type_code);
+    
+    // Delete existing category for this document
+    mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
+    
+    // Insert new category
+    $query = "INSERT INTO document_categories 
+              (document_id, education_level, grade_id, subject_code, major_group_id, major_code, doc_type_code)
+              VALUES 
+              ($document_id, '$education_level', $grade_id, $subject_code, $major_group_id, $major_code, '$doc_type_code')";
+    
+    return mysqli_query($conn, $query);
+}
+
+/**
+ * Get document category
+ */
+function getDocumentCategory($document_id) {
+    global $conn;
+    $document_id = intval($document_id);
+    
+    $query = "SELECT * FROM document_categories WHERE document_id = $document_id";
+    $result = mysqli_query($conn, $query);
+    
+    return mysqli_fetch_assoc($result);
+}
+
+/**
+ * Get document category with full names
+ */
+function getDocumentCategoryWithNames($document_id) {
+    $cat = getDocumentCategory($document_id);
+    if (!$cat) {
+        return null;
+    }
+    
+    $result = [
+        'education_level' => $cat['education_level'],
+        'education_level_name' => EDUCATION_LEVELS[$cat['education_level']]['name'] ?? $cat['education_level'],
+        'doc_type_code' => $cat['doc_type_code'],
+        'doc_type_name' => getDocTypeName($cat['doc_type_code'])
+    ];
+    
+    if (isPhoThong($cat['education_level'])) {
+        $grade_info = getGradeInfo($cat['education_level'], $cat['grade_id']);
+        $result['grade_id'] = $cat['grade_id'];
+        $result['grade_name'] = $grade_info ? $grade_info['name'] : "Lớp " . $cat['grade_id'];
+        $result['subject_code'] = $cat['subject_code'];
+        $result['subject_name'] = getSubjectNameByCode($cat['subject_code']);
+    } else {
+        $group_info = getMajorGroupInfo($cat['major_group_id']);
+        $major_info = getMajorInfo($cat['major_code']);
+        
+        $result['major_group_id'] = $cat['major_group_id'];
+        $result['major_group_name'] = $group_info ? $group_info['name'] : '';
+        $result['major_code'] = $cat['major_code'];
+        $result['major_name'] = $major_info ? $major_info['name'] : '';
+    }
+    
+    return $result;
+}
+
+/**
+ * Delete document category
+ */
+function deleteDocumentCategory($document_id) {
+    global $conn;
+    $document_id = intval($document_id);
+    
+    return mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
+}
+
+// =====================================================
+// SEARCH & FILTER
+// =====================================================
+
+/**
+ * Search documents by category filters
+ */
+function searchDocumentsByCategory($filters = []) {
+    global $conn;
+    
+    $where = ["d.status = 'approved'", "d.is_public = 1"];
+    
+    if (!empty($filters['education_level'])) {
+        $level = mysqli_real_escape_string($conn, $filters['education_level']);
+        $where[] = "dc.education_level = '$level'";
+    }
+    
+    if (!empty($filters['grade_id'])) {
+        $grade = intval($filters['grade_id']);
+        $where[] = "dc.grade_id = $grade";
+    }
+    
+    if (!empty($filters['subject_code'])) {
+        $subject = mysqli_real_escape_string($conn, $filters['subject_code']);
+        $where[] = "dc.subject_code = '$subject'";
+    }
+    
+    if (!empty($filters['major_group_id'])) {
+        $group = intval($filters['major_group_id']);
+        $where[] = "dc.major_group_id = $group";
+    }
+    
+    if (!empty($filters['major_code'])) {
+        $major = mysqli_real_escape_string($conn, $filters['major_code']);
+        $where[] = "dc.major_code = '$major'";
+    }
+    
+    if (!empty($filters['doc_type_code'])) {
+        $doc_type = mysqli_real_escape_string($conn, $filters['doc_type_code']);
+        $where[] = "dc.doc_type_code = '$doc_type'";
+    }
+    
+    $where_str = implode(' AND ', $where);
+    
+        $query = "
+        SELECT DISTINCT d.*, u.username, dc.*
+            FROM documents d
+        JOIN users u ON d.user_id = u.id
+        LEFT JOIN document_categories dc ON d.id = dc.document_id
+        WHERE $where_str
+            ORDER BY d.created_at DESC
+        ";
+    
+    $result = mysqli_query($conn, $query);
+    $documents = [];
+    
+    while ($row = mysqli_fetch_assoc($result)) {
+        $documents[] = $row;
+    }
+    
+    return $documents;
+}
+
+// =====================================================
+// LEGACY COMPATIBILITY (For old code that might still use these)
+// =====================================================
+
+/**
+ * @deprecated Use getEducationLevels() instead
+ */
+function getCategoriesByType($type, $active_only = true) {
+    // Return empty for legacy calls
+    return [];
+}
+
+/**
+ * @deprecated Use getEducationLevels() instead
+ */
+function getAllCategoriesGrouped($active_only = true) {
+    // Return empty for legacy calls
+    return [];
 }
 
 /**
  * Get category type label in Vietnamese
- * @param string $type
- * @return string
+ * @deprecated 
  */
 function getCategoryTypeLabel($type) {
     $labels = [
-        'field' => 'Lĩnh vực',
+        'education_level' => 'Cấp học',
+        'grade' => 'Lớp',
         'subject' => 'Môn học',
-        'level' => 'Cấp học',
-        'curriculum' => 'Chương trình',
+        'major_group' => 'Nhóm ngành',
+        'major' => 'Ngành học',
         'doc_type' => 'Loại tài liệu'
     ];
     
@@ -63,272 +525,55 @@ function getCategoryTypeLabel($type) {
 }
 
 /**
- * Get category by ID
- * @param int $category_id
- * @return array|null
- */
-function getCategoryById($category_id) {
-    global $conn;
-    $category_id = intval($category_id);
-    
-    $query = "SELECT * FROM categories WHERE id = $category_id";
-    $result = mysqli_query($conn, $query);
-    
-    return mysqli_fetch_assoc($result);
-}
-
-/**
- * Get categories for a document
- * @param int $document_id
- * @return array
+ * @deprecated 
  */
 function getDocumentCategories($document_id) {
-    global $conn;
-    $document_id = intval($document_id);
-    
-    $query = "
-        SELECT c.*, dc.id as dc_id
-        FROM document_categories dc
-        JOIN categories c ON dc.category_id = c.id
-        WHERE dc.document_id = $document_id
-        ORDER BY c.type, c.sort_order
-    ";
-    
-    $result = mysqli_query($conn, $query);
-    $categories = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $categories[] = $row;
-    }
-    
-    return $categories;
+    $cat = getDocumentCategoryWithNames($document_id);
+    return $cat ? [$cat] : [];
 }
 
 /**
- * Get categories for a document, grouped by type
- * @param int $document_id
- * @return array
+ * @deprecated
  */
 function getDocumentCategoriesGrouped($document_id) {
-    $categories = getDocumentCategories($document_id);
-    $grouped = [];
+    $cat = getDocumentCategoryWithNames($document_id);
+    if (!$cat) return [];
     
-    foreach($categories as $cat) {
-        $type = $cat['type'];
-        if(!isset($grouped[$type])) {
-            $grouped[$type] = [];
-        }
-        $grouped[$type][] = $cat;
+    $result = [
+        'level' => [['name' => $cat['education_level_name']]],
+        'doc_type' => [['name' => $cat['doc_type_name']]]
+    ];
+    
+    if (isset($cat['grade_name'])) {
+        $result['grade'] = [['name' => $cat['grade_name']]];
+        $result['subject'] = [['name' => $cat['subject_name']]];
+    } else {
+        $result['major_group'] = [['name' => $cat['major_group_name']]];
+        $result['major'] = [['name' => $cat['major_name']]];
     }
     
-    return $grouped;
+    return $result;
 }
 
 /**
- * Add categories to a document
- * @param int $document_id
- * @param array $category_ids
- * @return bool
+ * @deprecated Use saveDocumentCategory() instead
  */
 function addDocumentCategories($document_id, $category_ids) {
-    global $conn;
-    $document_id = intval($document_id);
-    
-    if(empty($category_ids) || !is_array($category_ids)) {
-        return true; // No categories to add
-    }
-    
-    // Remove old categories first
-    mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
-    
-    // Insert new categories
-    $values = [];
-    foreach($category_ids as $cat_id) {
-        $cat_id = intval($cat_id);
-        if($cat_id > 0) {
-            $values[] = "($document_id, $cat_id)";
-        }
-    }
-    
-    if(empty($values)) {
-        return true;
-    }
-    
-    $query = "INSERT INTO document_categories (document_id, category_id) VALUES " . implode(', ', $values);
-    return mysqli_query($conn, $query);
+    // Legacy compatibility - do nothing
+    return true;
 }
 
 /**
- * Update categories for a document
- * @param int $document_id
- * @param array $category_ids
- * @return bool
+ * @deprecated Use saveDocumentCategory() instead
  */
 function updateDocumentCategories($document_id, $category_ids) {
     return addDocumentCategories($document_id, $category_ids);
 }
 
 /**
- * Remove all categories from a document
- * @param int $document_id
- * @return bool
+ * @deprecated Use deleteDocumentCategory() instead
  */
 function removeDocumentCategories($document_id) {
-    global $conn;
-    $document_id = intval($document_id);
-    
-    return mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
-}
-
-/**
- * Create new category
- * @param string $name
- * @param string $type
- * @param string $description
- * @param int $sort_order
- * @return int|false - category ID or false
- */
-function createCategory($name, $type, $description = '', $sort_order = 0) {
-    global $conn;
-    
-    $name = mysqli_real_escape_string($conn, $name);
-    $type = mysqli_real_escape_string($conn, $type);
-    $description = mysqli_real_escape_string($conn, $description);
-    $sort_order = intval($sort_order);
-    
-    $query = "
-        INSERT INTO categories (name, type, description, sort_order, is_active)
-        VALUES ('$name', '$type', '$description', $sort_order, 1)
-    ";
-    
-    if(mysqli_query($conn, $query)) {
-        return mysqli_insert_id($conn);
-    }
-    
-    return false;
-}
-
-/**
- * Update category
- * @param int $category_id
- * @param string $name
- * @param string $description
- * @param int $sort_order
- * @param int $is_active
- * @return bool
- */
-function updateCategory($category_id, $name, $description = '', $sort_order = 0, $is_active = 1) {
-    global $conn;
-    
-    $category_id = intval($category_id);
-    $name = mysqli_real_escape_string($conn, $name);
-    $description = mysqli_real_escape_string($conn, $description);
-    $sort_order = intval($sort_order);
-    $is_active = intval($is_active);
-    
-    $query = "
-        UPDATE categories 
-        SET name = '$name',
-            description = '$description',
-            sort_order = $sort_order,
-            is_active = $is_active
-        WHERE id = $category_id
-    ";
-    
-    return mysqli_query($conn, $query);
-}
-
-/**
- * Delete category
- * @param int $category_id
- * @return bool
- */
-function deleteCategory($category_id) {
-    global $conn;
-    $category_id = intval($category_id);
-    
-    // First remove from document_categories
-    mysqli_query($conn, "DELETE FROM document_categories WHERE category_id = $category_id");
-    
-    // Then delete category
-    return mysqli_query($conn, "DELETE FROM categories WHERE id = $category_id");
-}
-
-/**
- * Toggle category active status
- * @param int $category_id
- * @return bool
- */
-function toggleCategoryStatus($category_id) {
-    global $conn;
-    $category_id = intval($category_id);
-    
-    $query = "UPDATE categories SET is_active = NOT is_active WHERE id = $category_id";
-    return mysqli_query($conn, $query);
-}
-
-/**
- * Get document count by category
- * @param int $category_id
- * @return int
- */
-function getDocumentCountByCategory($category_id) {
-    global $conn;
-    $category_id = intval($category_id);
-    
-    $query = "SELECT COUNT(*) as count FROM document_categories WHERE category_id = $category_id";
-    $result = mysqli_query($conn, $query);
-    $row = mysqli_fetch_assoc($result);
-    
-    return intval($row['count']);
-}
-
-/**
- * Search documents by categories
- * @param array $category_ids
- * @param string $match_type - 'any' or 'all'
- * @return array
- */
-function searchDocumentsByCategories($category_ids, $match_type = 'any') {
-    global $conn;
-    
-    if(empty($category_ids) || !is_array($category_ids)) {
-        return [];
-    }
-    
-    $ids = array_map('intval', $category_ids);
-    $ids_str = implode(',', $ids);
-    
-    if($match_type === 'all') {
-        // Document must have ALL specified categories
-        $count = count($ids);
-        $query = "
-            SELECT d.*, COUNT(DISTINCT dc.category_id) as match_count
-            FROM documents d
-            JOIN document_categories dc ON d.id = dc.document_id
-            WHERE dc.category_id IN ($ids_str)
-            GROUP BY d.id
-            HAVING match_count = $count
-            ORDER BY d.created_at DESC
-        ";
-    } else {
-        // Document must have ANY of the specified categories
-        $query = "
-            SELECT DISTINCT d.*
-            FROM documents d
-            JOIN document_categories dc ON d.id = dc.document_id
-            WHERE dc.category_id IN ($ids_str)
-            ORDER BY d.created_at DESC
-        ";
-    }
-    
-    $result = mysqli_query($conn, $query);
-    $documents = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $documents[] = $row;
-    }
-    
-    return $documents;
+    return deleteDocumentCategory($document_id);
 }
 ?>

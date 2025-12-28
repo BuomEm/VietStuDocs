@@ -111,8 +111,8 @@ if (!hasViewedInSession($doc_id)) {
     markViewedInSession($doc_id);
 }
 
-// Load document categories
-$doc_categories = getDocumentCategoriesGrouped($doc_id);
+// Load document categories (new format)
+$doc_category = getDocumentCategoryWithNames($doc_id);
 
 // Check if user has purchased the document (or is owner)
 $has_purchased = false;
@@ -225,8 +225,9 @@ if($is_logged_in) {
 
 // Get category IDs for current document
 $category_ids = [];
-if(!empty($doc_categories)) {
-    foreach($doc_categories as $cats) {
+if($doc_category) {
+    $cats_array = [['name' => $doc_category['education_level_name']]];
+    foreach($cats_array as $cats) {
         foreach($cats as $cat) {
             $category_ids[] = intval($cat['id']);
         }
@@ -880,7 +881,7 @@ include 'includes/sidebar.php';
                                 <i class="fa-regular fa-bookmark"></i>
                                 Saved
                             </button> -->
-                            <?php if(!empty($doc['description']) || !empty($doc_categories)): ?>
+                            <?php if(!empty($doc['description']) || $doc_category): ?>
                             <button class="btn btn-ghost btn-sm" onclick="toggleDocInfo()" id="infoToggleBtn">
                                 <i class="fa-solid fa-circle-info"></i>
                                 Info
@@ -927,7 +928,7 @@ include 'includes/sidebar.php';
         </div>
 
         <!-- Document Info Section (Collapsible) -->
-        <?php if(!empty($doc['description']) || !empty($doc_categories)): ?>
+        <?php if(!empty($doc['description']) || $doc_category): ?>
         <div class="document-info-section grid grid-cols-1 md:grid-cols-2 gap-4" id="documentInfoSection" style="display: none;">
             <?php if(!empty($doc['description'])): ?>
             <div class="card bg-base-100 shadow-md">
@@ -941,38 +942,72 @@ include 'includes/sidebar.php';
             </div>
             <?php endif; ?>
             
-            <?php if(!empty($doc_categories)): ?>
+            <?php if($doc_category): ?>
             <div class="card bg-base-100 shadow-md">
                 <div class="card-title rounded-t-xl bg-primary text-white p-4">
                     <i class="fa-solid fa-folder"></i>
                     <h3>Phân Loại</h3>
                 </div>
                 <div class="card-body">
-                    <?php
-                    $type_labels = [
-                        'field' => ['icon' => 'fa-solid fa-briefcase', 'label' => 'Lĩnh vực'],
-                        'subject' => ['icon' => 'fa-solid fa-book', 'label' => 'Môn học'],
-                        'level' => ['icon' => 'fa-solid fa-graduation-cap', 'label' => 'Cấp học'],
-                        'curriculum' => ['icon' => 'fa-solid fa-book-open', 'label' => 'Chương trình'],
-                        'doc_type' => ['icon' => 'fa-solid fa-file-lines', 'label' => 'Loại tài liệu']
-                    ];
-                    foreach($doc_categories as $type => $cats):
-                        $type_info = $type_labels[$type] ?? ['icon' => '', 'label' => $type];
-                    ?>
-                        <div class="mb-4 last:mb-0">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <?php if(!empty($type_info['icon'])): ?>
-                                <i class="<?= $type_info['icon'] ?> text-base-content/70"></i>
-                                <?php endif; ?>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide"><?= $type_info['label'] ?></span>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <?php foreach($cats as $cat): ?>
-                                    <span class="badge badge-primary"><?= htmlspecialchars($cat['name']) ?></span>
-                                <?php endforeach; ?>
-                            </div>
+                    <!-- Cấp học -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-graduation-cap text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Cấp học</span>
                         </div>
-                    <?php endforeach; ?>
+                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
+                    </div>
+                    
+                    <?php if(isset($doc_category['grade_name'])): ?>
+                    <!-- Lớp -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-users text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Lớp</span>
+                        </div>
+                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
+                    </div>
+                    
+                    <!-- Môn học -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-book text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Môn học</span>
+                        </div>
+                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if(isset($doc_category['major_group_name'])): ?>
+                    <!-- Nhóm ngành -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-briefcase text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Nhóm ngành</span>
+                        </div>
+                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
+                    </div>
+                    
+                    <?php if(!empty($doc_category['major_name'])): ?>
+                    <!-- Ngành học -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-scroll text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Ngành học</span>
+                        </div>
+                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_name']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php endif; ?>
+                    
+                    <!-- Loại tài liệu -->
+                    <div class="mb-0">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                            <i class="fa-solid fa-file-lines text-base-content/70"></i>
+                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Loại tài liệu</span>
+                        </div>
+                        <span class="badge badge-secondary"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
+                    </div>
                 </div>
             </div>
             <?php endif; ?>
@@ -1067,9 +1102,12 @@ include 'includes/sidebar.php';
             <!-- More from Category -->
             <?php if(!empty($category_docs)):
                 // Get category name for display
-                $first_group = !empty($doc_categories) ? reset($doc_categories) : null;
-                $first_category = !empty($first_group) && is_array($first_group) ? reset($first_group) : null;
-                $category_name = $first_category ? htmlspecialchars($first_category['name']) : 'Category';
+                $category_name = $doc_category ? htmlspecialchars($doc_category['education_level_name']) : 'Category';
+                if ($doc_category && isset($doc_category['subject_name'])) {
+                    $category_name = htmlspecialchars($doc_category['subject_name']);
+                } elseif ($doc_category && isset($doc_category['major_name'])) {
+                    $category_name = htmlspecialchars($doc_category['major_name']);
+                }
             ?>
             <div class="card bg-base-100 shadow-md">
                 <div class="card-body">

@@ -12,8 +12,8 @@ redirectIfNotLoggedIn();
 $user_id = getCurrentUserId();
 $user_points = getUserPoints($user_id);
 
-// Get all active categories grouped by type
-$categories_grouped = getAllCategoriesGrouped(true);
+// Get education levels for the cascade selection
+$education_levels = getEducationLevels();
 
 $page_title = "Upload Document - DocShare";
 $current_page = 'upload';
@@ -69,41 +69,6 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             </div>
         </div>
 
-        <!-- <div class="card">
-            <h4 class="card-title card-title-with-icon">
-                <span class="card-icon">📋</span>
-                <span>Upload Guide</span>
-            </h4>
-            <ul class="guide-list">
-                <li class="guide-item">✓ Select multiple files</li>
-                <li class="guide-item"><strong>✓ Add descriptions *</strong></li>
-                <li class="guide-item"><strong>✓ Select categories *</strong></li>
-                <li class="guide-item">✓ Choose privacy level</li>
-                <li class="guide-item guide-item-last">✓ Upload & auto-verify</li>
-            </ul>
-            <div style="margin-top: 12px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 11px; color: #856404;">
-                <strong>*</strong> Bắt buộc phải điền
-            </div>
-        </div> -->
-
-        <!-- <div class="card">
-            <h4 class="card-title card-title-with-icon">
-                <span class="card-icon">📁</span>
-                <span>Supported Files</span>
-            </h4>
-            <div class="supported-files">
-                <div class="file-type"><strong>Documents:</strong> PDF, DOC, DOCX</div>
-                <div class="file-type"><strong>Sheets:</strong> XLS, XLSX</div>
-                <div class="file-type"><strong>Presentations:</strong> PPT, PPTX</div>
-                <div class="file-type"><strong>Media:</strong> JPG, PNG, ZIP</div>
-                <div class="file-type"><strong>Text:</strong> TXT</div>
-                <div class="file-type file-type-limit">Max 200MB per file</div>
-            </div>
-        </div> -->
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-3xl font-bold flex items-center gap-2">
@@ -114,7 +79,6 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 </h1>
                 <p class="text-base-content/70 mt-2">Upload and share your documents with the community</p>
             </div>
-            <!-- <a href="dashboard.php" class="btn btn-ghost">← Back to Dashboard</a> -->
         </div>
 
         <div id="alertMessage" class="mb-4"></div>
@@ -140,7 +104,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                         </svg>
                         Files to Upload (<span id="fileCount">0</span>)
                     </h3>
-                    <div id="fileListContent" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
+                    <div id="fileListContent" class="space-y-4 max-h-[600px] overflow-y-auto"></div>
                 </div>
             </div>
 
@@ -182,24 +146,46 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         display: none;
     }
     
-    /* Category type label styling */
-    .category-type-label {
-        display: block;
-        font-size: 11px;
-        color: hsl(var(--p));
+    /* Category cascade styling */
+    .category-cascade {
+        background: hsl(var(--b2));
+        border-radius: 8px;
+        padding: 16px;
+    }
+    
+    .category-cascade .form-control {
+        margin-bottom: 12px;
+    }
+    
+    .category-cascade .form-control:last-child {
+        margin-bottom: 0;
+    }
+    
+    .category-cascade .label-text {
         font-weight: 600;
+        font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 6px;
+        color: hsl(var(--p));
+    }
+    
+    .cascade-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: hsl(var(--p));
+        font-size: 12px;
+        margin: 8px 0;
     }
 </style>
 
 <!-- PDF.js for thumbnail generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="js/pdf-functions.js"></script>
+<script src="js/categories.js"></script>
 <script>
-    // Categories data from PHP
-    const categoriesData = <?= json_encode($categories_grouped) ?>;
+    // Education levels from PHP
+    const educationLevels = <?= json_encode($education_levels) ?>;
     
     const dragDropArea = document.getElementById('dragDropArea');
     const fileInput = document.getElementById('fileInput');
@@ -213,7 +199,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
     const fileCount = document.getElementById('fileCount');
 
     let selectedFiles = [];
-    let fileCategories = {}; // Store selected categories for each file
+    let fileCategories = {}; // Store category data for each file
     
     // Helper function to get filename without extension
     function getFileNameWithoutExtension(filename) {
@@ -278,17 +264,16 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                         
                         <div class="form-control mb-4">
                             <label class="label">
-                                <span class="label-text font-semibold">Description <span class="text-error">*</span></span>
+                                <span class="label-text font-semibold">Mô tả <span class="text-error">*</span></span>
                             </label>
                             <input type="text" class="input input-bordered fileDescription" data-index="${index}" placeholder="Nhập mô tả tài liệu..." required>
                         </div>
                         
                         <div class="form-control mb-4">
                             <label class="label">
-                                <span class="label-text font-semibold">📂 Categories <span class="text-error">*</span> <small class="text-base-content/70">(Chọn ít nhất 1 category)</small></span>
+                                <span class="label-text font-semibold">📂 Phân loại <span class="text-error">*</span></span>
                             </label>
-                            ${generateCategorySelectors(index)}
-                            <div class="selected-categories mt-2" id="selected-cats-${index}"></div>
+                            ${generateCategoryCascade(index)}
                         </div>
                         
                         <div class="form-control">
@@ -300,6 +285,9 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                     </div>
                 </div>
             `).join('');
+            
+            // Initialize cascade handlers for each file
+            initializeCascadeHandlers();
         } else {
             fileList.classList.add('hidden');
         }
@@ -351,102 +339,372 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         const dataTransfer = new DataTransfer();
         selectedFiles.forEach(file => dataTransfer.items.add(file));
         fileInput.files = dataTransfer.files;
-        delete fileCategories[index]; // Remove categories for this file
+        delete fileCategories[index];
         updateFileList();
     }
 
-    // Category Management Functions
-    function generateCategorySelectors(fileIndex) {
-        const types = [
-            { key: 'field', label: 'Lĩnh vực' },
-            { key: 'subject', label: 'Môn học' },
-            { key: 'level', label: 'Cấp học' },
-            { key: 'curriculum', label: 'Chương trình' },
-            { key: 'doc_type', label: 'Loại tài liệu' }
-        ];
-        
-        return types.map(type => {
-            const categories = categoriesData[type.key] || [];
-            if (categories.length === 0) return '';
-            
-            return `
-                <div class="categories-group">
-                    <span class="category-type-label">${type.label}</span>
-                    <select class="select select-bordered w-full mb-2" onchange="addCategory(${fileIndex}, this.value, '${type.key}', this)">
-                        <option value="">-- Select ${type.label} --</option>
-                        ${categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+    // Generate cascade category selectors for each file
+    function generateCategoryCascade(fileIndex) {
+        return `
+            <div class="category-cascade" id="cascade-${fileIndex}">
+                <!-- Cấp học -->
+                <div class="form-control">
+                    <label class="label py-1">
+                        <span class="label-text">Cấp học</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full education-level-select" 
+                            data-index="${fileIndex}"
+                            onchange="onEducationLevelChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn cấp học --</option>
+                        ${educationLevels.map(level => `<option value="${level.code}">${level.name}</option>`).join('')}
                     </select>
                 </div>
-            `;
-        }).join('');
+                
+                <!-- Lớp (for phổ thông) -->
+                <div class="form-control hidden" id="grade-container-${fileIndex}">
+                    <div class="cascade-arrow">↓</div>
+                    <label class="label py-1">
+                        <span class="label-text">Lớp</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full grade-select" 
+                            data-index="${fileIndex}"
+                            onchange="onGradeChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn lớp --</option>
+                    </select>
+                </div>
+                
+                <!-- Môn học (for phổ thông) -->
+                <div class="form-control hidden" id="subject-container-${fileIndex}">
+                    <div class="cascade-arrow">↓</div>
+                    <label class="label py-1">
+                        <span class="label-text">Môn học</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full subject-select" 
+                            data-index="${fileIndex}"
+                            onchange="onSubjectChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn môn học --</option>
+                    </select>
+                </div>
+                
+                <!-- Nhóm ngành (for đại học) -->
+                <div class="form-control hidden" id="major-group-container-${fileIndex}">
+                    <div class="cascade-arrow">↓</div>
+                    <label class="label py-1">
+                        <span class="label-text">Nhóm ngành</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full major-group-select" 
+                            data-index="${fileIndex}"
+                            onchange="onMajorGroupChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn nhóm ngành --</option>
+                    </select>
+                </div>
+                
+                <!-- Ngành học (for đại học) -->
+                <div class="form-control hidden" id="major-container-${fileIndex}">
+                    <div class="cascade-arrow">↓</div>
+                    <label class="label py-1">
+                        <span class="label-text">Ngành học</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full major-select" 
+                            data-index="${fileIndex}"
+                            onchange="onMajorChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn ngành học --</option>
+                    </select>
+                </div>
+                
+                <!-- Loại tài liệu -->
+                <div class="form-control hidden" id="doc-type-container-${fileIndex}">
+                    <div class="cascade-arrow">↓</div>
+                    <label class="label py-1">
+                        <span class="label-text">Loại tài liệu</span>
+                    </label>
+                    <select class="select select-bordered select-sm w-full doc-type-select" 
+                            data-index="${fileIndex}"
+                            onchange="onDocTypeChange(${fileIndex}, this.value)">
+                        <option value="">-- Chọn loại tài liệu --</option>
+                    </select>
+                </div>
+                
+                <!-- Summary -->
+                <div class="mt-3 p-2 bg-base-100 rounded text-xs hidden" id="category-summary-${fileIndex}"></div>
+            </div>
+        `;
     }
 
-    function addCategory(fileIndex, categoryId, categoryType, selectElement) {
-        if (!categoryId) return;
-        
-        categoryId = parseInt(categoryId);
-        
-        // Initialize array if needed
-        if (!fileCategories[fileIndex]) {
-            fileCategories[fileIndex] = [];
-        }
-        
-        // Check if already added
-        if (fileCategories[fileIndex].includes(categoryId)) {
-            selectElement.value = '';
-            return;
-        }
-        
-        // Add category
-        fileCategories[fileIndex].push(categoryId);
-        
-        // Reset select
-        selectElement.value = '';
-        
-        // Render tags
-        renderSelectedCategories(fileIndex);
-    }
-
-    function removeCategory(fileIndex, categoryId) {
-        if (!fileCategories[fileIndex]) return;
-        
-        const index = fileCategories[fileIndex].indexOf(categoryId);
-        if (index > -1) {
-            fileCategories[fileIndex].splice(index, 1);
-        }
-        
-        renderSelectedCategories(fileIndex);
-    }
-
-    function renderSelectedCategories(fileIndex) {
-        const container = document.getElementById(`selected-cats-${fileIndex}`);
-        if (!container) return;
-        
-        // Remove error highlighting when categories are selected
-        container.classList.remove('border-2', 'border-error', 'border-dashed', 'bg-error/10', 'p-2', 'rounded');
-        
-        const selectedCatIds = fileCategories[fileIndex] || [];
-        if (selectedCatIds.length === 0) {
-            container.innerHTML = '<div style="font-size: 11px; color: #999; padding: 4px 0;">Chưa chọn category nào</div>';
-            return;
-        }
-        
-        // Find category details
-        const allCategories = [];
-        Object.keys(categoriesData).forEach(type => {
-            allCategories.push(...categoriesData[type]);
+    function initializeCascadeHandlers() {
+        // Initialize fileCategories for each file
+        selectedFiles.forEach((file, index) => {
+            if (!fileCategories[index]) {
+                fileCategories[index] = {
+                    education_level: '',
+                    grade_id: null,
+                    subject_code: null,
+                    major_group_id: null,
+                    major_code: null,
+                    doc_type_code: ''
+                };
+            }
         });
+    }
+
+    // Cascade handlers
+    async function onEducationLevelChange(fileIndex, level) {
+        fileCategories[fileIndex] = {
+            education_level: level,
+            grade_id: null,
+            subject_code: null,
+            major_group_id: null,
+            major_code: null,
+            doc_type_code: ''
+        };
         
-        const selectedDetails = selectedCatIds.map(id => {
-            return allCategories.find(cat => cat.id == id);
-        }).filter(cat => cat != null);
+        // Hide all subsequent containers first
+        hideElement(`grade-container-${fileIndex}`);
+        hideElement(`subject-container-${fileIndex}`);
+        hideElement(`major-group-container-${fileIndex}`);
+        hideElement(`major-container-${fileIndex}`);
+        hideElement(`doc-type-container-${fileIndex}`);
+        hideElement(`category-summary-${fileIndex}`);
         
-        container.innerHTML = selectedDetails.map(cat => `
-            <span class="category-tag">
-                ${cat.name}
-                <button type="button" class="category-tag-remove" onclick="removeCategory(${fileIndex}, ${cat.id})">×</button>
-            </span>
-        `).join('');
+        if (!level) return;
+        
+        const isPhoThong = ['tieu_hoc', 'thcs', 'thpt'].includes(level);
+        
+        if (isPhoThong) {
+            // Load grades
+            showElement(`grade-container-${fileIndex}`);
+            await loadGrades(fileIndex, level);
+        } else {
+            // Load major groups for đại học
+            showElement(`major-group-container-${fileIndex}`);
+            await loadMajorGroups(fileIndex);
+        }
+        
+        // Load doc types
+        showElement(`doc-type-container-${fileIndex}`);
+        await loadDocTypes(fileIndex, level);
+    }
+
+    async function onGradeChange(fileIndex, gradeId) {
+        fileCategories[fileIndex].grade_id = gradeId ? parseInt(gradeId) : null;
+        fileCategories[fileIndex].subject_code = null;
+        
+        hideElement(`subject-container-${fileIndex}`);
+        
+        if (!gradeId) {
+            updateCategorySummary(fileIndex);
+            return;
+        }
+        
+        // Load subjects
+        showElement(`subject-container-${fileIndex}`);
+        await loadSubjects(fileIndex, fileCategories[fileIndex].education_level, gradeId);
+        updateCategorySummary(fileIndex);
+    }
+
+    async function onSubjectChange(fileIndex, subjectCode) {
+        fileCategories[fileIndex].subject_code = subjectCode || null;
+        updateCategorySummary(fileIndex);
+    }
+
+    async function onMajorGroupChange(fileIndex, groupId) {
+        fileCategories[fileIndex].major_group_id = groupId ? parseInt(groupId) : null;
+        fileCategories[fileIndex].major_code = null;
+        
+        hideElement(`major-container-${fileIndex}`);
+        
+        if (!groupId) {
+            updateCategorySummary(fileIndex);
+            return;
+        }
+        
+        // Load majors
+        showElement(`major-container-${fileIndex}`);
+        await loadMajors(fileIndex, groupId);
+        updateCategorySummary(fileIndex);
+    }
+
+    async function onMajorChange(fileIndex, majorCode) {
+        fileCategories[fileIndex].major_code = majorCode || null;
+        updateCategorySummary(fileIndex);
+    }
+
+    async function onDocTypeChange(fileIndex, docTypeCode) {
+        fileCategories[fileIndex].doc_type_code = docTypeCode || '';
+        updateCategorySummary(fileIndex);
+    }
+
+    // API loaders
+    async function loadGrades(fileIndex, level) {
+        try {
+            const response = await fetch(`/handler/categories_api.php?action=grades&level=${level}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.querySelector(`#cascade-${fileIndex} .grade-select`);
+                select.innerHTML = '<option value="">-- Chọn lớp --</option>' + 
+                    data.data.map(grade => `<option value="${grade.id}">${grade.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading grades:', error);
+        }
+    }
+
+    async function loadSubjects(fileIndex, level, gradeId) {
+        try {
+            const response = await fetch(`/handler/categories_api.php?action=subjects&level=${level}&grade_id=${gradeId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.querySelector(`#cascade-${fileIndex} .subject-select`);
+                select.innerHTML = '<option value="">-- Chọn môn học --</option>' + 
+                    data.data.map(subject => `<option value="${subject.code}">${subject.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading subjects:', error);
+        }
+    }
+
+    async function loadMajorGroups(fileIndex) {
+        try {
+            const response = await fetch(`/handler/categories_api.php?action=major_groups`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.querySelector(`#cascade-${fileIndex} .major-group-select`);
+                select.innerHTML = '<option value="">-- Chọn nhóm ngành --</option>' + 
+                    data.data.map(group => `<option value="${group.id}">${group.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading major groups:', error);
+        }
+    }
+
+    async function loadMajors(fileIndex, groupId) {
+        try {
+            const response = await fetch(`/handler/categories_api.php?action=majors&group_id=${groupId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.querySelector(`#cascade-${fileIndex} .major-select`);
+                select.innerHTML = '<option value="">-- Chọn ngành học --</option>' + 
+                    data.data.map(major => `<option value="${major.code}">${major.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading majors:', error);
+        }
+    }
+
+    async function loadDocTypes(fileIndex, level) {
+        try {
+            const response = await fetch(`/handler/categories_api.php?action=doc_types&level=${level}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.querySelector(`#cascade-${fileIndex} .doc-type-select`);
+                select.innerHTML = '<option value="">-- Chọn loại tài liệu --</option>' + 
+                    data.data.map(docType => `<option value="${docType.code}">${docType.name}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading doc types:', error);
+        }
+    }
+
+    // Helper functions
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    }
+
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    }
+
+    function updateCategorySummary(fileIndex) {
+        const summary = document.getElementById(`category-summary-${fileIndex}`);
+        const cat = fileCategories[fileIndex];
+        
+        if (!cat || !cat.education_level) {
+            summary.classList.add('hidden');
+            return;
+        }
+        
+        const parts = [];
+        
+        // Education level
+        const eduSelect = document.querySelector(`#cascade-${fileIndex} .education-level-select`);
+        if (eduSelect && eduSelect.selectedOptions[0]) {
+            parts.push(eduSelect.selectedOptions[0].text);
+        }
+        
+        // Grade or Major Group
+        if (cat.grade_id) {
+            const gradeSelect = document.querySelector(`#cascade-${fileIndex} .grade-select`);
+            if (gradeSelect && gradeSelect.selectedOptions[0]) {
+                parts.push(gradeSelect.selectedOptions[0].text);
+            }
+        }
+        if (cat.major_group_id) {
+            const mgSelect = document.querySelector(`#cascade-${fileIndex} .major-group-select`);
+            if (mgSelect && mgSelect.selectedOptions[0]) {
+                parts.push(mgSelect.selectedOptions[0].text);
+            }
+        }
+        
+        // Subject or Major
+        if (cat.subject_code) {
+            const subSelect = document.querySelector(`#cascade-${fileIndex} .subject-select`);
+            if (subSelect && subSelect.selectedOptions[0]) {
+                parts.push(subSelect.selectedOptions[0].text);
+            }
+        }
+        if (cat.major_code) {
+            const majorSelect = document.querySelector(`#cascade-${fileIndex} .major-select`);
+            if (majorSelect && majorSelect.selectedOptions[0]) {
+                parts.push(majorSelect.selectedOptions[0].text);
+            }
+        }
+        
+        // Doc type
+        if (cat.doc_type_code) {
+            const dtSelect = document.querySelector(`#cascade-${fileIndex} .doc-type-select`);
+            if (dtSelect && dtSelect.selectedOptions[0]) {
+                parts.push(`[${dtSelect.selectedOptions[0].text}]`);
+            }
+        }
+        
+        if (parts.length > 0) {
+            summary.innerHTML = `<strong>📂 Phân loại:</strong> ${parts.join(' → ')}`;
+            summary.classList.remove('hidden');
+        } else {
+            summary.classList.add('hidden');
+        }
+    }
+
+    // Validate category selection
+    function validateCategories(fileIndex) {
+        const cat = fileCategories[fileIndex];
+        const errors = [];
+        
+        if (!cat || !cat.education_level) {
+            errors.push('Chưa chọn cấp học');
+            return errors;
+        }
+        
+        const isPhoThong = ['tieu_hoc', 'thcs', 'thpt'].includes(cat.education_level);
+        
+        if (isPhoThong) {
+            if (!cat.grade_id) errors.push('Chưa chọn lớp');
+            if (!cat.subject_code) errors.push('Chưa chọn môn học');
+        } else {
+            if (!cat.major_group_id) errors.push('Chưa chọn nhóm ngành');
+            if (!cat.major_code) errors.push('Chưa chọn ngành học');
+        }
+        
+        if (!cat.doc_type_code) errors.push('Chưa chọn loại tài liệu');
+        
+        return errors;
     }
 
     uploadForm.addEventListener('submit', async function(e) {
@@ -465,7 +723,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             const file = selectedFiles[i];
             const fileName = document.querySelector(`.fileName[data-index="${i}"]`)?.value || '';
             const description = document.querySelector(`.fileDescription[data-index="${i}"]`)?.value || '';
-            const categories = fileCategories[i] || [];
+            const categoryErrors = validateCategories(i);
             
             if(!fileName.trim()) {
                 validationErrors.push(`📄 ${file.name}: Chưa nhập tên tài liệu`);
@@ -485,7 +743,6 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             
             if(!description.trim()) {
                 validationErrors.push(`📄 ${file.name}: Chưa nhập mô tả`);
-                // Highlight the description input
                 const descInput = document.querySelector(`.fileDescription[data-index="${i}"]`);
                 if(descInput) {
                     descInput.classList.add('input-error');
@@ -493,24 +750,18 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                 }
             }
             
-            if(categories.length === 0) {
-                validationErrors.push(`📄 ${file.name}: Chưa chọn category`);
-                // Highlight the categories section
-                const catsContainer = document.getElementById(`selected-cats-${i}`);
-                if(catsContainer) {
-                    catsContainer.classList.add('border-2', 'border-error', 'border-dashed', 'bg-error/10', 'p-2', 'rounded');
-                    if(!firstErrorElement) firstErrorElement = catsContainer;
-                }
+            if(categoryErrors.length > 0) {
+                validationErrors.push(`📄 ${file.name}: ${categoryErrors.join(', ')}`);
+                const cascade = document.getElementById(`cascade-${i}`);
+                if(cascade && !firstErrorElement) firstErrorElement = cascade;
             }
         }
         
         if(validationErrors.length > 0) {
-            // Scroll to first error
             if(firstErrorElement) {
                 firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             
-            // Show detailed error message
             const errorMessage = `
                 <div style="text-align: left;">
                     <strong>⚠️ Vui lòng điền đầy đủ thông tin bắt buộc:</strong>
@@ -537,7 +788,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             const fileName = document.querySelector(`.fileName[data-index="${i}"]`)?.value || '';
             const description = document.querySelector(`.fileDescription[data-index="${i}"]`)?.value || '';
             const isPublic = document.querySelector(`.filePrivacy[data-index="${i}"]`)?.checked ? 1 : 0;
-            const categories = fileCategories[i] || [];
+            const categories = fileCategories[i];
 
             try {
                 await uploadFileSequential(file, fileName, description, isPublic, categories, i, selectedFiles.length);
@@ -577,9 +828,9 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             formData.append('description', description);
             formData.append('is_public', isPublic);
             
-            // Add categories as JSON array
-            if (categories && categories.length > 0) {
-                formData.append('categories', JSON.stringify(categories));
+            // Add category data as JSON
+            if (categories) {
+                formData.append('category_data', JSON.stringify(categories));
             }
 
             const progressItem = document.createElement('div');
@@ -624,7 +875,6 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                         if(response.needs_client_processing && response.doc_id && response.pdf_path_for_processing) {
                             status.innerHTML = '✓ <span class="text-success">Success</span> | Processing PDF...';
                             try {
-                                // Use shared function to count pages and generate thumbnail
                                 const result = await processPdfDocument(
                                     response.pdf_path_for_processing,
                                     response.doc_id,
@@ -682,5 +932,4 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-warning';
         alertMessage.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
     }
-
 </script>
