@@ -223,27 +223,27 @@ if($is_logged_in) {
     $user_saved = $saved ? true : false;
 }
 
-// Get category IDs for current document
-$category_ids = [];
-if($doc_category) {
-    $cats_array = [['name' => $doc_category['education_level_name']]];
-    foreach($cats_array as $cats) {
-        foreach($cats as $cat) {
-            $category_ids[] = intval($cat['id']);
-        }
-    }
-}
-
-// Get documents from same categories (More from Category)
+// Get documents from same category (More from Category)
 $category_docs = [];
-if(!empty($category_ids)) {
-    $ids_str = implode(',', $category_ids);
+if($doc_category) {
+    // Build WHERE clause based on category type
+    $cat_where = "dc.education_level = '" . mysqli_real_escape_string($conn, $doc_category['education_level']) . "'";
+    
+    // For phổ thông: match by subject
+    if(isset($doc_category['subject_code']) && $doc_category['subject_code']) {
+        $cat_where .= " AND dc.subject_code = '" . mysqli_real_escape_string($conn, $doc_category['subject_code']) . "'";
+    }
+    // For đại học: match by major
+    elseif(isset($doc_category['major_code']) && $doc_category['major_code']) {
+        $cat_where .= " AND dc.major_code = '" . mysqli_real_escape_string($conn, $doc_category['major_code']) . "'";
+    }
+    
     $category_query = "
         SELECT DISTINCT d.*, u.username
         FROM documents d
         JOIN users u ON d.user_id = u.id
         JOIN document_categories dc ON d.id = dc.document_id
-        WHERE dc.category_id IN ($ids_str)
+        WHERE $cat_where
         AND d.id != $doc_id
         AND d.status = 'approved'
         AND d.is_public = TRUE
@@ -251,8 +251,10 @@ if(!empty($category_ids)) {
         LIMIT 8
     ";
     $category_result = mysqli_query($conn, $category_query);
-    while($row = mysqli_fetch_assoc($category_result)) {
-        $category_docs[] = $row;
+    if($category_result) {
+        while($row = mysqli_fetch_assoc($category_result)) {
+            $category_docs[] = $row;
+        }
     }
 }
 
@@ -881,13 +883,11 @@ include 'includes/sidebar.php';
                                 <i class="fa-regular fa-bookmark"></i>
                                 Saved
                             </button> -->
-                            <?php if(!empty($doc['description']) || $doc_category): ?>
                             <button class="btn btn-ghost btn-sm" onclick="toggleDocInfo()" id="infoToggleBtn">
                                 <i class="fa-solid fa-circle-info"></i>
                                 Info
                                 <span class="info-toggle-arrow" id="infoToggleArrow">▼</span>
                             </button>
-                            <?php endif; ?>
                             <button class="btn btn-ghost btn-sm" onclick="document.location='dashboard.php'">
                                 <i class="fa-solid fa-arrow-left"></i>
                                 Back
@@ -928,91 +928,95 @@ include 'includes/sidebar.php';
         </div>
 
         <!-- Document Info Section (Collapsible) -->
-        <?php if(!empty($doc['description']) || $doc_category): ?>
         <div class="document-info-section grid grid-cols-1 md:grid-cols-2 gap-4" id="documentInfoSection" style="display: none;">
-            <?php if(!empty($doc['description'])): ?>
+            <!-- Description Card -->
             <div class="card bg-base-100 shadow-md">
                 <div class="card-title rounded-t-xl bg-primary text-white p-4">
                     <i class="fa-solid fa-file-lines"></i>
                     <h3>Mô Tả Tài Liệu</h3>
                 </div>
                 <div class="card-body">
-                    <p class="text-sm leading-relaxed whitespace-pre-wrap"><?= htmlspecialchars($doc['description']) ?></p>
+                    <?php if(!empty($doc['description'])): ?>
+                        <p class="text-sm leading-relaxed whitespace-pre-wrap"><?= htmlspecialchars($doc['description']) ?></p>
+                    <?php else: ?>
+                        <p class="text-sm text-base-content/50 italic">Chưa có mô tả cho tài liệu này.</p>
+                    <?php endif; ?>
                 </div>
             </div>
-            <?php endif; ?>
             
-            <?php if($doc_category): ?>
+            <!-- Categories Card -->
             <div class="card bg-base-100 shadow-md">
-                <div class="card-title rounded-t-xl bg-primary text-white p-4">
+                <div class="card-title rounded-t-xl bg-secondary text-white p-4">
                     <i class="fa-solid fa-folder"></i>
                     <h3>Phân Loại</h3>
                 </div>
                 <div class="card-body">
-                    <!-- Cấp học -->
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-graduation-cap text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Cấp học</span>
+                    <?php if($doc_category): ?>
+                        <!-- Cấp học -->
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-graduation-cap text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Cấp học</span>
+                            </div>
+                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
                         </div>
-                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
-                    </div>
-                    
-                    <?php if(isset($doc_category['grade_name'])): ?>
-                    <!-- Lớp -->
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-users text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Lớp</span>
+                        
+                        <?php if(isset($doc_category['grade_name'])): ?>
+                        <!-- Lớp -->
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-users text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Lớp</span>
+                            </div>
+                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
                         </div>
-                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
-                    </div>
-                    
-                    <!-- Môn học -->
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-book text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Môn học</span>
+                        
+                        <!-- Môn học -->
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-book text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Môn học</span>
+                            </div>
+                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
                         </div>
-                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
-                    </div>
+                        <?php endif; ?>
+                        
+                        <?php if(isset($doc_category['major_group_name'])): ?>
+                        <!-- Nhóm ngành -->
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-briefcase text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Nhóm ngành</span>
+                            </div>
+                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
+                        </div>
+                        
+                        <?php if(!empty($doc_category['major_name'])): ?>
+                        <!-- Ngành học -->
+                        <div class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-scroll text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Ngành học</span>
+                            </div>
+                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_name']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <!-- Loại tài liệu -->
+                        <div class="mb-0">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
+                                <i class="fa-solid fa-file-lines text-base-content/70"></i>
+                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Loại tài liệu</span>
+                            </div>
+                            <span class="badge badge-secondary"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-sm text-base-content/50 italic">Chưa có phân loại cho tài liệu này.</p>
                     <?php endif; ?>
-                    
-                    <?php if(isset($doc_category['major_group_name'])): ?>
-                    <!-- Nhóm ngành -->
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-briefcase text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Nhóm ngành</span>
-                        </div>
-                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
-                    </div>
-                    
-                    <?php if(!empty($doc_category['major_name'])): ?>
-                    <!-- Ngành học -->
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-scroll text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Ngành học</span>
-                        </div>
-                        <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_name']) ?></span>
-                    </div>
-                    <?php endif; ?>
-                    <?php endif; ?>
-                    
-                    <!-- Loại tài liệu -->
-                    <div class="mb-0">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                            <i class="fa-solid fa-file-lines text-base-content/70"></i>
-                            <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Loại tài liệu</span>
-                        </div>
-                        <span class="badge badge-secondary"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
-                    </div>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
-        <?php endif; ?>
 
         <!-- Document Viewer -->
         <div class="card bg-base-100 shadow-lg <?= !$has_purchased ? 'protected' : '' ?>" id="documentViewer">
