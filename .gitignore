@@ -4,3 +4,4 @@ vendor/
 *.pdf
 config/db.php
 .env
+API/pdfservices-api-credentials.json
