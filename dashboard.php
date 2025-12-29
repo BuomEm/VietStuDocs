@@ -301,10 +301,14 @@ if(isset($_GET['download'])) {
                             <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
                             <p class="text-xs text-base-content/70">' . htmlspecialchars($doc_type) . '</p>
                             <div class="card-actions justify-center mt-2">
-                                <div class="badge badge-outline gap-1">
-                                    <i class="fa-regular fa-thumbs-up"></i>
-                                    <span>' . $like_percentage . '%</span>
-                                    <span class="text-xs">(' . $likes . ')</span>
+                                <div class="flex items-center gap-2 w-full">
+                                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
+                                        <i class="fa-regular fa-thumbs-up text-xs"></i>
+                                    </div>
+                                    <div class="flex-1 h-6 bg-success/80 rounded-full flex items-center justify-center gap-1">
+                                        <span class="text-white font-semibold text-sm">' . $like_percentage . '%</span>
+                                        <span class="text-white/80 text-xs">(' . $likes . ')</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -540,10 +544,14 @@ if(isset($_GET['download'])) {
                             <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
                             <p class="text-xs text-base-content/70">' . htmlspecialchars($doc_type) . '</p>
                             <div class="card-actions justify-center mt-2">
-                                <div class="badge badge-outline gap-1">
-                                    <i class="fa-regular fa-thumbs-up"></i>
-                                    <span>' . $like_percentage . '%</span>
-                                    <span class="text-xs">(' . $likes . ')</span>
+                                <div class="flex items-center gap-2 w-full">
+                                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
+                                        <i class="fa-regular fa-thumbs-up text-xs"></i>
+                                    </div>
+                                    <div class="flex-1 h-6 bg-success/80 rounded-full flex items-center justify-center gap-1">
+                                        <span class="text-white font-semibold text-sm">' . $like_percentage . '%</span>
+                                        <span class="text-white/80 text-xs">(' . $likes . ')</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

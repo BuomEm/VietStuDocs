@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/points.php';
 redirectIfNotAdmin();
 
 $admin_id = getCurrentUserId();
-$page_title = "All Documents - Admin Panel";
+$page_title = "Tất cả tài liệu - Admin Panel";
 
 // Handle actions
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -127,829 +127,629 @@ $unread_notifications = mysqli_num_rows(mysqli_query($conn,
 
 // For shared admin sidebar
 $admin_active_page = 'documents';
+
+// Include header
+include __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($page_title) ?></title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .admin-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .admin-sidebar {
-            width: 260px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            position: fixed;
-            height: 100vh;
-            left: 0;
-            top: 0;
-            overflow-y: auto;
-        }
-
-        .admin-sidebar h2 {
-            font-size: 20px;
-            margin-bottom: 30px;
-            text-align: center;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-            padding-bottom: 15px;
-        }
-
-        .admin-sidebar nav a {
-            display: block;
-            padding: 12px 15px;
-            color: white;
-            text-decoration: none;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .admin-sidebar nav a:hover,
-        .admin-sidebar nav a.active {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .admin-sidebar .logout {
-            margin-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-            padding-top: 15px;
-        }
-
-        .admin-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 30px;
-        }
-
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .admin-header h1 {
-            font-size: 24px;
-            color: #333;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border-left: 4px solid #667eea;
-        }
-
-        .stat-card h3 {
-            font-size: 12px;
-            color: #999;
-            font-weight: 600;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .stat-card .value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-card.pending {
-            border-left-color: #ff9800;
-        }
-
-        .stat-card.pending .value {
-            color: #ff9800;
-        }
-
-        .stat-card.approved {
-            border-left-color: #4caf50;
-        }
-
-        .stat-card.approved .value {
-            color: #4caf50;
-        }
-
-        .stat-card.rejected {
-            border-left-color: #f44336;
-        }
-
-        .stat-card.rejected .value {
-            color: #f44336;
-        }
-
-        .content-section {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-
-        .content-section h2 {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #333;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .filter-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-bar input,
-        .filter-bar select {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .filter-bar input[type="search"] {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .filter-bar button {
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .filter-bar button:hover {
-            background: #764ba2;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 13px;
-        }
-
-        .data-table thead {
-            background: #f9f9f9;
-        }
-
-        .data-table th {
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #666;
-            border-bottom: 2px solid #eee;
-        }
-
-        .data-table td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .data-table tr:hover {
-            background: #fafafa;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-pending {
-            background: #fff3cd;
-            color: #ff9800;
-        }
-
-        .badge-approved {
-            background: #d4edda;
-            color: #4caf50;
-        }
-
-        .badge-rejected {
-            background: #f8d7da;
-            color: #f44336;
-        }
-
-        .badge-public {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .badge-private {
-            background: #f5f5f5;
-            color: #666;
-        }
-
-        .action-btn {
-            padding: 6px 12px;
-            margin-right: 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            text-decoration: none;
-            transition: all 0.3s;
-            display: inline-block;
-        }
-
-        .action-btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .action-btn-primary:hover {
-            background: #764ba2;
-        }
-
-        .action-btn-success {
-            background: #4caf50;
-            color: white;
-        }
-
-        .action-btn-success:hover {
-            background: #45a049;
-        }
-
-        .action-btn-warning {
-            background: #ff9800;
-            color: white;
-        }
-
-        .action-btn-warning:hover {
-            background: #f57c00;
-        }
-
-        .action-btn-danger {
-            background: #f44336;
-            color: white;
-        }
-
-        .action-btn-danger:hover {
-            background: #d32f2f;
-        }
-
-        .action-btn-secondary {
-            background: #999;
-            color: white;
-        }
-
-        .action-btn-secondary:hover {
-            background: #777;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-
-        .modal-header h2 {
-            font-size: 20px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 25px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-danger {
-            background: #f44336;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #999;
-            color: white;
-        }
-
-        .pagination {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .pagination a,
-        .pagination span {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            text-decoration: none;
-            color: #333;
-        }
-
-        .pagination a:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .pagination .active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        @media (max-width: 768px) {
-            .admin-sidebar {
-                width: 200px;
-            }
-
-            .admin-content {
-                margin-left: 200px;
-            }
-
-            .data-table {
-                font-size: 11px;
-            }
-
-            .data-table th,
-            .data-table td {
-                padding: 8px;
-            }
-        }
-</style>
-</head>
-<body>
-    <div class="admin-container">
-        <!-- Sidebar -->
-        <?php include __DIR__ . '/../includes/admin-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <div class="admin-content">
-            <!-- Header -->
-            <div class="admin-header">
-                <h1>📚 All Documents Management</h1>
+<!-- Page Header -->
+<div class="p-6 bg-base-100 border-b border-base-300">
+    <div class="container mx-auto max-w-7xl">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-files"></i>
+                    Quản lý tài liệu
+                </h2>
+                <p class="text-base-content/70 mt-1">Tổng cộng <?= number_format($total_documents) ?> tài liệu</p>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-success" onclick="openBatchThumbnailModal()">
+                    <i class="fa-solid fa-image mr-2"></i>
+                    Tạo Thumbnails
+                </button>
+            </div>
+        </div>
+    </div>
             </div>
 
+<!-- Page Body -->
+<div class="p-6">
+    <div class="container mx-auto max-w-7xl">
             <!-- Status Messages -->
             <?php if(isset($_GET['msg'])): ?>
-                <?php if($_GET['msg'] === 'approved'): ?>
-                    <div class="alert alert-success">✓ Document approved successfully!</div>
-                <?php elseif($_GET['msg'] === 'rejected'): ?>
-                    <div class="alert alert-success">✓ Document rejected successfully!</div>
-                <?php elseif($_GET['msg'] === 'deleted'): ?>
-                    <div class="alert alert-success">✓ Document deleted successfully!</div>
-                <?php elseif($_GET['msg'] === 'status_changed'): ?>
-                    <div class="alert alert-success">✓ Document status changed successfully!</div>
-                <?php endif; ?>
+            <div class="alert alert-success mb-4">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>
+                    <?php 
+                    $messages = [
+                        'approved' => 'Tài liệu đã được duyệt thành công!',
+                        'rejected' => 'Tài liệu đã bị từ chối!',
+                        'deleted' => 'Tài liệu đã bị xóa!',
+                        'status_changed' => 'Trạng thái tài liệu đã được thay đổi!'
+                    ];
+                    echo $messages[$_GET['msg']] ?? 'Thao tác thành công!';
+                    ?>
+                </span>
+            </div>
             <?php endif; ?>
 
             <!-- Statistics -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Documents</h3>
-                    <div class="value"><?= number_format($stats['total_documents']) ?></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng tài liệu</div>
+                    <div class="stat-value text-primary text-3xl font-bold"><?= number_format($stats['total_documents']) ?></div>
                 </div>
-                <div class="stat-card pending">
-                    <h3>Pending</h3>
-                    <div class="value"><?= number_format($stats['pending_count']) ?></div>
                 </div>
-                <div class="stat-card approved">
-                    <h3>Approved</h3>
-                    <div class="value"><?= number_format($stats['approved_count']) ?></div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Chờ duyệt</div>
+                    <div class="stat-value text-warning text-3xl font-bold"><?= number_format($stats['pending_count']) ?></div>
                 </div>
-                <div class="stat-card rejected">
-                    <h3>Rejected</h3>
-                    <div class="value"><?= number_format($stats['rejected_count']) ?></div>
                 </div>
-                <div class="stat-card">
-                    <h3>Public Documents</h3>
-                    <div class="value"><?= number_format($stats['public_count']) ?></div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Đã duyệt</div>
+                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['approved_count']) ?></div>
                 </div>
-                <div class="stat-card">
-                    <h3>Total Points Assigned</h3>
-                    <div class="value"><?= number_format($stats['total_points_assigned']) ?></div>
                 </div>
-                <div class="stat-card">
-                    <h3>Total Sales</h3>
-                    <div class="value"><?= number_format($stats['total_sales']) ?></div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Từ chối</div>
+                    <div class="stat-value text-error text-3xl font-bold"><?= number_format($stats['rejected_count']) ?></div>
                 </div>
-                <div class="stat-card">
-                    <h3>Total Points Earned</h3>
-                    <div class="value"><?= number_format($stats['total_points_earned'] ?? 0) ?></div>
+            </div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Public</div>
+                    <div class="stat-value text-info text-3xl font-bold"><?= number_format($stats['public_count']) ?></div>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng điểm gán</div>
+                    <div class="stat-value text-secondary text-3xl font-bold"><?= number_format($stats['total_points_assigned']) ?></div>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Lượt bán</div>
+                    <div class="stat-value text-accent text-3xl font-bold"><?= number_format($stats['total_sales']) ?></div>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng doanh thu</div>
+                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['total_points_earned'] ?? 0) ?></div>
+                </div>
                 </div>
             </div>
 
-            <!-- Documents List -->
-            <div class="content-section">
-                <h2>All Documents</h2>
+        <!-- Documents Table Card -->
+        <div class="card bg-base-100 shadow">
+            <div class="card-header bg-base-200">
+                <h3 class="card-title">
+                    <i class="fa-solid fa-list mr-2"></i>
+                    Danh sách tài liệu
+                </h3>
+            </div>
 
                 <!-- Filter Bar -->
-                <form method="GET" class="filter-bar">
-                    <input type="search" name="search" placeholder="Search by document name, user, or description..." value="<?= htmlspecialchars($search) ?>">
-                    <select name="status">
-                        <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Status</option>
-                        <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="approved" <?= $status_filter === 'approved' ? 'selected' : '' ?>>Approved</option>
-                        <option value="rejected" <?= $status_filter === 'rejected' ? 'selected' : '' ?>>Rejected</option>
+            <div class="card-body border-b border-base-300">
+                <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div class="md:col-span-4">
+                        <input type="text" name="search" class="input input-bordered w-full" placeholder="Tìm kiếm..." value="<?= htmlspecialchars($search) ?>">
+                    </div>
+                    <div class="md:col-span-2">
+                        <select name="status" class="select select-bordered w-full">
+                            <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>Tất cả</option>
+                            <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Chờ duyệt</option>
+                            <option value="approved" <?= $status_filter === 'approved' ? 'selected' : '' ?>>Đã duyệt</option>
+                            <option value="rejected" <?= $status_filter === 'rejected' ? 'selected' : '' ?>>Từ chối</option>
                     </select>
-                    <select name="user">
-                        <option value="0" <?= $user_filter === 0 ? 'selected' : '' ?>>All Users</option>
+                    </div>
+                    <div class="md:col-span-2">
+                        <select name="user" class="select select-bordered w-full">
+                            <option value="0">Tất cả người dùng</option>
                         <?php while($user = mysqli_fetch_assoc($users_list)): ?>
                             <option value="<?= $user['id'] ?>" <?= $user_filter == $user['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($user['username']) ?>
                             </option>
                         <?php endwhile; ?>
                     </select>
-                    <button type="submit">🔍 Filter</button>
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="btn btn-primary w-full">
+                            <i class="fa-solid fa-filter mr-2"></i>Lọc
+                        </button>
+                    </div>
                     <?php if($search || $status_filter !== 'all' || $user_filter > 0): ?>
-                        <a href="all-documents.php" style="padding: 10px 20px; background: #999; color: white; text-decoration: none; border-radius: 4px;">Clear</a>
+                        <div class="md:col-span-2">
+                            <a href="all-documents.php" class="btn btn-ghost w-full">
+                                <i class="fa-solid fa-xmark mr-2"></i>Xóa bộ lọc
+                            </a>
+                        </div>
                     <?php endif; ?>
-                    <button type="button" onclick="openBatchThumbnailModal()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
-                        🖼️ Generate Missing Thumbnails
-                    </button>
                 </form>
+            </div>
 
-                <?php if(mysqli_num_rows($documents) > 0): ?>
-                    <table class="data-table">
+            <!-- Table -->
+            <?php 
+            // Format file size helper function
+            if(!function_exists('formatBytes')) {
+                function formatBytes($bytes) {
+                    if ($bytes === 0) return '0 B';
+                    $k = 1024;
+                    $sizes = ['B', 'KB', 'MB', 'GB'];
+                    $i = floor(log($bytes) / log($k));
+                    return round($bytes / pow($k, $i), 1) . ' ' . $sizes[$i];
+                }
+            }
+            
+            if(mysqli_num_rows($documents) > 0): ?>
+                <div class="overflow-x-auto">
+                    <table class="table">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Document</th>
-                                <th>Owner</th>
-                                <th>Status</th>
-                                <th>Points</th>
-                                <th>Sales</th>
-                                <th>Privacy</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <th>Tài liệu</th>
+                                <th>Chủ sở hữu</th>
+                                <th>Trạng thái</th>
+                                <th>Thông tin</th>
+                                <th>Điểm/Bán</th>
+                                <th>Ngày tạo</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php while($doc = mysqli_fetch_assoc($documents)): 
                                 $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                                 $icon_map = [
-                                    'pdf' => '📄', 'doc' => '📄', 'docx' => '📄',
-                                    'txt' => '📝', 'xlsx' => '📊', 'ppt' => '🎬',
-                                    'jpg' => '🖼️', 'png' => '🖼️', 'jpeg' => '🖼️',
-                                    'zip' => '🗂️', 'rar' => '🗂️'
+                                    'pdf' => 'fa-file-pdf',
+                                    'doc' => 'fa-file-word',
+                                    'docx' => 'fa-file-word',
+                                    'txt' => 'fa-file-lines',
+                                    'xlsx' => 'fa-file-excel',
+                                    'xls' => 'fa-file-excel',
+                                    'ppt' => 'fa-file-powerpoint',
+                                    'pptx' => 'fa-file-powerpoint',
+                                    'jpg' => 'fa-file-image',
+                                    'jpeg' => 'fa-file-image',
+                                    'png' => 'fa-file-image',
+                                    'zip' => 'fa-file-zipper',
+                                    'rar' => 'fa-file-zipper'
                                 ];
-                                $icon = $icon_map[$ext] ?? '📁';
+                                $icon = $icon_map[$ext] ?? 'fa-file';
+                                
+                                $color_map = [
+                                    'pdf' => 'bg-error',
+                                    'doc' => 'bg-info',
+                                    'docx' => 'bg-info',
+                                    'txt' => 'bg-base-300',
+                                    'xlsx' => 'bg-success',
+                                    'xls' => 'bg-success',
+                                    'ppt' => 'bg-warning',
+                                    'pptx' => 'bg-warning',
+                                    'jpg' => 'bg-secondary',
+                                    'jpeg' => 'bg-secondary',
+                                    'png' => 'bg-secondary'
+                                ];
+                                $bg_color = $color_map[$ext] ?? 'bg-neutral';
+                                
+                                // Get file path for size calculation
+                                $file_path = "../uploads/" . $doc['file_name'];
+                                $file_size = file_exists($file_path) ? filesize($file_path) : 0;
                             ?>
-                                <tr>
-                                    <td><?= $doc['id'] ?></td>
+                                <tr class="hover">
                                     <td>
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <span style="font-size: 20px;"><?= $icon ?></span>
-                                            <div>
-                                                <strong><?= htmlspecialchars(substr($doc['original_name'], 0, 40)) ?></strong>
+                                        <div class="flex items-center gap-3">
+                                            <div class="avatar placeholder">
+                                                <div class="<?= $bg_color ?> text-white rounded w-12 h-12">
+                                                    <i class="fa-solid <?= $icon ?> text-xl"></i>
+                                                </div>
+                                            </div>
+                                            <div class="max-w-[250px]">
+                                                <a href="view-document.php?id=<?= $doc['id'] ?>" class="font-bold text-sm truncate hover:text-primary hover:underline cursor-pointer block" title="<?= htmlspecialchars($doc['original_name']) ?>">
+                                                    <?= htmlspecialchars($doc['original_name']) ?>
+                                                </a>
                                                 <?php if($doc['description']): ?>
-                                                    <br><small style="color: #999;"><?= htmlspecialchars(substr($doc['description'], 0, 50)) ?>...</small>
+                                                    <div class="text-base-content/70 text-xs truncate">
+                                                        <?= htmlspecialchars(substr($doc['description'], 0, 50)) ?>...
+                                                    </div>
                                                 <?php endif; ?>
+                                                <div class="flex gap-2 mt-1">
+                                                    <span class="badge badge-xs badge-ghost">.<?= strtoupper($ext) ?></span>
+                                                    <span class="badge badge-xs badge-ghost">ID: <?= $doc['id'] ?></span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <strong><?= htmlspecialchars($doc['username'] ?? 'Unknown') ?></strong>
-                                        <br><small style="color: #999;"><?= htmlspecialchars($doc['email'] ?? '') ?></small>
+                                        <div class="flex items-center gap-2">
+                                            <div class="avatar placeholder">
+                                                <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                                    <span class="text-xs"><?= strtoupper(substr($doc['username'] ?? 'U', 0, 2)) ?></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-sm"><?= htmlspecialchars($doc['username'] ?? 'Unknown') ?></div>
+                                                <div class="text-base-content/70 text-xs"><?= htmlspecialchars(substr($doc['email'] ?? '', 0, 20)) ?></div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <span class="badge badge-<?= $doc['status'] ?>">
-                                            <?= ucfirst($doc['status']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if($doc['status'] === 'approved'): ?>
-                                            <strong><?= number_format($doc['admin_points'] ?? $doc['assigned_points'] ?? 0) ?></strong> pts
-                                        <?php else: ?>
-                                            <span style="color: #999;">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if($doc['status'] === 'approved'): ?>
-                                            <strong><?= $doc['sales_count'] ?? 0 ?></strong> sales
-                                            <br><small style="color: #999;"><?= number_format($doc['total_earned'] ?? 0) ?> pts earned</small>
-                                        <?php else: ?>
-                                            <span style="color: #999;">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge <?= $doc['is_public'] ? 'badge-public' : 'badge-private' ?>">
-                                            <?= $doc['is_public'] ? 'Public' : 'Private' ?>
-                                        </span>
-                                    </td>
-                                    <td><?= date('M d, Y', strtotime($doc['created_at'])) ?></td>
-                                    <td>
-                                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                                            <a href="../view.php?id=<?= $doc['id'] ?>" target="_blank" class="action-btn action-btn-secondary">👁️ View</a>
+                                        <div class="space-y-1">
                                             <?php if($doc['status'] === 'pending'): ?>
-                                                <button class="action-btn action-btn-success" onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">✓ Approve</button>
-                                                <button class="action-btn action-btn-warning" onclick="openRejectModal(<?= $doc['id'] ?>)">✗ Reject</button>
+                                                <div class="badge badge-warning gap-1">
+                                                    <i class="fa-solid fa-clock text-xs"></i>
+                                                    Chờ
+                                                </div>
                                             <?php elseif($doc['status'] === 'approved'): ?>
-                                                <button class="action-btn action-btn-warning" onclick="openChangeStatusModal(<?= $doc['id'] ?>, '<?= $doc['status'] ?>')">🔄 Change Status</button>
-                                            <?php elseif($doc['status'] === 'rejected'): ?>
-                                                <button class="action-btn action-btn-primary" onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">✓ Approve</button>
-                                                <button class="action-btn action-btn-warning" onclick="openChangeStatusModal(<?= $doc['id'] ?>, '<?= $doc['status'] ?>')">🔄 Change Status</button>
+                                                <div class="badge badge-success gap-1">
+                                                    <i class="fa-solid fa-circle-check text-xs"></i>
+                                                    Duyệt
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="badge badge-error gap-1">
+                                                    <i class="fa-solid fa-circle-xmark text-xs"></i>
+                                                    Từ chối
+                                                </div>
                                             <?php endif; ?>
-                                            <button class="action-btn action-btn-danger" onclick="deleteDocument(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">🗑️ Delete</button>
+                                            
+                                            <?php if($doc['is_public']): ?>
+                                                <div class="badge badge-info badge-sm gap-1">
+                                                    <i class="fa-solid fa-globe text-xs"></i>
+                                                    Public
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="badge badge-outline badge-sm gap-1">
+                                                    <i class="fa-solid fa-lock text-xs"></i>
+                                                    Private
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="space-y-1 text-xs">
+                                            <div class="flex items-center gap-1">
+                                                <i class="fa-solid fa-file text-base-content/50"></i>
+                                                <span><?= formatBytes($file_size) ?></span>
+                                            </div>
+                                            <?php if($doc['total_pages'] > 0): ?>
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fa-solid fa-file-lines text-base-content/50"></i>
+                                                    <span><?= number_format($doc['total_pages']) ?> trang</span>
+                                                </div>
+                                        <?php endif; ?>
+                                            <div class="flex items-center gap-1">
+                                                <i class="fa-solid fa-eye text-base-content/50"></i>
+                                                <span><?= number_format($doc['views'] ?? 0) ?> lượt xem</span>
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <i class="fa-solid fa-download text-base-content/50"></i>
+                                                <span><?= number_format($doc['downloads'] ?? 0) ?> lượt tải</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if($doc['status'] === 'approved'): ?>
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fa-solid fa-coins text-warning text-xs"></i>
+                                                    <span class="font-bold text-sm"><?= number_format($doc['admin_points'] ?? $doc['assigned_points'] ?? 0) ?></span>
+                                                    <span class="text-xs text-base-content/70">điểm</span>
+                                                </div>
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fa-solid fa-cart-shopping text-success text-xs"></i>
+                                                    <span class="font-bold text-sm"><?= $doc['sales_count'] ?? 0 ?></span>
+                                                    <span class="text-xs text-base-content/70">bán</span>
+                                                </div>
+                                                <?php if(($doc['total_earned'] ?? 0) > 0): ?>
+                                                    <div class="text-success font-bold text-xs">
+                                                        <i class="fa-solid fa-sack-dollar"></i>
+                                                        <?= number_format($doc['total_earned']) ?> đ
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="text-base-content/50 text-xs">Chưa duyệt</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="text-xs text-base-content/70">
+                                            <?= date('d/m/Y', strtotime($doc['created_at'])) ?>
+                                            <div class="text-xs text-base-content/50">
+                                                <?= date('H:i', strtotime($doc['created_at'])) ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="flex gap-1">
+                                            <a href="view-document.php?id=<?= $doc['id'] ?>" class="btn btn-ghost btn-sm btn-square" title="Xem chi tiết">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                            <div class="dropdown dropdown-end">
+                                                <label tabindex="0" class="btn btn-ghost btn-sm btn-square">
+                                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                </label>
+                                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                                    <li>
+                                                        <a href="view-document.php?id=<?= $doc['id'] ?>">
+                                                            <i class="fa-solid fa-eye"></i>Xem chi tiết
+                                                        </a>
+                                                    </li>
+                                            <?php if($doc['status'] === 'pending'): ?>
+                                                        <li>
+                                                            <a class="text-success" onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">
+                                                                <i class="fa-solid fa-check"></i>Duyệt
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="text-warning" onclick="openRejectModal(<?= $doc['id'] ?>)">
+                                                                <i class="fa-solid fa-xmark"></i>Từ chối
+                                                            </a>
+                                                        </li>
+                                            <?php elseif($doc['status'] === 'approved'): ?>
+                                                        <li>
+                                                            <a onclick="openChangeStatusModal(<?= $doc['id'] ?>, '<?= $doc['status'] ?>')">
+                                                                <i class="fa-solid fa-arrows-rotate"></i>Đổi trạng thái
+                                                            </a>
+                                                        </li>
+                                            <?php elseif($doc['status'] === 'rejected'): ?>
+                                                        <li>
+                                                            <a class="text-success" onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">
+                                                                <i class="fa-solid fa-check"></i>Duyệt
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a onclick="openChangeStatusModal(<?= $doc['id'] ?>, '<?= $doc['status'] ?>')">
+                                                                <i class="fa-solid fa-arrows-rotate"></i>Đổi trạng thái
+                                                            </a>
+                                                        </li>
+                                            <?php endif; ?>
+                                                    <li class="menu-title"><span>Nguy hiểm</span></li>
+                                                    <li>
+                                                        <a class="text-error" onclick="deleteDocument(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')">
+                                                            <i class="fa-solid fa-trash"></i>Xóa
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
+                </div>
 
                     <!-- Pagination -->
                     <?php if($total_pages > 1): ?>
-                        <div class="pagination">
+                    <div class="card-footer flex items-center justify-between border-t border-base-300 p-4">
+                        <div class="text-base-content/70 text-sm">
+                            Hiển thị <span class="font-bold"><?= $offset + 1 ?></span> đến <span class="font-bold"><?= min($offset + $per_page, $total_documents) ?></span> trong <span class="font-bold"><?= $total_documents ?></span> kết quả
+                        </div>
+                        <div class="join">
                             <?php if($page > 1): ?>
-                                <a href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>">« Prev</a>
+                                <a href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>" class="join-item btn btn-sm">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </a>
                             <?php endif; ?>
                             
                             <?php for($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                <?php if($i == $page): ?>
-                                    <span class="active"><?= $i ?></span>
-                                <?php else: ?>
-                                    <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>"><?= $i ?></a>
-                                <?php endif; ?>
+                                <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>" 
+                                   class="join-item btn btn-sm <?= $i == $page ? 'btn-primary btn-active' : '' ?>">
+                                    <?= $i ?>
+                                </a>
                             <?php endfor; ?>
                             
                             <?php if($page < $total_pages): ?>
-                                <a href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>">Next »</a>
+                                <a href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>&user=<?= $user_filter ?>" class="join-item btn btn-sm">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </a>
                             <?php endif; ?>
+                        </div>
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
-                    <div style="text-align: center; padding: 40px; color: #999;">No documents found</div>
+                <div class="card-body">
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-file-circle-xmark text-6xl text-base-content/30 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Không tìm thấy tài liệu</h3>
+                        <p class="text-base-content/70 mb-4">Không có tài liệu nào phù hợp với bộ lọc của bạn.</p>
+                        <a href="all-documents.php" class="btn btn-primary">
+                            <i class="fa-solid fa-rotate mr-2"></i>Xóa bộ lọc
+                        </a>
+                    </div>
+                </div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <!-- Approve Modal -->
-    <div id="approveModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>✓ Approve Document</h2>
-                <button class="close-btn" onclick="closeModal('approveModal')">×</button>
-            </div>
+<input type="checkbox" id="approveModal" class="modal-toggle" />
+<div class="modal">
+    <div class="modal-box">
             <form method="POST">
                 <input type="hidden" name="document_id" id="approve_doc_id">
                 <input type="hidden" name="action" value="approve">
 
-                <div class="form-group">
-                    <label for="doc_title">Document</label>
-                    <input type="text" id="doc_title" readonly style="background: #f5f5f5;">
+            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-check text-success"></i>
+                Duyệt tài liệu
+            </h3>
+            
+            <div class="form-control mb-3">
+                <label class="label">
+                    <span class="label-text">Tài liệu</span>
+                </label>
+                <input type="text" id="doc_title" class="input input-bordered" readonly>
                 </div>
 
-                <div class="form-group">
-                    <label for="points">🎯 Points Value</label>
-                    <input type="number" id="points" name="points" min="1" max="1000" value="50" required>
-                    <small style="color: #999;">Maximum points users can set for selling this document</small>
+            <div class="form-control mb-3">
+                <label class="label">
+                    <span class="label-text">Giá trị điểm <span class="text-error">*</span></span>
+                </label>
+                <div class="join w-full">
+                    <span class="join-item btn btn-disabled"><i class="fa-solid fa-coins"></i></span>
+                    <input type="number" id="points" name="points" class="input input-bordered join-item flex-1" min="1" max="1000" value="50" required>
+                    <span class="join-item btn btn-disabled">điểm</span>
+                </div>
+                <label class="label">
+                    <span class="label-text-alt">Đây là giá tối đa người dùng có thể đặt để bán tài liệu này</span>
+                </label>
                 </div>
 
-                <div class="form-group">
-                    <label for="notes">📝 Admin Notes</label>
-                    <textarea id="notes" name="notes" placeholder="Add any notes about this document..."></textarea>
+            <div class="form-control mb-3">
+                <label class="label">
+                    <span class="label-text">Ghi chú Admin</span>
+                </label>
+                <textarea id="notes" name="notes" class="textarea textarea-bordered" rows="3" placeholder="Thêm ghi chú..."></textarea>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">✓ Approve</button>
+            <div class="modal-action">
+                <label for="approveModal" class="btn btn-ghost">Hủy</label>
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-check mr-2"></i>Duyệt
+                </button>
                 </div>
             </form>
         </div>
+    <label class="modal-backdrop" for="approveModal">Close</label>
     </div>
 
     <!-- Reject Modal -->
-    <div id="rejectModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>✗ Reject Document</h2>
-                <button class="close-btn" onclick="closeModal('rejectModal')">×</button>
-            </div>
+<input type="checkbox" id="rejectModal" class="modal-toggle" />
+<div class="modal">
+    <div class="modal-box">
             <form method="POST">
                 <input type="hidden" name="document_id" id="reject_doc_id">
                 <input type="hidden" name="action" value="reject">
 
-                <div class="form-group">
-                    <label for="reason">❌ Rejection Reason</label>
-                    <textarea id="reason" name="rejection_reason" placeholder="Why are you rejecting this document?" required></textarea>
+            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-xmark text-error"></i>
+                Từ chối tài liệu
+            </h3>
+            
+            <div class="form-control mb-3">
+                <label class="label">
+                    <span class="label-text">Lý do từ chối <span class="text-error">*</span></span>
+                </label>
+                <textarea id="reason" name="rejection_reason" class="textarea textarea-bordered" rows="4" placeholder="Giải thích lý do..." required></textarea>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
-                    <button type="submit" class="btn btn-danger">✗ Reject</button>
+            <div class="alert alert-warning mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Người dùng sẽ nhận được thông báo về lý do từ chối này.</span>
+            </div>
+            
+            <div class="modal-action">
+                <label for="rejectModal" class="btn btn-ghost">Hủy</label>
+                <button type="submit" class="btn btn-error">
+                    <i class="fa-solid fa-xmark mr-2"></i>Từ chối
+                </button>
                 </div>
             </form>
         </div>
+    <label class="modal-backdrop" for="rejectModal">Close</label>
     </div>
 
     <!-- Change Status Modal -->
-    <div id="changeStatusModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔄 Change Document Status</h2>
-                <button class="close-btn" onclick="closeModal('changeStatusModal')">×</button>
-            </div>
+<input type="checkbox" id="changeStatusModal" class="modal-toggle" />
+<div class="modal">
+    <div class="modal-box">
             <form method="POST">
                 <input type="hidden" name="document_id" id="change_status_doc_id">
                 <input type="hidden" name="action" value="change_status">
 
-                <div class="form-group">
-                    <label for="new_status">New Status</label>
-                    <select id="new_status" name="new_status" required>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
+            <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                Đổi trạng thái
+            </h3>
+            
+            <div class="form-control mb-3">
+                <label class="label">
+                    <span class="label-text">Trạng thái mới <span class="text-error">*</span></span>
+                </label>
+                <select id="new_status" name="new_status" class="select select-bordered" required>
+                    <option value="pending">Chờ duyệt</option>
+                    <option value="approved">Đã duyệt</option>
+                    <option value="rejected">Từ chối</option>
                     </select>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('changeStatusModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Change Status</button>
+            <div class="modal-action">
+                <label for="changeStatusModal" class="btn btn-ghost">Hủy</label>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-check mr-2"></i>Lưu thay đổi
+                </button>
                 </div>
             </form>
         </div>
+    <label class="modal-backdrop" for="changeStatusModal">Close</label>
     </div>
 
     <!-- Batch Generate Thumbnails Modal -->
-    <div id="batchThumbnailModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header">
-                <h2>🖼️ Generate Missing Thumbnails</h2>
-                <button class="close-btn" onclick="closeModal('batchThumbnailModal')">×</button>
+<input type="checkbox" id="batchThumbnailModal" class="modal-toggle" />
+<div class="modal">
+    <div class="modal-box max-w-3xl">
+        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
+            <i class="fa-solid fa-image"></i>
+            Tạo Thumbnails hàng loạt
+        </h3>
+        
+        <div id="batchThumbnailStatus" class="mb-3">
+            <p class="text-base-content/70">Click "Bắt đầu" để tạo thumbnails cho tất cả tài liệu chưa có.</p>
             </div>
-            <div class="modal-body">
-                <div id="batchThumbnailStatus" style="margin-bottom: 20px;">
-                    <p>Click "Start" to begin generating thumbnails for all documents that don't have one.</p>
-                </div>
+        
                 <div id="batchThumbnailProgress" style="display: none;">
-                    <div style="margin-bottom: 10px;">
-                        <strong>Progress:</strong> <span id="batchProgressText">0/0</span>
+            <div class="mb-3">
+                <div class="flex justify-between mb-1">
+                    <span class="font-bold">Tiến độ:</span>
+                    <span id="batchProgressText">0/0</span>
                     </div>
-                    <div style="width: 100%; height: 30px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin-bottom: 20px;">
-                        <div id="batchProgressBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+                <progress id="batchProgressBar" class="progress progress-success w-full" value="0" max="100"></progress>
                     </div>
-                    <div id="batchThumbnailLog" style="max-height: 300px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+            
+            <div id="batchThumbnailLog" class="bg-base-200 rounded p-3 overflow-y-auto font-mono text-sm" style="max-height: 300px;">
                     </div>
                 </div>
-                <div class="form-actions" style="margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('batchThumbnailModal')" id="batchCloseBtn">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="startBatchThumbnailGeneration()" id="batchStartBtn">Start</button>
+        
+        <div class="modal-action">
+            <label for="batchThumbnailModal" class="btn btn-ghost" id="batchCloseBtn">Đóng</label>
+            <button type="button" class="btn btn-success" onclick="startBatchThumbnailGeneration()" id="batchStartBtn">
+                <i class="fa-solid fa-play mr-2"></i>Bắt đầu
+            </button>
                 </div>
             </div>
-        </div>
+    <label class="modal-backdrop" for="batchThumbnailModal">Close</label>
     </div>
 
     <!-- PDF.js for thumbnail generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Shared PDF functions for page counting and thumbnail generation -->
-    <script src="../js/pdf-functions.js"></script>
+<script src="../js/pdf-functions.js"></script>
 
     <script>
         function openApproveModal(docId, docTitle) {
             document.getElementById('approve_doc_id').value = docId;
             document.getElementById('doc_title').value = docTitle;
-            document.getElementById('approveModal').classList.add('show');
+        document.getElementById('approveModal').checked = true;
         }
 
         function openRejectModal(docId) {
             document.getElementById('reject_doc_id').value = docId;
-            document.getElementById('rejectModal').classList.add('show');
+        document.getElementById('rejectModal').checked = true;
         }
 
         function openChangeStatusModal(docId, currentStatus) {
             document.getElementById('change_status_doc_id').value = docId;
             document.getElementById('new_status').value = currentStatus;
-            document.getElementById('changeStatusModal').classList.add('show');
+        document.getElementById('changeStatusModal').checked = true;
         }
 
         function deleteDocument(docId, docTitle) {
-            if(confirm(`Are you sure you want to delete "${docTitle}"?\n\nThis action cannot be undone!`)) {
+        if(confirm(`Bạn có chắc chắn muốn xóa "${docTitle}"?\n\nHành động này không thể hoàn tác!`)) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
@@ -961,23 +761,12 @@ $admin_active_page = 'documents';
             }
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-
-        window.addEventListener('click', function(event) {
-            if(event.target.classList.contains('modal')) {
-                event.target.classList.remove('show');
-            }
-        });
-
         function openBatchThumbnailModal() {
-            document.getElementById('batchThumbnailModal').classList.add('show');
+        document.getElementById('batchThumbnailModal').checked = true;
             document.getElementById('batchThumbnailProgress').style.display = 'none';
-            document.getElementById('batchThumbnailStatus').innerHTML = '<p>Click "Start" to begin generating thumbnails for all documents that don\'t have one.</p>';
+        document.getElementById('batchThumbnailStatus').innerHTML = '<p class="text-base-content/70">Click "Bắt đầu" để tạo thumbnails cho tất cả tài liệu chưa có.</p>';
             document.getElementById('batchThumbnailLog').innerHTML = '';
             document.getElementById('batchStartBtn').disabled = false;
-            document.getElementById('batchCloseBtn').disabled = false;
         }
 
         async function startBatchThumbnailGeneration() {
@@ -987,33 +776,26 @@ $admin_active_page = 'documents';
             const progressText = document.getElementById('batchProgressText');
             const logDiv = document.getElementById('batchThumbnailLog');
             const startBtn = document.getElementById('batchStartBtn');
-            const closeBtn = document.getElementById('batchCloseBtn');
 
             startBtn.disabled = true;
-            closeBtn.disabled = true;
             progressDiv.style.display = 'block';
-            statusDiv.innerHTML = '<p><strong>Fetching documents without thumbnails...</strong></p>';
+        statusDiv.innerHTML = '<p class="text-info font-bold">Đang tải danh sách tài liệu...</p>';
 
             try {
-                // Fetch list of documents without thumbnails
                 const response = await fetch('../handler/batch_generate_thumbnails.php');
                 
-                // Check if response is OK
                 if (!response.ok) {
                     const text = await response.text();
                     throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
                 }
                 
-                // Get response text first to check for errors
                 const responseText = await response.text();
-                
-                // Try to parse as JSON
                 let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
                     console.error('Response text:', responseText);
-                    throw new Error('Invalid JSON response: ' + parseError.message + '. Response: ' + responseText.substring(0, 200));
+                throw new Error('Invalid JSON response: ' + parseError.message);
                 }
 
                 if (!data.success) {
@@ -1024,52 +806,42 @@ $admin_active_page = 'documents';
                 const total = documents.length;
 
                 if (total === 0) {
-                    statusDiv.innerHTML = '<p style="color: #10b981;"><strong>✓ All documents already have thumbnails!</strong></p>';
+                statusDiv.innerHTML = '<p class="text-success font-bold"><i class="fa-solid fa-check mr-2"></i>Tất cả tài liệu đã có thumbnails!</p>';
                     startBtn.disabled = false;
-                    closeBtn.disabled = false;
                     return;
                 }
 
-                statusDiv.innerHTML = `<p><strong>Found ${total} documents without thumbnails. Starting generation...</strong></p>`;
+            statusDiv.innerHTML = `<p class="text-info font-bold">Tìm thấy ${total} tài liệu cần tạo thumbnail...</p>`;
                 logDiv.innerHTML = '';
 
                 let successCount = 0;
                 let failCount = 0;
                 let skipCount = 0;
-                let existingPdfCount = 0; // Count of DOCX files that used existing PDF
-                let convertedCount = 0; // Count of DOCX files that were converted
 
-                // Process each document
                 for (let i = 0; i < documents.length; i++) {
                     const doc = documents[i];
                     const current = i + 1;
                     const percent = Math.round((current / total) * 100);
 
-                    progressBar.style.width = percent + '%';
+                progressBar.value = percent;
                     progressText.textContent = `${current}/${total} (${percent}%)`;
 
                     const logEntry = document.createElement('div');
-                    logEntry.style.marginBottom = '5px';
-                    logEntry.innerHTML = `[${current}/${total}] Processing: ${doc.original_name}...`;
+                logEntry.className = 'mb-1';
+                logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> Đang xử lý: ${doc.original_name}...`;
                     logDiv.appendChild(logEntry);
                     logDiv.scrollTop = logDiv.scrollHeight;
 
                     try {
-                        // Skip non-PDF/DOCX files (images already have thumbnails from server-side)
                         if (!['pdf', 'docx', 'doc'].includes(doc.file_ext)) {
-                            logEntry.innerHTML = `[${current}/${total}] ⏭️ Skipped: ${doc.original_name} (${doc.file_ext} - not PDF/DOCX)`;
-                            logEntry.style.color = '#999';
+                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name} (${doc.file_ext})</span>`;
                             skipCount++;
                             continue;
                         }
 
-                        // Get document info (for DOCX, this will convert to PDF using Adobe API)
-                        // Note: For DOCX files, countdown delay is added above before this call
                         const docInfoResponse = await fetch('../handler/batch_generate_thumbnails.php', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                        headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ doc_id: doc.id })
                         });
 
@@ -1078,77 +850,42 @@ $admin_active_page = 'documents';
                             throw new Error(`HTTP ${docInfoResponse.status}: ${text.substring(0, 100)}`);
                         }
 
-                        const responseText = await docInfoResponse.text();
-                        
-                        // Debug: Log response details
-                        console.log('Response status:', docInfoResponse.status);
-                        console.log('Response headers:', docInfoResponse.headers.get('content-type'));
-                        console.log('Response text (first 500 chars):', responseText.substring(0, 500));
-                        
-                        // Check if response looks like HTML
-                        if (responseText.trim().startsWith('<')) {
-                            console.error('Server returned HTML instead of JSON. Full response:', responseText);
-                            throw new Error('Server returned HTML instead of JSON. Response starts with: ' + responseText.substring(0, 200));
-                        }
-                        
+                    const docInfoText = await docInfoResponse.text();
+                    
+                    if (docInfoText.trim().startsWith('<')) {
+                        throw new Error('Server returned HTML instead of JSON');
+                    }
+                    
                         let docInfo;
                         try {
-                            docInfo = JSON.parse(responseText);
+                        docInfo = JSON.parse(docInfoText);
                         } catch (parseError) {
-                            console.error('JSON Parse Error:', parseError);
-                            console.error('Full response text:', responseText);
-                            throw new Error('Invalid JSON response: ' + parseError.message + '. Response (first 300 chars): ' + responseText.substring(0, 300));
+                        throw new Error('Invalid JSON response');
                         }
 
                         if (!docInfo.success) {
                             throw new Error(docInfo.message || 'Failed to get document info');
                         }
 
-                        // Handle DOCX files: Convert to PDF server-side, then process client-side
                         if (['docx', 'doc'].includes(doc.file_ext)) {
-                            // Add countdown relay to avoid rate limiting (5 seconds delay)
                             const delaySeconds = 5;
-                            logEntry.innerHTML = `[${current}/${total}] ⏳ Waiting ${delaySeconds}s before conversion (to avoid rate limiting)...`;
-                            logEntry.style.color = '#f59e0b';
+                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${delaySeconds}s...</span>`;
                             
-                            // Countdown display
                             for (let countdown = delaySeconds; countdown > 0; countdown--) {
                                 await new Promise(resolve => setTimeout(resolve, 1000));
-                                logEntry.innerHTML = `[${current}/${total}] ⏳ Waiting ${countdown}s before conversion...`;
-                                logDiv.scrollTop = logDiv.scrollHeight;
-                            }
-                            
-                            if (docInfo.skip === true) {
-                                // DOCX conversion failed
-                                logEntry.innerHTML = `[${current}/${total}] ⏭️ Skipped: ${doc.original_name} (${docInfo.message || 'Cannot convert DOCX'})`;
-                                logEntry.style.color = '#999';
+                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${countdown}s...</span>`;
+                        }
+                        
+                        if (docInfo.skip === true || !docInfo.converted_pdf_path) {
+                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name}</span>`;
                                 skipCount++;
                                 continue;
                             }
-                            
-                            // Conversion succeeded - now process the converted PDF client-side
-                            // The handler returns the converted PDF path, so we treat it as a PDF
-                            if (docInfo.converted_pdf_path) {
-                                // Track if we used existing PDF or converted new one
-                                if (docInfo.used_existing_pdf === true) {
-                                    existingPdfCount++;
-                                } else {
-                                    convertedCount++;
-                                }
-                                
-                                // Fall through to PDF processing with converted PDF path
-                                docInfo.file_path = docInfo.converted_pdf_path;
-                                docInfo.file_ext = 'pdf';
-                            } else {
-                                // No converted PDF path - skip
-                                logEntry.innerHTML = `[${current}/${total}] ⏭️ Skipped: ${doc.original_name} (No converted PDF path)`;
-                                logEntry.style.color = '#999';
-                                skipCount++;
-                                continue;
-                            }
+                        
+                        docInfo.file_path = docInfo.converted_pdf_path;
+                        docInfo.file_ext = 'pdf';
                         }
 
-                        // For PDF files (including converted DOCX), use client-side PDF.js generation via shared functions
                         if (docInfo.file_ext === 'pdf') {
                             const pdfPath = docInfo.file_path;
                             
@@ -1156,96 +893,67 @@ $admin_active_page = 'documents';
                                 throw new Error('No PDF path available');
                             }
 
-                            // Ensure filePath is a valid URL (relative paths need to be resolved)
-                            let pdfUrl = pdfPath;
-                            if (!pdfPath.startsWith('http://') && !pdfPath.startsWith('https://') && !pdfPath.startsWith('data:')) {
-                                // Relative path - ensure it starts with ../
-                                if (!pdfPath.startsWith('../') && !pdfPath.startsWith('/')) {
-                                    pdfUrl = '../' + pdfPath;
-                                } else if (pdfPath.startsWith('/')) {
-                                    pdfUrl = '..' + pdfPath;
-                                } else {
-                                    pdfUrl = pdfPath;
-                                }
+                        let pdfUrl = pdfPath;
+                        if (!pdfPath.startsWith('http://') && !pdfPath.startsWith('https://') && !pdfPath.startsWith('data:')) {
+                            if (!pdfPath.startsWith('../') && !pdfPath.startsWith('/')) {
+                                pdfUrl = '../' + pdfPath;
+                            } else if (pdfPath.startsWith('/')) {
+                                pdfUrl = '..' + pdfPath;
                             }
+                        }
 
-                            console.log('Processing PDF document:', {
-                                docId: docInfo.doc_id,
-                                pdfPath: pdfUrl,
-                                fileExt: docInfo.file_ext,
-                                totalPages: docInfo.total_pages
-                            });
-
-                            // Use shared function to process PDF (count pages and generate thumbnail)
-                            const result = await processPdfDocument(pdfUrl, docInfo.doc_id, {
-                                countPages: true,
-                                generateThumbnail: true,
-                                thumbnailWidth: 400
-                            });
-                            
-                            // Build success message with total pages information
-                            let successMessage = `[${current}/${total}] ✓ Success: ${doc.original_name}`;
-                            if (result.pages && result.pages > 0) {
-                                successMessage += ` (${result.pages} pages)`;
-                            } else if (docInfo.total_pages && docInfo.total_pages > 0) {
-                                successMessage += ` (${docInfo.total_pages} pages)`;
-                            }
+                        const result = await processPdfDocument(pdfUrl, docInfo.doc_id, {
+                            countPages: true,
+                            generateThumbnail: true,
+                            thumbnailWidth: 400
+                        });
+                        
+                        let successMessage = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-success">✓ ${doc.original_name}`;
+                        if (result.pages && result.pages > 0) {
+                            successMessage += ` (${result.pages} trang)`;
+                        }
+                        successMessage += '</span>';
                             
                             logEntry.innerHTML = successMessage;
-                            logEntry.style.color = '#10b981';
                             successCount++;
                         } else {
-                            // Other file types - should not reach here, but handle gracefully
-                            logEntry.innerHTML = `[${current}/${total}] ⏭️ Skipped: ${doc.original_name} (unsupported file type)`;
-                            logEntry.style.color = '#999';
+                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name}</span>`;
                             skipCount++;
                         }
 
                     } catch (error) {
-                        logEntry.innerHTML = `[${current}/${total}] ✗ Failed: ${doc.original_name} - ${error.message}`;
-                        logEntry.style.color = '#ef4444';
+                    logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-error">✗ ${doc.original_name} - ${error.message}</span>`;
                         failCount++;
                         console.error('Error processing document:', doc.id, error);
                     }
 
-                    // Small delay to prevent browser freezing
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
 
-                // Show summary
                 let summaryDetails = [];
-                summaryDetails.push(`✓ Success: ${successCount}`);
-                if (convertedCount > 0) {
-                    summaryDetails.push(`🔄 Converted: ${convertedCount}`);
-                }
-                if (existingPdfCount > 0) {
-                    summaryDetails.push(`📄 Used Existing PDF: ${existingPdfCount}`);
-                }
-                summaryDetails.push(`✗ Failed: ${failCount}`);
-                summaryDetails.push(`⏭️ Skipped: ${skipCount}`);
+            summaryDetails.push(`<span class="text-success">✓ Thành công: ${successCount}</span>`);
+            summaryDetails.push(`<span class="text-error">✗ Thất bại: ${failCount}</span>`);
+            summaryDetails.push(`<span class="text-warning">⏭️ Bỏ qua: ${skipCount}</span>`);
                 
                 statusDiv.innerHTML = `
-                    <p><strong>Batch processing completed!</strong></p>
+                <p class="text-success font-bold"><i class="fa-solid fa-check mr-2"></i>Hoàn tất!</p>
                     <p>${summaryDetails.join(' | ')}</p>
                 `;
-                progressBar.style.width = '100%';
-                progressText.textContent = `Complete: ${successCount} success, ${failCount} failed, ${skipCount} skipped`;
+            progressBar.value = 100;
+            progressText.textContent = `Hoàn tất: ${successCount} thành công, ${failCount} thất bại, ${skipCount} bỏ qua`;
 
                 startBtn.disabled = false;
-                closeBtn.disabled = false;
 
             } catch (error) {
-                statusDiv.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
-                logDiv.innerHTML += `<div style="color: #ef4444;">Error: ${error.message}</div>`;
+            statusDiv.innerHTML = `<p class="text-error font-bold"><i class="fa-solid fa-circle-exclamation mr-2"></i>Lỗi:</strong> ${error.message}</p>`;
+            logDiv.innerHTML += `<div class="text-error">Error: ${error.message}</div>`;
                 startBtn.disabled = false;
-                closeBtn.disabled = false;
                 console.error('Batch thumbnail generation error:', error);
             }
         }
-
     </script>
-</body>
-</html>
 
-<?php mysqli_close($conn); ?>
-
+<?php 
+include __DIR__ . '/../includes/admin-footer.php';
+mysqli_close($conn); 
+?>
