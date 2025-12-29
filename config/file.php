@@ -208,7 +208,7 @@ function convertDocxToPdf_Adobe($docx_path, $output_path) {
         return false;
     }
     
-    $credentials_path = __DIR__ . '/../API/pdfservices-api-credentials.json';
+    $credentials_path = __DIR__ . '/../AAA/pdfservices-api-credentials.json';
     if (!file_exists($credentials_path)) {
         error_log("convertDocxToPdf_Adobe: Credentials file not found: $credentials_path");
         return false;
