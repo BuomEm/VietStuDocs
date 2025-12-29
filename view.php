@@ -1290,47 +1290,22 @@ include 'includes/sidebar.php';
             <form method="dialog">
                 <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
             </form>
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-error">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-triangle-exclamation"></i>
-                Báo Cáo Tài Liệu
+                Report Document
             </h3>
-            <form onsubmit="submitReport(event)" id="reportForm" class="space-y-4">
+            <form onsubmit="submitReport(event)" class="space-y-4">
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold">Lý do báo cáo <span class="text-error">*</span></span>
+                        <span class="label-text font-semibold">Reason:</span>
                     </label>
-                    <select id="reportReason" class="select select-bordered w-full" required>
-                        <option value="">-- Chọn lý do --</option>
-                        <option value="inappropriate">Nội dung không phù hợp</option>
-                        <option value="copyright">Vi phạm bản quyền</option>
-                        <option value="spam">Spam / Quảng cáo</option>
-                        <option value="misleading">Tiêu đề gây hiểu lầm</option>
-                        <option value="low_quality">Chất lượng kém</option>
-                        <option value="duplicate">Trùng lặp nội dung</option>
-                        <option value="other">Lý do khác</option>
-                    </select>
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">Mô tả chi tiết</span>
-                    </label>
-                    <textarea id="reportDescription" class="textarea textarea-bordered h-24" placeholder="Vui lòng cung cấp thêm thông tin về báo cáo của bạn..."></textarea>
-                    <label class="label">
-                        <span class="label-text-alt">Mô tả chi tiết sẽ giúp quản trị viên xem xét nhanh hơn</span>
-                    </label>
-                </div>
-                <div class="alert alert-warning">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <span class="text-sm">Báo cáo sai sự thật có thể dẫn đến việc tài khoản của bạn bị hạn chế.</span>
+                    <textarea id="reportReason" class="textarea textarea-bordered" placeholder="Explain why you're reporting this document..." required></textarea>
                 </div>
                 <div class="modal-action">
                     <form method="dialog">
-                        <button type="button" class="btn btn-ghost">Hủy</button>
+                        <button class="btn btn-ghost">Cancel</button>
                     </form>
-                    <button type="submit" class="btn btn-error">
-                        <i class="fa-solid fa-paper-plane mr-2"></i>
-                        Gửi Báo Cáo
-                    </button>
+                    <button type="submit" class="btn btn-primary">Submit Report</button>
                 </div>
             </form>
         </div>
@@ -1789,10 +1764,6 @@ include 'includes/sidebar.php';
         }
         
         function openReportModal() {
-            if (!<?= $is_logged_in ? 'true' : 'false' ?>) {
-                showAlert('Vui lòng đăng nhập để báo cáo tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
-                return;
-            }
             document.getElementById('reportModal').showModal();
         }
         
@@ -1809,47 +1780,15 @@ include 'includes/sidebar.php';
         
         function submitReport(e) {
             e.preventDefault();
-            
             const reason = document.getElementById('reportReason').value;
-            const description = document.getElementById('reportDescription').value;
             
-            if (!reason) {
-                showAlert('Vui lòng chọn lý do báo cáo', 'triangle-exclamation', 'Thiếu Thông Tin');
-                return;
-            }
-            
-            // Disable submit button to prevent double submission
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang gửi...';
-            
-            fetch('/handler/report_handler.php', {
+            fetch('', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_id: <?= $doc_id ?>,
-                    reason: reason,
-                    description: description
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Gửi Báo Cáo';
-                
-                if (data.success) {
-                    closeReportModal();
-                    document.getElementById('reportForm').reset();
-                    showAlert(data.message, 'circle-check', 'Thành Công');
-                } else {
-                    showAlert(data.message, 'triangle-exclamation', 'Lỗi');
-                }
-            })
-            .catch(error => {
-                console.error('Report error:', error);
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Gửi Báo Cáo';
-                showAlert('Có lỗi xảy ra khi gửi báo cáo. Vui lòng thử lại sau.', 'triangle-exclamation', 'Lỗi');
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=report&reason=' + encodeURIComponent(reason)
+            }).then(() => {
+                closeReportModal();
+                showAlert('Báo cáo đã được gửi thành công. Cảm ơn bạn đã phản hồi!', '✓', 'Thành Công');
             });
         }
         

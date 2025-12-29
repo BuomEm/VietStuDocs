@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/points.php';
 redirectIfNotAdmin();
 
 $admin_id = getCurrentUserId();
-$page_title = "Quản lý giao dịch - Admin Panel";
+$page_title = "Transactions Management - Admin Panel";
 
 // Get filter parameters
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
@@ -74,224 +74,446 @@ $unread_notifications = mysqli_num_rows(mysqli_query($conn,
 
 // For shared admin sidebar
 $admin_active_page = 'transactions';
-
-// Include header
-include __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<!-- Page Header -->
-<div class="p-6 bg-base-100 border-b border-base-300">
-    <div class="container mx-auto max-w-7xl">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-coins"></i>
-                    Quản lý giao dịch
-                </h2>
-                <p class="text-base-content/70 mt-1">Tổng cộng <?= number_format($total_transactions) ?> giao dịch</p>
-            </div>
-        </div>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($page_title) ?></title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
 
-<!-- Page Body -->
-<div class="p-6">
-    <div class="container mx-auto max-w-7xl">
-        <!-- Statistics -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng giao dịch</div>
-                    <div class="stat-value text-primary text-3xl font-bold"><?= number_format($stats['total_transactions'] ?? 0) ?></div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Giao dịch cộng điểm</div>
-                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['earn_count'] ?? 0) ?></div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Giao dịch trừ điểm</div>
-                    <div class="stat-value text-error text-3xl font-bold"><?= number_format($stats['spend_count'] ?? 0) ?></div>
-                </div>
-            </div>
-        </div>
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
 
-        <!-- Transactions Table -->
-        <div class="card bg-base-100 shadow">
-            <div class="card-header bg-base-200">
-                <h3 class="card-title">Lịch sử giao dịch</h3>
+        .admin-sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+        }
+
+        .admin-sidebar h2 {
+            font-size: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding-bottom: 15px;
+        }
+
+        .admin-sidebar nav a {
+            display: block;
+            padding: 12px 15px;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .admin-sidebar nav a:hover,
+        .admin-sidebar nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .admin-sidebar .logout {
+            margin-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 15px;
+        }
+
+        .admin-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .admin-header h1 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: #999;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card.earn {
+            border-left-color: #4caf50;
+        }
+
+        .stat-card.earn .value {
+            color: #4caf50;
+        }
+
+        .stat-card.spend {
+            border-left-color: #f44336;
+        }
+
+        .stat-card.spend .value {
+            color: #f44336;
+        }
+
+        .content-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .content-section h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar input,
+        .filter-bar select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-bar input[type="search"] {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-bar button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .filter-bar button:hover {
+            background: #764ba2;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .data-table thead {
+            background: #f9f9f9;
+        }
+
+        .data-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #eee;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-earn {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-spend {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .pagination a:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination .active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 200px;
+            }
+
+            .admin-content {
+                margin-left: 200px;
+            }
+
+            .data-table {
+                font-size: 11px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px;
+            }
+        }
+</style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <?php include __DIR__ . '/../includes/admin-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <!-- Header -->
+            <div class="admin-header">
+                <h1>💰 Transactions Management</h1>
             </div>
-            
-            <!-- Filter Bar -->
-            <div class="card-body border-b border-base-300">
-                <form method="GET" class="flex flex-wrap gap-3">
-                    <div class="flex-1 min-w-[200px]">
-                        <div class="join w-full">
-                            <div class="join-item bg-base-200 px-4 flex items-center">
-                                <i class="fa-solid fa-search"></i>
-                            </div>
-                            <input type="text" name="search" class="input input-bordered join-item flex-1" placeholder="Tìm theo user hoặc tài liệu..." value="<?= htmlspecialchars($search) ?>">
-                        </div>
-                    </div>
-                    <div class="w-40">
-                        <select name="type" class="select select-bordered w-full">
-                            <option value="all" <?= $type_filter === 'all' ? 'selected' : '' ?>>Tất cả loại</option>
-                            <option value="earn" <?= $type_filter === 'earn' ? 'selected' : '' ?>>Cộng điểm</option>
-                            <option value="spend" <?= $type_filter === 'spend' ? 'selected' : '' ?>>Trừ điểm</option>
-                        </select>
-                    </div>
-                    <div class="w-40">
-                        <select name="status" class="select select-bordered w-full">
-                            <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>Tất cả trạng thái</option>
-                            <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
-                            <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Đang chờ</option>
-                            <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-filter mr-2"></i>Lọc
-                    </button>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Transactions</h3>
+                    <div class="value"><?= number_format($stats['total_transactions'] ?? 0) ?></div>
+                </div>
+                <div class="stat-card earn">
+                    <h3>Earn Transactions</h3>
+                    <div class="value"><?= number_format($stats['earn_count'] ?? 0) ?></div>
+                </div>
+                <div class="stat-card spend">
+                    <h3>Spend Transactions</h3>
+                    <div class="value"><?= number_format($stats['spend_count'] ?? 0) ?></div>
+                </div>
+                <!-- <div class="stat-card earn">
+                    <h3>Total Points Earned</h3>
+                    <div class="value"><?= number_format($stats['total_earned'] ?? 0) ?></div>
+                </div> -->
+                <!-- <div class="stat-card spend">
+                    <h3>Total Points Spent</h3>
+                    <div class="value"><?= number_format($stats['total_spent'] ?? 0) ?></div>
+                </div> -->
+                <!-- <div class="stat-card">
+                    <h3>Completed</h3>
+                    <div class="value"><?= number_format($stats['completed_count'] ?? 0) ?></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending</h3>
+                    <div class="value"><?= number_format($stats['pending_count'] ?? 0) ?></div>
+                </div> -->
+            </div>
+
+            <!-- Transactions List -->
+            <div class="content-section">
+                <h2>All Transactions</h2>
+
+                <!-- Filter Bar -->
+                <form method="GET" class="filter-bar">
+                    <input type="search" name="search" placeholder="Search by user or document..." value="<?= htmlspecialchars($search) ?>">
+                    <select name="type">
+                        <option value="all" <?= $type_filter === 'all' ? 'selected' : '' ?>>All Types</option>
+                        <option value="earn" <?= $type_filter === 'earn' ? 'selected' : '' ?>>Earn</option>
+                        <option value="spend" <?= $type_filter === 'spend' ? 'selected' : '' ?>>Spend</option>
+                    </select>
+                    <select name="status">
+                        <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Status</option>
+                        <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Completed</option>
+                        <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
+                        <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                    </select>
+                    <button type="submit">🔍 Filter</button>
                     <?php if($search || $type_filter !== 'all' || $status_filter !== 'all'): ?>
-                        <a href="transactions.php" class="btn btn-ghost">
-                            <i class="fa-solid fa-xmark mr-2"></i>Xóa bộ lọc
-                        </a>
+                        <a href="transactions.php" style="padding: 10px 20px; background: #999; color: white; text-decoration: none; border-radius: 4px;">Clear</a>
                     <?php endif; ?>
                 </form>
-            </div>
 
-            <!-- Table -->
-            <?php if(mysqli_num_rows($transactions) > 0): ?>
-                <div class="card-body p-0">
-                    <div class="overflow-x-auto">
-                        <table class="table table-zebra">
-                            <thead>
+                <?php if(mysqli_num_rows($transactions) > 0): ?>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Points</th>
+                                <th>Document</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($trans = mysqli_fetch_assoc($transactions)): ?>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Người dùng</th>
-                                    <th>Loại</th>
-                                    <th>Điểm</th>
-                                    <th>Tài liệu</th>
-                                    <th>Lý do</th>
-                                    <th>Trạng thái</th>
-                                    <th>Thời gian</th>
+                                    <td><?= $trans['id'] ?></td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($trans['username'] ?? 'Unknown') ?></strong>
+                                        <br><small style="color: #999;"><?= htmlspecialchars($trans['email'] ?? '') ?></small>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $trans['transaction_type'] === 'earn' ? 'badge-earn' : 'badge-spend' ?>">
+                                            <?= ucfirst($trans['transaction_type']) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong style="color: <?= $trans['transaction_type'] === 'earn' ? '#4caf50' : '#f44336' ?>;">
+                                            <?= $trans['transaction_type'] === 'earn' ? '+' : '-' ?><?= number_format($trans['points']) ?>
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <?php if($trans['document_id']): ?>
+                                            <a href="../view.php?id=<?= $trans['document_id'] ?>" target="_blank" style="color: #667eea; text-decoration: none;">
+                                                <?= htmlspecialchars(substr($trans['original_name'] ?? 'Unknown', 0, 30)) ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <span style="color: #999;">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= htmlspecialchars(substr($trans['reason'] ?? '-', 0, 40)) ?></td>
+                                    <td>
+                                        <span class="badge badge-<?= $trans['status'] ?>">
+                                            <?= ucfirst($trans['status']) ?>
+                                        </span>
+                                    </td>
+                                    <td><?= date('M d, Y H:i', strtotime($trans['created_at'])) ?></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php while($trans = mysqli_fetch_assoc($transactions)): ?>
-                                    <tr>
-                                        <td class="text-base-content/70"><?= $trans['id'] ?></td>
-                                        <td>
-                                            <div class="flex items-center gap-2">
-                                                <div class="avatar placeholder">
-                                                    <div class="bg-info text-info-content rounded-full w-8">
-                                                        <span class="text-xs"><?= strtoupper(substr($trans['username'] ?? 'U', 0, 2)) ?></span>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div class="font-bold"><?= htmlspecialchars($trans['username'] ?? 'Unknown') ?></div>
-                                                    <div class="text-xs text-base-content/70"><?= htmlspecialchars($trans['email'] ?? '') ?></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <?php if($trans['transaction_type'] === 'earn'): ?>
-                                                <span class="badge badge-success badge-sm">
-                                                    <i class="fa-solid fa-arrow-up mr-1"></i>Cộng
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge badge-error badge-sm">
-                                                    <i class="fa-solid fa-arrow-down mr-1"></i>Trừ
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <span class="font-bold <?= $trans['transaction_type'] === 'earn' ? 'text-success' : 'text-error' ?>">
-                                                <?= $trans['transaction_type'] === 'earn' ? '+' : '-' ?><?= number_format($trans['points']) ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <?php if($trans['document_id']): ?>
-                                                <a href="../view.php?id=<?= $trans['document_id'] ?>" target="_blank" class="link link-hover truncate max-w-[150px] inline-block">
-                                                    <i class="fa-regular fa-file mr-1"></i>
-                                                    <?= htmlspecialchars(substr($trans['original_name'] ?? 'Unknown', 0, 25)) ?>...
-                                                </a>
-                                            <?php else: ?>
-                                                <span class="text-base-content/70">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-base-content/70 truncate max-w-[150px]">
-                                            <?= htmlspecialchars($trans['reason'] ?? '-') ?>
-                                        </td>
-                                        <td>
-                                            <?php
-                                            $status_badges = [
-                                                'completed' => 'badge-success',
-                                                'pending' => 'badge-warning',
-                                                'cancelled' => 'badge-error'
-                                            ];
-                                            $status_texts = [
-                                                'completed' => 'Hoàn thành',
-                                                'pending' => 'Đang chờ',
-                                                'cancelled' => 'Đã hủy'
-                                            ];
-                                            ?>
-                                            <span class="badge <?= $status_badges[$trans['status']] ?? 'badge-ghost' ?> badge-sm">
-                                                <?= $status_texts[$trans['status']] ?? ucfirst($trans['status']) ?>
-                                            </span>
-                                        </td>
-                                        <td class="text-base-content/70"><?= date('d/m/Y H:i', strtotime($trans['created_at'])) ?></td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
 
-                <!-- Pagination -->
-                <?php if($total_pages > 1): ?>
-                    <div class="card-footer bg-base-200 flex items-center justify-between">
-                        <p class="text-base-content/70">Hiển thị <span><?= $offset + 1 ?></span> đến <span><?= min($offset + $per_page, $total_transactions) ?></span> trong <span><?= $total_transactions ?></span> kết quả</p>
-                        <div class="join">
+                    <!-- Pagination -->
+                    <?php if($total_pages > 1): ?>
+                        <div class="pagination">
                             <?php if($page > 1): ?>
-                                <a class="join-item btn btn-sm" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>">
-                                    <i class="fa-solid fa-chevron-left"></i>
-                                </a>
+                                <a href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>">« Prev</a>
                             <?php endif; ?>
                             
                             <?php for($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                <a class="join-item btn btn-sm <?= $i == $page ? 'btn-active' : '' ?>" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>"><?= $i ?></a>
+                                <?php if($i == $page): ?>
+                                    <span class="active"><?= $i ?></span>
+                                <?php else: ?>
+                                    <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>"><?= $i ?></a>
+                                <?php endif; ?>
                             <?php endfor; ?>
                             
                             <?php if($page < $total_pages): ?>
-                                <a class="join-item btn btn-sm" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>">
-                                    <i class="fa-solid fa-chevron-right"></i>
-                                </a>
+                                <a href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&type=<?= $type_filter ?>&status=<?= $status_filter ?>">Next »</a>
                             <?php endif; ?>
                         </div>
-                    </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div style="text-align: center; padding: 40px; color: #999;">No transactions found</div>
                 <?php endif; ?>
-            <?php else: ?>
-                <div class="card-body">
-                    <div class="flex flex-col items-center justify-center py-12">
-                        <i class="fa-regular fa-receipt text-6xl text-base-content/30 mb-4"></i>
-                        <h3 class="text-xl font-bold mb-2">Không tìm thấy giao dịch</h3>
-                        <p class="text-base-content/70 text-center mb-6">
-                            Không có giao dịch nào phù hợp với bộ lọc.
-                        </p>
-                        <a href="transactions.php" class="btn btn-primary">
-                            <i class="fa-solid fa-refresh mr-2"></i>Xóa bộ lọc
-                        </a>
-                    </div>
-                </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
-</div>
+</body>
+</html>
 
-<?php 
-include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
-?>
+<?php mysqli_close($conn); ?>
+

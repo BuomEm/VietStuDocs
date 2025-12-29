@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/points.php';
 redirectIfNotAdmin();
 
 $admin_id = getCurrentUserId();
-$page_title = "Dashboard - Admin Panel";
+$page_title = "Admin Dashboard - DocShare";
 
 // Get statistics
 $pending_docs = getPendingDocumentsCount();
@@ -70,284 +70,395 @@ $unread_notifications = mysqli_num_rows(mysqli_query($conn,
 // For shared admin sidebar
 $admin_active_page = 'dashboard';
 $admin_pending_count = $stats['pending_documents'];
-
-// Include header
-include __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<!-- Page Header -->
-<div class="p-6 bg-base-100 border-b border-base-300">
-    <div class="container mx-auto max-w-7xl">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-gauge"></i>
-                    Dashboard
-                </h2>
-                <p class="text-base-content/70 mt-1">Tổng quan hệ thống quản lý tài liệu</p>
-            </div>
-            <div class="flex gap-2">
-                <a href="pending-docs.php" class="btn btn-primary">
-                    <i class="fa-regular fa-clock mr-2"></i>
-                    Duyệt tài liệu
-                    <?php if($admin_pending_count > 0): ?>
-                        <span class="badge badge-warning badge-sm ml-2"><?= $admin_pending_count ?></span>
-                    <?php endif; ?>
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($page_title) ?></title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
 
-<!-- Page Body -->
-<div class="p-6">
-    <div class="container mx-auto max-w-7xl">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Tổng tài liệu</div>
-                    </div>
-                    <div class="stat-value text-primary text-3xl font-bold"><?= number_format($stats['total_documents']) ?></div>
-                    <div class="mt-2">
-                        <span class="text-base-content/70 text-sm">
-                            <i class="fa-regular fa-files mr-1"></i>
-                            Tất cả trạng thái
-                        </span>
-                    </div>
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .admin-sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+        }
+
+        .admin-sidebar h2 {
+            font-size: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding-bottom: 15px;
+        }
+
+        .admin-sidebar nav a {
+            display: block;
+            padding: 12px 15px;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .admin-sidebar nav a:hover,
+        .admin-sidebar nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .admin-sidebar .logout {
+            margin-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 15px;
+        }
+
+        /* Main Content */
+        .admin-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .admin-header h1 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .admin-header .user-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .notification-badge {
+            background: #ff4444;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: #999;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card.pending {
+            border-left-color: #ff9800;
+        }
+
+        .stat-card.pending .value {
+            color: #ff9800;
+        }
+
+        .stat-card.approved {
+            border-left-color: #4caf50;
+        }
+
+        .stat-card.approved .value {
+            color: #4caf50;
+        }
+
+        .stat-card.rejected {
+            border-left-color: #f44336;
+        }
+
+        .stat-card.rejected .value {
+            color: #f44336;
+        }
+
+        /* Content Section */
+        .content-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .content-section h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table thead {
+            background: #f9f9f9;
+        }
+
+        .data-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #eee;
+            font-size: 13px;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-pending {
+            background: #fff3cd;
+            color: #ff9800;
+        }
+
+        .badge-approved {
+            background: #d4edda;
+            color: #4caf50;
+        }
+
+        .badge-rejected {
+            background: #f8d7da;
+            color: #f44336;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .action-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-btn-primary:hover {
+            background: #764ba2;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 200px;
+            }
+
+            .admin-content {
+                margin-left: 200px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <?php include __DIR__ . '/../includes/admin-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <!-- Header -->
+            <div class="admin-header">
+                <h1>📊 Admin Dashboard</h1>
+                <div class="user-info">
+                    <span>Welcome, <strong><?= htmlspecialchars(getCurrentUsername()) ?></strong></span>
                 </div>
             </div>
 
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Chờ duyệt</div>
-                    </div>
-                    <div class="stat-value text-warning text-3xl font-bold"><?= number_format($stats['pending_documents']) ?></div>
-                    <div class="mt-2">
-                        <?php if($stats['pending_documents'] > 0): ?>
-                            <a href="pending-docs.php" class="text-warning text-sm hover:underline">
-                                <i class="fa-solid fa-arrow-right mr-1"></i>
-                                Xem ngay
-                            </a>
-                        <?php else: ?>
-                            <span class="text-success text-sm">
-                                <i class="fa-solid fa-check mr-1"></i>
-                                Đã xử lý hết
-                            </span>
-                        <?php endif; ?>
-                    </div>
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Documents</h3>
+                    <div class="value"><?= $stats['total_documents'] ?></div>
+                </div>
+
+                <div class="stat-card pending">
+                    <h3>Pending Approval</h3>
+                    <div class="value"><?= $stats['pending_documents'] ?></div>
+                </div>
+
+                <div class="stat-card approved">
+                    <h3>Approved</h3>
+                    <div class="value"><?= $stats['approved_documents'] ?></div>
+                </div>
+
+                <div class="stat-card rejected">
+                    <h3>Rejected</h3>
+                    <div class="value"><?= $stats['rejected_documents'] ?></div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Total Users</h3>
+                    <div class="value"><?= $user_stats['total_users'] ?></div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Admin Users</h3>
+                    <div class="value"><?= $user_stats['admin_count'] ?></div>
                 </div>
             </div>
 
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Đã duyệt</div>
-                    </div>
-                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['approved_documents']) ?></div>
-                    <div class="mt-2">
-                        <span class="text-base-content/70 text-sm">
-                            <i class="fa-solid fa-circle-check mr-1"></i>
-                            Đang hoạt động
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Từ chối</div>
-                    </div>
-                    <div class="stat-value text-error text-3xl font-bold"><?= number_format($stats['rejected_documents']) ?></div>
-                    <div class="mt-2">
-                        <span class="text-base-content/70 text-sm">
-                            <i class="fa-solid fa-circle-xmark mr-1"></i>
-                            Không đạt yêu cầu
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User Stats -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Tổng người dùng</div>
-                    </div>
-                    <div class="stat-value text-info text-3xl font-bold"><?= number_format($user_stats['total_users']) ?></div>
-                    <div class="mt-2">
-                        <a href="users.php" class="text-info text-sm hover:underline">
-                            <i class="fa-solid fa-arrow-right mr-1"></i>
-                            Quản lý
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="flex items-center">
-                        <div class="text-xs uppercase font-semibold text-base-content/70">Admin</div>
-                    </div>
-                    <div class="stat-value text-secondary text-3xl font-bold"><?= number_format($user_stats['admin_count']) ?></div>
-                    <div class="mt-2">
-                        <span class="text-base-content/70 text-sm">
-                            <i class="fa-solid fa-shield-halved mr-1"></i>
-                            Quản trị viên
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Recent Activities -->
-            <div class="card bg-base-100 shadow">
-                <div class="card-header bg-base-200">
-                    <h3 class="card-title">
-                        <i class="fa-solid fa-chart-line mr-2"></i>
-                        Hoạt động gần đây
-                    </h3>
-                </div>
-                <div class="card-body p-0">
-                    <div class="overflow-x-auto">
-                        <table class="table table-zebra">
-                            <thead>
+            <div class="content-section">
+                <h2>📈 Recent Activities</h2>
+                <?php if(mysqli_num_rows($recent_activities) > 0): ?>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>User</th>
+                                <th>Points Assigned</th>
+                                <th>Approved At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($activity = mysqli_fetch_assoc($recent_activities)): ?>
                                 <tr>
-                                    <th>Tài liệu</th>
-                                    <th>Người dùng</th>
-                                    <th>Điểm</th>
-                                    <th>Thời gian</th>
+                                    <td><strong><?= htmlspecialchars(substr($activity['original_name'], 0, 40)) ?></strong></td>
+                                    <td><?= htmlspecialchars($activity['username']) ?></td>
+                                    <td><strong><?= $activity['value'] ?> pts</strong></td>
+                                    <td><?= date('M d, H:i', strtotime($activity['timestamp'])) ?></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php if(mysqli_num_rows($recent_activities) > 0): ?>
-                                <?php while($activity = mysqli_fetch_assoc($recent_activities)): ?>
-                                    <tr>
-                                        <td>
-                                            <div class="truncate max-w-[150px]" title="<?= htmlspecialchars($activity['original_name']) ?>">
-                                                <?= htmlspecialchars(substr($activity['original_name'], 0, 30)) ?>...
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-info badge-sm"><?= htmlspecialchars($activity['username']) ?></span>
-                                        </td>
-                                        <td>
-                                            <span class="text-success font-bold">+<?= $activity['value'] ?></span>
-                                        </td>
-                                        <td class="text-base-content/70">
-                                            <?= date('d/m H:i', strtotime($activity['timestamp'])) ?>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center text-base-content/70 py-8">
-                                            <i class="fa-regular fa-face-meh text-4xl block mb-2"></i>
-                                            <div>Chưa có hoạt động nào</div>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="empty-message">No recent activities</div>
+                <?php endif; ?>
             </div>
 
             <!-- Top Documents -->
-            <div class="card bg-base-100 shadow">
-                <div class="card-header bg-base-200">
-                    <h3 class="card-title">
-                        <i class="fa-solid fa-star mr-2"></i>
-                        Top tài liệu bán chạy
-                    </h3>
-                </div>
-                <div class="card-body p-0">
-                    <div class="overflow-x-auto">
-                        <table class="table table-zebra">
-                            <thead>
+            <div class="content-section">
+                <h2>⭐ Top Documents by Sales</h2>
+                <?php if(mysqli_num_rows($top_documents) > 0): ?>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>Author</th>
+                                <th>Points Value</th>
+                                <th>Sales</th>
+                                <th>Total Earned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($doc = mysqli_fetch_assoc($top_documents)): ?>
                                 <tr>
-                                    <th>Tài liệu</th>
-                                    <th>Tác giả</th>
-                                    <th>Lượt bán</th>
-                                    <th>Doanh thu</th>
+                                    <td><strong><?= htmlspecialchars(substr($doc['original_name'], 0, 40)) ?></strong></td>
+                                    <td><?= htmlspecialchars($doc['username']) ?></td>
+                                    <td><?= $doc['admin_points'] ?> pts</td>
+                                    <td><?= $doc['sales_count'] ?></td>
+                                    <td><strong><?= $doc['total_points_earned'] ?? 0 ?> pts</strong></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php if(mysqli_num_rows($top_documents) > 0): ?>
-                                <?php while($doc = mysqli_fetch_assoc($top_documents)): ?>
-                                    <tr>
-                                        <td>
-                                            <div class="truncate max-w-[150px]" title="<?= htmlspecialchars($doc['original_name']) ?>">
-                                                <?= htmlspecialchars(substr($doc['original_name'], 0, 30)) ?>...
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-cyan badge-sm"><?= htmlspecialchars($doc['username']) ?></span>
-                                        </td>
-                                        <td>
-                                            <span class="font-bold"><?= $doc['sales_count'] ?></span>
-                                        </td>
-                                        <td>
-                                            <span class="text-success font-bold"><?= number_format($doc['total_points_earned'] ?? 0) ?> điểm</span>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center text-base-content/70 py-8">
-                                            <i class="fa-regular fa-chart-bar text-4xl block mb-2"></i>
-                                            <div>Chưa có dữ liệu bán hàng</div>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="empty-message">No sales data yet</div>
+                <?php endif; ?>
             </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="mt-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-header bg-base-200">
-                    <h3 class="card-title">
-                        <i class="fa-solid fa-bolt mr-2"></i>
-                        Thao tác nhanh
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="flex flex-wrap gap-3">
-                        <a href="pending-docs.php" class="btn btn-primary">
-                            <i class="fa-regular fa-clock mr-2"></i>
-                            Duyệt tài liệu
-                        </a>
-                        <a href="users.php" class="btn btn-info">
-                            <i class="fa-solid fa-users mr-2"></i>
-                            Quản lý người dùng
-                        </a>
-                        <a href="transactions.php" class="btn btn-success">
-                            <i class="fa-solid fa-coins mr-2"></i>
-                            Xem giao dịch
-                        </a>
-                        <a href="all-documents.php" class="btn btn-secondary">
-                            <i class="fa-regular fa-files mr-2"></i>
-                            Tất cả tài liệu
-                        </a>
-                    </div>
-                </div>
+            <!-- Quick Actions -->
+            <div class="content-section">
+                <h2>⚡ Quick Actions</h2>
+                <p>
+                    <a href="pending-docs.php" class="action-btn action-btn-primary">Review Pending Documents</a>
+                    <a href="users.php" class="action-btn action-btn-primary">Manage Users</a>
+                    <a href="transactions.php" class="action-btn action-btn-primary">View Transactions</a>
+                </p>
             </div>
         </div>
     </div>
-</div>
+</body>
+</html>
 
-<?php 
-include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
-?>
+<?php mysqli_close($conn); ?>
