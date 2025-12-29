@@ -43,6 +43,10 @@ define('DB_USER', $_ENV['DB_USER'] ?? 'root');
 define('DB_PASS', $_ENV['DB_PASS'] ?? '');
 define('DB_NAME', $_ENV['DB_NAME'] ?? 'docshare');
 
+// Telegram configuration from environment variables (optional, can be overridden by settings table)
+define('TELEGRAM_BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? '');
+define('TELEGRAM_CHAT_ID', $_ENV['TELEGRAM_CHAT_ID'] ?? '');
+
 // Create connection
 $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 

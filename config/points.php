@@ -361,14 +361,9 @@ function purchaseDocument($buyer_id, $document_id) {
     }
     
     // Notify admin (optional, don't fail if this fails)
-    $admins = mysqli_query($conn, "SELECT id FROM users WHERE role='admin'");
-    if($admins) {
-        $message = mysqli_real_escape_string($conn, "Tài liệu đã được bán với giá $points_to_pay điểm");
-        while($admin = mysqli_fetch_assoc($admins)) {
-            mysqli_query($conn, "INSERT INTO admin_notifications (admin_id, notification_type, document_id, message)
-                                VALUES ({$admin['id']}, 'document_sold', $document_id, '$message')");
-        }
-    }
+    require_once __DIR__ . '/notifications.php';
+    $message = "Tài liệu đã được bán với giá $points_to_pay điểm";
+    sendNotificationToAllAdmins('document_sold', $message, $document_id);
     
     return ['success' => true, 'message' => 'Mua tài liệu thành công', 'transaction_id' => $transaction_id];
 }

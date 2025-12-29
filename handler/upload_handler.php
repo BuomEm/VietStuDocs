@@ -227,12 +227,10 @@ if ($category_data) {
     );
 }
 
-// Create admin notification for new document
-$admins = mysqli_query($conn, "SELECT id FROM users WHERE role='admin'");
-while($admin = mysqli_fetch_assoc($admins)) {
-    mysqli_query($conn, "INSERT INTO admin_notifications (admin_id, notification_type, document_id, message)
-                        VALUES ({$admin['id']}, 'new_document', $doc_id, 'New document submitted for review: " . addslashes($original_name) . "')");
-}
+// Create admin notification for new document using unified sender
+require_once __DIR__ . '/../config/notifications.php';
+$notification_message = "Tài liệu mới cần duyệt: " . $original_name;
+sendNotificationToAllAdmins('new_document', $notification_message, $doc_id);
 
 // Initialize user points if not exists (start with 0 points)
 $points_check = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM user_points WHERE user_id=$user_id"));

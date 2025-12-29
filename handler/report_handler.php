@@ -54,17 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      VALUES ($document_id, $user_id, '$reason', '$description')";
     
     if (mysqli_query($conn, $insert_query)) {
-        // Create notification for admins
-        $admin_query = "SELECT id FROM users WHERE role='admin'";
-        $admins = mysqli_query($conn, $admin_query);
+        // Create notification for admins using unified sender
+        require_once __DIR__ . '/../config/notifications.php';
         
-        while ($admin = mysqli_fetch_assoc($admins)) {
-            $admin_id = $admin['id'];
-            $notification_message = mysqli_real_escape_string($conn, "Báo cáo mới cho tài liệu #$document_id");
-            mysqli_query($conn, 
-                "INSERT INTO admin_notifications (admin_id, message, type) 
-                 VALUES ($admin_id, '$notification_message', 'report')");
-        }
+        $doc_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT original_name FROM documents WHERE id=$document_id"));
+        $doc_name = $doc_info ? htmlspecialchars($doc_info['original_name']) : "Tài liệu #$document_id";
+        
+        $notification_message = "Báo cáo mới cho tài liệu: $doc_name";
+        sendNotificationToAllAdmins('report', $notification_message, $document_id);
         
         echo json_encode(['success' => true, 'message' => 'Báo cáo của bạn đã được gửi thành công']);
     } else {

@@ -2,6 +2,8 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/telegram_notifications.php';
 
 redirectIfNotAdmin();
 
@@ -62,6 +64,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_notification']))
 // Handle test notification
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_notification'])) {
     header('Content-Type: application/json');
+    require_once __DIR__ . '/../config/notifications.php';
+    
     $test_messages = [
         ['type' => 'new_document', 'msg' => 'Test: Tài liệu mới "Sample Document.pdf" được upload bởi user John Doe'],
         ['type' => 'document_sold', 'msg' => 'Test: Tài liệu "Research Paper.docx" đã được mua với 150 điểm'],
@@ -69,21 +73,73 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_notification'])) {
     ];
     
     $random_test = $test_messages[array_rand($test_messages)];
-    $message = mysqli_real_escape_string($conn, $random_test['msg']);
-    $type = mysqli_real_escape_string($conn, $random_test['type']);
+    $message = $random_test['msg'];
+    $type = $random_test['type'];
     
-    mysqli_query($conn, "
-        INSERT INTO admin_notifications (admin_id, notification_type, message, created_at) 
-        VALUES ($admin_id, '$type', '$message', NOW())
-    ");
+    // Use unified notification sender which will send to Telegram if enabled
+    $result = sendAdminNotification($admin_id, $type, $message, null);
     
-    if(mysqli_affected_rows($conn) > 0) {
-        echo json_encode(['success' => true, 'message' => 'Test notification created successfully!']);
+    if($result['success']) {
+        $response = ['success' => true, 'message' => 'Test notification created successfully!'];
+        if($result['telegram_sent']) {
+            $response['telegram_sent'] = true;
+            $response['message'] = 'Test notification đã được tạo và gửi đến Telegram thành công!';
+        } else {
+            $response['telegram_sent'] = false;
+            $response['message'] = 'Test notification đã được tạo. Telegram chưa được gửi (có thể chưa bật hoặc chưa cấu hình).';
+        }
+        echo json_encode($response);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to create test notification']);
     }
     exit;
 }
+
+// Handle save settings
+if($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $input = file_get_contents('php://input');
+    $settings_to_save = json_decode($input, true);
+    
+    // Check if this is a settings save request (has JSON data with settings keys)
+    if ($settings_to_save && (isset($settings_to_save['notify_browser_push_enabled']) || isset($settings_to_save['site_name']))) {
+        header('Content-Type: application/json');
+        
+        $errors = [];
+        foreach ($settings_to_save as $name => $value) {
+            // Determine category based on setting name
+            $category = 'general';
+            if (strpos($name, 'notify_') === 0 || strpos($name, 'telegram_') === 0) {
+                $category = strpos($name, 'telegram_') === 0 ? 'telegram' : 'notifications';
+            } elseif (strpos($name, 'site_') === 0) {
+                $category = 'site';
+            }
+            
+            if (!setSetting($name, $value, null, $category)) {
+                $errors[] = "Failed to save setting: $name";
+            }
+        }
+        
+        if (empty($errors)) {
+            echo json_encode(['success' => true, 'message' => 'Settings saved successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
+        }
+        exit;
+    }
+}
+
+// Handle test Telegram
+if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_telegram'])) {
+    header('Content-Type: application/json');
+    $result = testTelegramConnection();
+    echo json_encode($result);
+    exit;
+}
+
+// Load current settings for display
+$notification_settings = getSettingsByCategory('notifications');
+$telegram_settings = getSettingsByCategory('telegram');
+$site_settings = getSettingsByCategory('site');
 
 // Get filter parameters
 $filter = isset($_GET['filter']) ? mysqli_real_escape_string($conn, $_GET['filter']) : 'all';
@@ -156,6 +212,10 @@ include __DIR__ . '/../includes/admin-header.php';
                 </h2>
             </div>
             <div class="flex gap-2">
+                <button type="button" class="btn btn-info" onclick="openSettingsModal()">
+                    <i class="fa-solid fa-gear mr-2"></i>
+                    Cài đặt thông báo
+                </button>
                 <button type="button" class="btn btn-warning" onclick="testNotification()">
                     <i class="fa-solid fa-flask mr-2"></i>
                     Test
@@ -227,7 +287,8 @@ include __DIR__ . '/../includes/admin-header.php';
                             $type_info = [
                                 'new_document' => ['icon' => 'fa-file-circle-plus', 'color' => 'bg-info', 'label' => 'Tài liệu mới'],
                                 'document_sold' => ['icon' => 'fa-cart-shopping', 'color' => 'bg-success', 'label' => 'Đã bán'],
-                                'system_alert' => ['icon' => 'fa-circle-exclamation', 'color' => 'bg-warning', 'label' => 'Hệ thống']
+                                'system_alert' => ['icon' => 'fa-circle-exclamation', 'color' => 'bg-warning', 'label' => 'Hệ thống'],
+                                'report' => ['icon' => 'fa-flag', 'color' => 'bg-error', 'label' => 'Báo cáo']
                             ];
                             $info = $type_info[$notif['notification_type']] ?? ['icon' => 'fa-bell', 'color' => 'bg-secondary', 'label' => 'Thông báo'];
                         ?>
@@ -323,6 +384,180 @@ include __DIR__ . '/../includes/admin-header.php';
     </div>
 </div>
 
+<!-- Settings Modal -->
+<dialog id="settings-modal" class="modal">
+    <div class="modal-box w-11/12 max-w-5xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <h3 class="font-bold text-lg mb-4">
+            <i class="fa-solid fa-gear mr-2"></i>
+            Cài đặt thông báo
+        </h3>
+        
+        <!-- Tabs -->
+        <div class="tabs tabs-boxed mb-4">
+            <a class="tab tab-active" onclick="switchTab('notifications')">Thông báo</a>
+            <a class="tab" onclick="switchTab('site')">Cài đặt Website</a>
+        </div>
+        
+        <!-- Notifications Tab -->
+        <div id="tab-notifications" class="tab-panel">
+            <div class="space-y-6">
+                <!-- Global Settings -->
+                <div class="card bg-base-200">
+                    <div class="card-body">
+                        <h4 class="font-bold mb-4">Cài đặt chung</h4>
+                        <div class="space-y-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text">Bật thông báo Browser Push</span>
+                                <input type="checkbox" class="toggle toggle-primary" id="notify_browser_push_enabled" 
+                                       <?= isSettingEnabled('notify_browser_push_enabled') ? 'checked' : '' ?>>
+                            </label>
+                            <label class="label cursor-pointer">
+                                <span class="label-text">Bật thông báo Telegram</span>
+                                <input type="checkbox" class="toggle toggle-primary" id="notify_telegram_enabled" 
+                                       <?= isSettingEnabled('notify_telegram_enabled') ? 'checked' : '' ?>>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Telegram Configuration -->
+                <div class="card bg-base-200">
+                    <div class="card-body">
+                        <h4 class="font-bold mb-4">Cấu hình Telegram</h4>
+                        <div class="space-y-4">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Telegram Bot Token</span>
+                                </label>
+                                <input type="text" class="input input-bordered" id="telegram_bot_token" 
+                                       value="<?= htmlspecialchars(getSetting('telegram_bot_token', '')) ?>" 
+                                       placeholder="Nhập Bot Token từ @BotFather">
+                            </div>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Telegram Chat ID</span>
+                                </label>
+                                <input type="text" class="input input-bordered" id="telegram_chat_id" 
+                                       value="<?= htmlspecialchars(getSetting('telegram_chat_id', '')) ?>" 
+                                       placeholder="Nhập Chat ID của group/channel">
+                            </div>
+                            <div class="form-control">
+                                <label class="label cursor-pointer">
+                                    <span class="label-text">Bật Telegram</span>
+                                    <input type="checkbox" class="toggle toggle-primary" id="telegram_enabled" 
+                                           <?= isSettingEnabled('telegram_enabled') ? 'checked' : '' ?>>
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-info" onclick="testTelegram()">
+                                <i class="fa-solid fa-paper-plane mr-2"></i>
+                                Test Telegram
+                            </button>
+                            <div id="telegram-test-result" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notification Type Settings -->
+                <div class="card bg-base-200">
+                    <div class="card-body">
+                        <h4 class="font-bold mb-4">Cài đặt theo loại</h4>
+                        <div class="space-y-4">
+                            <?php 
+                            $notification_types = [
+                                'new_document' => ['label' => 'Tài liệu mới', 'icon' => 'fa-file-circle-plus'],
+                                'document_sold' => ['label' => 'Tài liệu đã bán', 'icon' => 'fa-cart-shopping'],
+                                'system_alert' => ['label' => 'Cảnh báo hệ thống', 'icon' => 'fa-circle-exclamation'],
+                                'report' => ['label' => 'Báo cáo mới', 'icon' => 'fa-flag']
+                            ];
+                            foreach ($notification_types as $type => $info): 
+                            ?>
+                                <div class="border border-base-300 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <i class="fa-solid <?= $info['icon'] ?>"></i>
+                                        <span class="font-semibold"><?= $info['label'] ?></span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <label class="label cursor-pointer">
+                                            <span class="label-text">Browser Push</span>
+                                            <input type="checkbox" class="toggle toggle-success" 
+                                                   id="notify_<?= $type ?>_browser" 
+                                                   <?= isSettingEnabled('notify_' . $type . '_browser') ? 'checked' : '' ?>>
+                                        </label>
+                                        <label class="label cursor-pointer">
+                                            <span class="label-text">Telegram</span>
+                                            <input type="checkbox" class="toggle toggle-info" 
+                                                   id="notify_<?= $type ?>_telegram" 
+                                                   <?= isSettingEnabled('notify_' . $type . '_telegram') ? 'checked' : '' ?>>
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Site Settings Tab -->
+        <div id="tab-site" class="tab-panel hidden">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Tên website</span>
+                    </label>
+                    <input type="text" class="input input-bordered" id="site_name" 
+                           value="<?= htmlspecialchars(getSetting('site_name', 'DocShare')) ?>">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Logo (đường dẫn)</span>
+                    </label>
+                    <input type="text" class="input input-bordered" id="site_logo" 
+                           value="<?= htmlspecialchars(getSetting('site_logo', '')) ?>" 
+                           placeholder="/path/to/logo.png">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Mô tả</span>
+                    </label>
+                    <textarea class="textarea textarea-bordered" id="site_description" rows="3"><?= htmlspecialchars(getSetting('site_description', '')) ?></textarea>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Từ khóa (SEO)</span>
+                    </label>
+                    <input type="text" class="input input-bordered" id="site_keywords" 
+                           value="<?= htmlspecialchars(getSetting('site_keywords', '')) ?>" 
+                           placeholder="keyword1, keyword2, keyword3">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Tác giả</span>
+                    </label>
+                    <input type="text" class="input input-bordered" id="site_author" 
+                           value="<?= htmlspecialchars(getSetting('site_author', '')) ?>">
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-action">
+            <button type="button" class="btn btn-primary" onclick="saveSettings()">
+                <i class="fa-solid fa-save mr-2"></i>
+                Lưu cài đặt
+            </button>
+            <form method="dialog">
+                <button class="btn">Đóng</button>
+            </form>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <script>
     // Auto-refresh notifications every 30 seconds
     let refreshInterval = setInterval(checkNewNotifications, 30000);
@@ -337,13 +572,15 @@ include __DIR__ . '/../includes/admin-header.php';
                 }
                 
                 if(data.new_count > 0) {
+                    // Check if browser push is enabled (would need to check settings, but for now just check permission)
                     if(Notification.permission === 'granted') {
-                        new Notification('DocShare Admin - Thông báo mới', {
-                            body: `Bạn có ${data.new_count} thông báo mới`,
-                            icon: '/favicon.ico',
-                            tag: 'admin-notification',
-                            requireInteraction: false
-                        });
+                        showBrowserNotification(
+                            'DocShare Admin - Thông báo mới',
+                            `Bạn có ${data.new_count} thông báo mới chưa đọc`,
+                            '/favicon.ico',
+                            'admin-notification',
+                            { url: 'notifications.php?filter=unread' }
+                        );
                     }
                     document.getElementById('unread-count').textContent = data.unread_count;
                     if(window.location.search.includes('filter=unread') || window.location.search.includes('filter=all') || window.location.search === '') {
@@ -401,6 +638,30 @@ include __DIR__ . '/../includes/admin-header.php';
     }
 
     function testNotification() {
+        // Check if Notification API is supported
+        if (!('Notification' in window)) {
+            alert('Trình duyệt của bạn không hỗ trợ thông báo!');
+            return;
+        }
+        
+        // Request permission if not granted
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    createTestNotification();
+                } else if (permission === 'denied') {
+                    alert('Thông báo đã bị chặn. Vui lòng bật lại trong cài đặt trình duyệt.');
+                }
+            });
+        } else if (Notification.permission === 'denied') {
+            alert('Thông báo đã bị chặn. Vui lòng bật lại trong cài đặt trình duyệt.');
+        } else {
+            // Permission is granted, create test notification
+            createTestNotification();
+        }
+    }
+    
+    function createTestNotification() {
         const formData = new FormData();
         formData.append('test_notification', '1');
 
@@ -411,14 +672,27 @@ include __DIR__ . '/../includes/admin-header.php';
         .then(response => response.json())
         .then(data => {
             if(data.success) {
+                // Show browser notification
                 if(Notification.permission === 'granted') {
-                    new Notification('DocShare Admin - Test Notification', {
-                        body: 'Đây là thông báo test. Hệ thống hoạt động bình thường!',
-                        icon: '/favicon.ico',
-                        tag: 'test-notification'
-                    });
+                    showBrowserNotification(
+                        'DocShare Admin - Test Notification',
+                        'Đây là thông báo test. Hệ thống hoạt động bình thường!',
+                        '/favicon.ico',
+                        'test-notification'
+                    );
                 }
-                setTimeout(() => window.location.reload(), 500);
+                
+                // Show success message with Telegram status
+                let successMsg = data.message || 'Thông báo test đã được tạo thành công!';
+                if(data.telegram_sent !== undefined) {
+                    if(data.telegram_sent) {
+                        successMsg += '\n\n✓ Đã gửi đến Telegram thành công!';
+                    } else {
+                        successMsg += '\n\n⚠ Telegram chưa được gửi (có thể chưa bật hoặc chưa cấu hình trong Cài đặt thông báo).';
+                    }
+                }
+                alert(successMsg);
+                setTimeout(() => window.location.reload(), 1000);
             } else {
                 alert('Lỗi tạo thông báo test: ' + (data.message || 'Unknown error'));
             }
@@ -429,9 +703,222 @@ include __DIR__ . '/../includes/admin-header.php';
         });
     }
 
-    // Request notification permission
-    if('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
+    // Request notification permission with better UX
+    let notificationPermission = 'default';
+    if('Notification' in window) {
+        notificationPermission = Notification.permission;
+        
+        if(notificationPermission === 'default') {
+            // Show a friendly message to request permission
+            const permissionBadge = document.createElement('div');
+            permissionBadge.id = 'permission-badge';
+            permissionBadge.className = 'alert alert-info mb-4';
+            permissionBadge.innerHTML = `
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Để nhận thông báo, vui lòng cho phép trình duyệt hiển thị thông báo.</span>
+                <button class="btn btn-sm btn-primary ml-2" onclick="requestNotificationPermission()">Cho phép</button>
+            `;
+            const pageBody = document.querySelector('.p-6');
+            if(pageBody) {
+                pageBody.insertBefore(permissionBadge, pageBody.firstChild);
+            }
+        } else if(notificationPermission === 'denied') {
+            const permissionBadge = document.createElement('div');
+            permissionBadge.id = 'permission-badge';
+            permissionBadge.className = 'alert alert-warning mb-4';
+            permissionBadge.innerHTML = `
+                <i class="fa-solid fa-exclamation-triangle"></i>
+                <span>Thông báo đã bị chặn. Vui lòng bật lại trong cài đặt trình duyệt.</span>
+            `;
+            const pageBody = document.querySelector('.p-6');
+            if(pageBody) {
+                pageBody.insertBefore(permissionBadge, pageBody.firstChild);
+            }
+        }
+    }
+    
+    function requestNotificationPermission() {
+        if('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if(permission === 'granted') {
+                    const badge = document.getElementById('permission-badge');
+                    if(badge) {
+                        badge.className = 'alert alert-success mb-4';
+                        badge.innerHTML = '<i class="fa-solid fa-check-circle"></i><span>Đã bật thông báo thành công!</span>';
+                        setTimeout(() => badge.remove(), 3000);
+                    }
+                    // Show a test notification
+                    new Notification('DocShare Admin', {
+                        body: 'Thông báo đã được bật thành công!',
+                        icon: '/favicon.ico',
+                        tag: 'permission-granted'
+                    });
+                } else {
+                    const badge = document.getElementById('permission-badge');
+                    if(badge) {
+                        badge.className = 'alert alert-error mb-4';
+                        badge.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Thông báo đã bị từ chối.</span>';
+                    }
+                }
+            });
+        }
+    }
+    
+    // Settings Modal Functions
+    function openSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        modal.showModal();
+        
+        // Ensure first tab is visible
+        document.querySelectorAll('.tab-panel').forEach((panel, index) => {
+            if(index === 0) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        });
+        
+        // Ensure first tab is active
+        document.querySelectorAll('.tab').forEach((tab, index) => {
+            if(index === 0) {
+                tab.classList.add('tab-active');
+            } else {
+                tab.classList.remove('tab-active');
+            }
+        });
+    }
+    
+    function switchTab(tabName) {
+        // Hide all tab panels
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+        // Remove active state from all tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('tab-active');
+        });
+        
+        // Show selected tab panel
+        const selectedPanel = document.getElementById('tab-' + tabName);
+        if(selectedPanel) {
+            selectedPanel.classList.remove('hidden');
+        }
+        
+        // Activate the clicked tab
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            const tabText = tab.textContent.trim();
+            if((tabName === 'notifications' && tabText === 'Thông báo') || 
+               (tabName === 'site' && tabText === 'Cài đặt Website')) {
+                tab.classList.add('tab-active');
+            }
+        });
+    }
+    
+    function saveSettings() {
+        const settings = {};
+        
+        // Notification settings
+        settings['notify_browser_push_enabled'] = document.getElementById('notify_browser_push_enabled').checked ? 'on' : 'off';
+        settings['notify_telegram_enabled'] = document.getElementById('notify_telegram_enabled').checked ? 'on' : 'off';
+        settings['telegram_bot_token'] = document.getElementById('telegram_bot_token').value;
+        settings['telegram_chat_id'] = document.getElementById('telegram_chat_id').value;
+        settings['telegram_enabled'] = document.getElementById('telegram_enabled').checked ? 'on' : 'off';
+        
+        // Notification type settings
+        ['new_document', 'document_sold', 'system_alert', 'report'].forEach(type => {
+            settings['notify_' + type + '_browser'] = document.getElementById('notify_' + type + '_browser').checked ? 'on' : 'off';
+            settings['notify_' + type + '_telegram'] = document.getElementById('notify_' + type + '_telegram').checked ? 'on' : 'off';
+        });
+        
+        // Site settings
+        settings['site_name'] = document.getElementById('site_name').value;
+        settings['site_logo'] = document.getElementById('site_logo').value;
+        settings['site_description'] = document.getElementById('site_description').value;
+        settings['site_keywords'] = document.getElementById('site_keywords').value;
+        settings['site_author'] = document.getElementById('site_author').value;
+        
+        fetch('notifications.php', {
+            method: 'POST',
+            body: JSON.stringify(settings),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                alert('Cài đặt đã được lưu thành công!');
+                document.getElementById('settings-modal').close();
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể lưu cài đặt'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Lỗi khi lưu cài đặt');
+        });
+    }
+    
+    function testTelegram() {
+        const resultDiv = document.getElementById('telegram-test-result');
+        resultDiv.innerHTML = '<div class="loading loading-spinner loading-sm"></div> Đang kiểm tra...';
+        
+        fetch('notifications.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'test_telegram=1'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                resultDiv.innerHTML = '<div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> ' + data.message + '</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-error"><i class="fa-solid fa-times-circle"></i> ' + data.message + '</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultDiv.innerHTML = '<div class="alert alert-error"><i class="fa-solid fa-times-circle"></i> Lỗi khi kiểm tra kết nối</div>';
+        });
+    }
+    
+    // Improved browser push notifications
+    function showBrowserNotification(title, body, icon, tag, data = {}) {
+        if('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification(title, {
+                body: body,
+                icon: icon || '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: tag,
+                requireInteraction: false,
+                data: data
+            });
+            
+            notification.onclick = function() {
+                window.focus();
+                if(data.url) {
+                    window.location.href = data.url;
+                } else {
+                    window.location.href = 'notifications.php';
+                }
+                notification.close();
+            };
+            
+            notification.onclose = function() {
+                console.log('Notification closed');
+            };
+            
+            // Auto close after 5 seconds
+            setTimeout(() => {
+                notification.close();
+            }, 5000);
+            
+            return notification;
+        }
+        return null;
     }
     
     // Initialize lastNotificationId
