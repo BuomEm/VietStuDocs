@@ -175,56 +175,74 @@ include __DIR__ . '/../includes/admin-header.php';
             <?php endif; ?>
 
             <!-- Statistics -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng tài liệu</div>
-                    <div class="stat-value text-primary text-3xl font-bold"><?= number_format($stats['total_documents']) ?></div>
-                </div>
-                </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Chờ duyệt</div>
-                    <div class="stat-value text-warning text-3xl font-bold"><?= number_format($stats['pending_count']) ?></div>
-                </div>
-                </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Đã duyệt</div>
-                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['approved_count']) ?></div>
-                </div>
-                </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Từ chối</div>
-                    <div class="stat-value text-error text-3xl font-bold"><?= number_format($stats['rejected_count']) ?></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-8 gap-4 mb-6 auto-fill-stats">
+            <?php
+            // Infobox definitions
+            $infoboxes = [
+                [
+                    'label' => 'Tổng tài liệu',
+                    'value' => number_format($stats['total_documents']),
+                    'class' => 'text-primary',
+                    'icon'  => 'fa-solid fa-layer-group',
+                ],
+                [
+                    'label' => 'Chờ duyệt',
+                    'value' => number_format($stats['pending_count']),
+                    'class' => 'text-warning',
+                    'icon'  => 'fa-solid fa-hourglass-half',
+                ],
+                [
+                    'label' => 'Đã duyệt',
+                    'value' => number_format($stats['approved_count']),
+                    'class' => 'text-success',
+                    'icon'  => 'fa-solid fa-circle-check',
+                ],
+                [
+                    'label' => 'Từ chối',
+                    'value' => number_format($stats['rejected_count']),
+                    'class' => 'text-error',
+                    'icon'  => 'fa-solid fa-times-circle',
+                ],
+                [
+                    'label' => 'Public',
+                    'value' => number_format($stats['public_count']),
+                    'class' => 'text-info',
+                    'icon'  => 'fa-solid fa-earth-asia',
+                ],
+            ];
+            // Fill with placeholder infoboxes if too few, for auto-fill look & spacing
+            $total_boxes = 5; // Adjust total number of columns
+            $count = count($infoboxes);
+            for ($i = 0; $i < $total_boxes; $i++):
+                $has_data = $i < $count;
+                $item = $has_data ? $infoboxes[$i] : [];
+            ?>
+            <div class="card bg-base-100 shadow min-h-[100px] flex flex-col justify-center">
+                <div class="card-body flex flex-col items-center justify-center p-4 gap-2 <?= $has_data ? '' : 'opacity-40' ?>">
+                    <?php if ($has_data): ?>
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="<?= $item['icon'] ?> text-lg <?= $item['class'] ?>"></i>
+                            <span class="text-xs uppercase font-semibold text-base-content/70"><?= $item['label'] ?></span>
+                        </div>
+                        <div class="stat-value <?= $item['class'] ?> text-3xl font-bold"><?= $item['value'] ?></div>
+                    <?php else: ?>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs uppercase font-semibold text-base-content/30">Trống</span>
+                        </div>
+                        <div class="stat-value text-base-content/20 text-3xl font-bold">-</div>
+                    <?php endif; ?>
                 </div>
             </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Public</div>
-                    <div class="stat-value text-info text-3xl font-bold"><?= number_format($stats['public_count']) ?></div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng điểm gán</div>
-                    <div class="stat-value text-secondary text-3xl font-bold"><?= number_format($stats['total_points_assigned']) ?></div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Lượt bán</div>
-                    <div class="stat-value text-accent text-3xl font-bold"><?= number_format($stats['total_sales']) ?></div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div class="text-xs uppercase font-semibold text-base-content/70">Tổng doanh thu</div>
-                    <div class="stat-value text-success text-3xl font-bold"><?= number_format($stats['total_points_earned'] ?? 0) ?></div>
-                </div>
-                </div>
-            </div>
+            <?php endfor; ?>
+        </div>
+        <style>
+            /* Optional: Responsive "auto-fill" look for the stats bar */
+            @media (min-width: 1536px) {
+                .auto-fill-stats {
+                    grid-template-columns: repeat(8, minmax(0,1fr)) !important;
+                }
+            }
+        </style>
 
         <!-- Documents Table Card -->
         <div class="card bg-base-100 shadow">

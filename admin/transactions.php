@@ -146,9 +146,9 @@ include __DIR__ . '/../includes/admin-header.php';
                     <div class="w-40">
                         <select name="status" class="select select-bordered w-full">
                             <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>Tất cả trạng thái</option>
-                            <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
-                            <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Đang chờ</option>
-                            <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
+                            <option value="completed" <?= $status_filter === 'completed' ? 'selected' : '' ?>>Completed</option>
+                            <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
+                            <option value="cancelled" <?= $status_filter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">
@@ -233,9 +233,9 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 'cancelled' => 'badge-error'
                                             ];
                                             $status_texts = [
-                                                'completed' => 'Hoàn thành',
-                                                'pending' => 'Đang chờ',
-                                                'cancelled' => 'Đã hủy'
+                                                'completed' => 'Completed',
+                                                'pending' => 'Pending',
+                                                'cancelled' => 'Cancelled'
                                             ];
                                             ?>
                                             <span class="badge <?= $status_badges[$trans['status']] ?? 'badge-ghost' ?> badge-sm">

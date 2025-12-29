@@ -309,13 +309,13 @@ include __DIR__ . '/../includes/admin-header.php';
                         <h3 class="card-title">Xem trước</h3>
                     </div>
                     <div class="card-body p-0">
-                        <div class="max-h-[800px] overflow-y-auto bg-base-200">
+                        <div class="max-h-[800px] overflow-y-auto overflow-x-hidden bg-base-200">
                             <?php
                             $pdf_path_for_preview = null;
                             
                             switch($file_ext) {
                                 case 'pdf':
-                                    echo '<div class="pdf-viewer p-6" id="pdfViewer"></div>';
+                                    echo '<div class="pdf-viewer p-4" id="pdfViewer"></div>';
                                     $pdf_path_for_preview = '/uploads/' . $doc['file_name'];
                                     break;
                                 case 'docx':
@@ -329,11 +329,11 @@ include __DIR__ . '/../includes/admin-header.php';
                                     // Check if file exists (using relative path for file_exists check)
                                     $converted_file_path = $converted_path ? ltrim($converted_path, '/') : null;
                                     if ($converted_file_path && file_exists(__DIR__ . '/../' . $converted_file_path)) {
-                                        echo '<div class="pdf-viewer p-6" id="pdfViewer"></div>';
+                                        echo '<div class="pdf-viewer p-4" id="pdfViewer"></div>';
                                         $pdf_path_for_preview = $converted_path;
                                     } else {
                                         $file_url = '/uploads/' . $doc['file_name'];
-                                        echo '<div class="docx-viewer p-6 bg-white" id="docxViewer"></div>';
+                                        echo '<div class="docx-viewer p-4 bg-white" id="docxViewer"></div>';
                                         $pdf_path_for_preview = null;
                                     }
                                     break;
@@ -349,7 +349,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                 case 'log':
                                 case 'md':
                                     $content = file_get_contents($file_path);
-                                    echo '<div class="p-6"><pre class="whitespace-pre-wrap break-words font-mono text-sm bg-white p-4 rounded">' . htmlspecialchars($content) . '</pre></div>';
+                                    echo '<div class="p-6"><pre class="whitespace-pre-wrap break-words font-mono text-sm bg-white p-4 rounded overflow-x-auto">' . htmlspecialchars($content) . '</pre></div>';
                                     break;
                                 default:
                                     echo '<div class="p-12 text-center text-base-content/70">
@@ -365,6 +365,55 @@ include __DIR__ . '/../includes/admin-header.php';
         </div>
     </div>
 </div>
+
+<style>
+    /* PDF Viewer Styles - Fit to container */
+    .pdf-viewer {
+        width: 100%;
+        overflow-x: hidden;
+    }
+    
+    .pdf-viewer canvas {
+        max-width: 100%;
+        height: auto !important;
+        display: block;
+        margin: 0 auto 1rem auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* DOCX Viewer Styles - Fit to container */
+    .docx-viewer {
+        width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    
+    .docx-viewer .docx-wrapper {
+        max-width: 100% !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+    
+    .docx-viewer .docx-wrapper > div {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 1rem !important;
+        overflow-x: hidden !important;
+        word-wrap: break-word !important;
+    }
+    
+    .docx-viewer .docx-wrapper table {
+        max-width: 100% !important;
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+    
+    .docx-viewer .docx-wrapper img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+</style>
 
 <!-- PDF.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -387,21 +436,29 @@ include __DIR__ . '/../includes/admin-header.php';
             const viewer = document.getElementById("pdfViewer");
             viewer.innerHTML = '';
             
+            // Get container width for responsive scaling
+            const containerWidth = viewer.offsetWidth - 32; // Subtract padding
+            
             // Render all pages
             for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
                 const page = await pdfDoc.getPage(pageNum);
-                const scale = 2;
-                const viewport = page.getViewport({ scale });
+                
+                // Calculate scale to fit container width
+                const viewport = page.getViewport({ scale: 1.0 });
+                const scale = Math.min(containerWidth / viewport.width, 2.0); // Max scale 2.0
+                const scaledViewport = page.getViewport({ scale });
                 
                 const canvas = document.createElement("canvas");
                 const context = canvas.getContext("2d");
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
+                canvas.width = scaledViewport.width;
+                canvas.height = scaledViewport.height;
+                canvas.style.maxWidth = '100%';
+                canvas.style.height = 'auto';
                 canvas.className = "mx-auto mb-4 shadow-lg";
                 
                 await page.render({
                     canvasContext: context,
-                    viewport: viewport
+                    viewport: scaledViewport
                 }).promise;
                 
                 viewer.appendChild(canvas);
@@ -467,7 +524,7 @@ include __DIR__ . '/../includes/admin-header.php';
             await docxAPI.renderAsync(arrayBuffer, docxViewer, null, {
                 className: "docx-wrapper",
                 inWrapper: true,
-                ignoreWidth: false,
+                ignoreWidth: true,  // Ignore width to allow responsive scaling
                 ignoreHeight: false,
                 ignoreFonts: false,
                 breakPages: true,
@@ -479,6 +536,36 @@ include __DIR__ . '/../includes/admin-header.php';
                 showInsertions: false,
                 showDeletions: false
             });
+            
+            // After rendering, ensure content fits container
+            setTimeout(() => {
+                const wrapper = docxViewer.querySelector('.docx-wrapper');
+                if (wrapper) {
+                    const containerWidth = docxViewer.offsetWidth;
+                    const contentWidth = wrapper.scrollWidth;
+                    
+                    if (contentWidth > containerWidth) {
+                        const scale = (containerWidth - 40) / contentWidth; // 40px for padding
+                        wrapper.style.transform = `scale(${scale})`;
+                        wrapper.style.transformOrigin = 'top left';
+                        wrapper.style.width = `${contentWidth}px`;
+                        wrapper.style.height = `${wrapper.scrollHeight * scale}px`;
+                    }
+                    
+                    // Ensure all tables and images fit
+                    const tables = wrapper.querySelectorAll('table');
+                    tables.forEach(table => {
+                        table.style.maxWidth = '100%';
+                        table.style.width = 'auto';
+                    });
+                    
+                    const images = wrapper.querySelectorAll('img');
+                    images.forEach(img => {
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                    });
+                }
+            }, 500);
             
         } catch(error) {
             document.getElementById("docxViewer").innerHTML = '<div class="p-12 text-center text-base-content/70">Error loading DOCX: ' + error.message + '</div>';
