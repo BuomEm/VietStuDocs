@@ -5,10 +5,6 @@ define('MAX_FILE_SIZE', 200 * 1024 * 1024); // 200MB
 define('ALLOWED_TYPES', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'zip']);
 define('VIEWABLE_TYPES', ['pdf', 'txt', 'jpg', 'jpeg', 'png']);
 
-// CloudConvert API Key for DOCX to PNG conversion
-// Get from environment variable or use default (you should set this in your environment)
-define('CLOUDCONVERT_API_KEY', getenv('CLOUDCONVERT_API_KEY') ?: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiNzAzODk3MDkwMTg4Y2IxODAyMGEwY2E5ODY1YWNjNGVlYzhhNTdmODUzY2NhNzNmYmVmYjlhNTYzOWYzYmFhOWNjNDdiNTU4ZmFiYTg2YjYiLCJpYXQiOjE3NjYzODE1NDQuOTEyOTE3LCJuYmYiOjE3NjYzODE1NDQuOTEyOTE4LCJleHAiOjQ5MjIwNTUxNDQuOTA2Nzg1LCJzdWIiOiI3Mzc4OTYwNiIsInNjb3BlcyI6WyJ1c2VyLnJlYWQiLCJ1c2VyLndyaXRlIiwidGFzay5yZWFkIiwidGFzay53cml0ZSIsIndlYmhvb2sucmVhZCIsIndlYmhvb2sud3JpdGUiLCJwcmVzZXQucmVhZCIsInByZXNldC53cml0ZSJdfQ.fs-vyrO6MO85LO48-IMcBSPeNGWwPY973n8ukstqBp1CkCxDxQgzfUZRmWks3zufIa4cCxmViDENabJR8W2E2XQGFCtXKny_2QX8OTdmNhkO5uZ-Te-ZulcEejEhTyV-oB1fVK752ATLDJlr4EwBo4eu7WbVJnTp-p7lc3w7V3GmNFIahYeFIAHCDVSJfJT0U4ySzstewpkwn0HgHcenFX2qr1urTbpodGSPNGIDzOkEfbRR6w1DARzTNWwe1k3gvgHdCDLvM5dCdyCB9tebz3OE1eE0ZtBXrYC3Jrin8v_Kjqm5_LiapbqVRixDZUPhtaRsF-D9fUsCZsc36sK8CkJ21-E6SD2FzGyncdB4AoofDRS-hhA-zM3vBFb3n6Grqj7e-5adVcvBx97QJH6OHyrCSgo5HvIqOoGUruESxXNman041V2f37Po7jKdmRKz3vHQyYECdjGnqRWlYbopjV5l1sJvf-St9SmD_LVC2z9jVHrwI1YhQsBjRkx-u2tm7MUnWB1vMmFRn7dd5aNqmaeWH6hyDfUtqzyt2ll0F4uaJ1JQnYg9WRj0nqV28Grvv5aW-YJ2Rdn3bcC1kW2SDg75DNNzR2CrW0EPNL4k7W4pJvJBBXF4b3PQfBrVMAJpdfx2bvFDg_IjKMMFaM4nONx57sjyyUOZwDbQdnHH5uY');
-
 // Create thumbnail directory if not exists
 if(!is_dir(THUMBNAIL_DIR)) {
     mkdir(THUMBNAIL_DIR, 0755, true);
@@ -208,7 +204,7 @@ function convertDocxToPdf_Adobe($docx_path, $output_path) {
         return false;
     }
     
-    $credentials_path = __DIR__ . '/../AAA/pdfservices-api-credentials.json';
+    $credentials_path = __DIR__ . '/../API/pdfservices-api-credentials.json';
     if (!file_exists($credentials_path)) {
         error_log("convertDocxToPdf_Adobe: Credentials file not found: $credentials_path");
         return false;
