@@ -153,7 +153,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             </tr>
                             <tr>
                                 <td>
-                                    <span class="badge badge-cyan badge-lg">
+                                    <span class="badge badge-warning badge-lg">
                                         <i class="fa-regular fa-file-lines mr-1"></i>loai-tai-lieu.json
                                     </span>
                                 </td>

@@ -285,17 +285,21 @@ include __DIR__ . '/../includes/admin-header.php';
                     <div class="divide-y divide-base-300">
                         <?php while($notif = mysqli_fetch_assoc($notifications)): 
                             $type_info = [
-                                'new_document' => ['icon' => 'fa-file-circle-plus', 'color' => 'bg-info', 'label' => 'Tài liệu mới'],
-                                'document_sold' => ['icon' => 'fa-cart-shopping', 'color' => 'bg-success', 'label' => 'Đã bán'],
-                                'system_alert' => ['icon' => 'fa-circle-exclamation', 'color' => 'bg-warning', 'label' => 'Hệ thống'],
-                                'report' => ['icon' => 'fa-flag', 'color' => 'bg-error', 'label' => 'Báo cáo']
+                                'new_document' => ['icon' => 'fa-file-circle-plus', 'color' => 'badge-info', 'label' => 'Tài liệu mới'],
+                                'document_sold' => ['icon' => 'fa-cart-shopping', 'color' => 'badge-success', 'label' => 'Đã bán'],
+                                'system_alert' => ['icon' => 'fa-circle-exclamation', 'color' => 'badge-warning', 'label' => 'Hệ thống'],
+                                'report' => ['icon' => 'fa-flag', 'color' => 'badge-error', 'label' => 'Báo cáo']
                             ];
                             $info = $type_info[$notif['notification_type']] ?? ['icon' => 'fa-bell', 'color' => 'bg-secondary', 'label' => 'Thông báo'];
                         ?>
                             <div class="p-4 <?= $notif['is_read'] ? '' : 'bg-info/10' ?>" id="notif-<?= $notif['id'] ?>">
                                 <div class="flex items-start gap-4">
                                     <div class="avatar placeholder">
-                                        <div class="<?= $info['color'] ?> text-white rounded w-12">
+                                        <?php 
+                                            // Extract base color (info, success, etc) from badge class
+                                            $base_color = str_replace('badge-', '', $info['color']);
+                                        ?>
+                                        <div class="bg-<?= $base_color ?> text-<?= $base_color ?>-content rounded w-12">
                                             <i class="fa-solid <?= $info['icon'] ?> text-xl"></i>
                                         </div>
                                     </div>

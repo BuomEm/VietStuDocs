@@ -1,7 +1,10 @@
 AAA/
 vendor/
+database/
 *.zip
 *.pdf
+*.docx
+uploads/thumbnails/*.jpg
 config/db.php
 .env
 API/pdfservices-api-credentials.json 

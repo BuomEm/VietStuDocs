@@ -22,9 +22,9 @@ $admin_username = function_exists('getCurrentUsername') ? getCurrentUsername() :
 <!-- Drawer Side -->
 <div class="drawer-side z-50">
     <label for="drawer-toggle" class="drawer-overlay"></label>
-    <aside class="w-64 min-h-full bg-primary text-primary-content">
+    <aside class="w-64 min-h-full bg-base-100 border-r border-base-300 text-base-content">
         <!-- Sidebar Header -->
-        <div class="p-4 border-b border-primary-focus/20">
+        <div class="p-4 border-b border-base-300">
             <a href="index.php" class="flex items-center gap-2 text-xl font-bold">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m-3-8h.01M4 6a2 2 0 012-2h8l4 4v10a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
@@ -127,7 +127,7 @@ $admin_username = function_exists('getCurrentUsername') ? getCurrentUsername() :
             </li>
             
             <!-- Divider -->
-            <li class="mt-4"><hr class="border-primary-focus/20"></li>
+            <li class="mt-4"><hr class="border-base-300"></li>
             
             <!-- Back to Site -->
             <li>
@@ -151,7 +151,7 @@ $admin_username = function_exists('getCurrentUsername') ? getCurrentUsername() :
         </ul>
         
         <!-- User info at bottom (desktop only) -->
-        <div class="mt-auto p-4 border-t border-primary-focus/20 hidden lg:block">
+        <div class="mt-auto p-4 border-t border-base-300 hidden lg:block">
             <div class="flex items-center gap-3">
                 <div class="avatar placeholder">
                     <div class="bg-secondary text-secondary-content rounded-full w-10">
