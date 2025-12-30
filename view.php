@@ -443,8 +443,8 @@ include 'includes/sidebar.php';
                 45deg,
                 transparent,
                 transparent 100px,
-                rgba(0,0,0,0.02) 100px,
-                rgba(0,0,0,0.02) 200px
+                rgba(0,0,0,0.05) 100px,
+                rgba(0,0,0,0.05) 200px
             );
         }
         
@@ -453,8 +453,8 @@ include 'includes/sidebar.php';
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 48px;
-            color: rgba(0,0,0,0.05);
+            font-size: 60px;
+            color: rgba(0,0,0,0.2);
             white-space: nowrap;
             font-weight: bold;
             pointer-events: none;
@@ -468,6 +468,37 @@ include 'includes/sidebar.php';
             padding: 20px;
             margin-bottom: 20px;
             text-align: center;
+        }
+        
+        /* Center alert content */
+        #documentViewer .alert.alert-warning {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+        }
+        
+        #documentViewer .alert.alert-warning > i {
+            margin-bottom: 12px;
+        }
+        
+        #documentViewer .alert.alert-warning > div {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        #documentViewer .alert.alert-warning h3 {
+            text-align: center;
+            width: 100%;
+        }
+        
+        #documentViewer .alert.alert-warning .text-sm {
+            text-align: center;
+            width: 100%;
         }
         
         .preview-limit-warning h3 {
