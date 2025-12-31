@@ -65,6 +65,7 @@ function getSettingsByCategory($category) {
     $patterns = [
         'site' => ['site_name', 'site_logo', 'site_description', 'site_keywords', 'site_author'],
         'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled'],
+        'apis' => ['cloudconvert_api_key'],
         'notifications' => [
             'notify_browser_push_enabled', 'notify_telegram_enabled',
             'notify_new_document_browser', 'notify_new_document_telegram',

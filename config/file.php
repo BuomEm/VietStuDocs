@@ -230,6 +230,7 @@ function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Safeguard for cPanel/Old OpenSSL
             CURLOPT_POSTFIELDS => http_build_query([
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
@@ -263,6 +264,7 @@ function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_CUSTOMREQUEST => $method,
+                CURLOPT_SSL_VERIFYPEER => false, // Safeguard for cPanel
                 CURLOPT_HTTPHEADER => array_merge([
                     "Authorization: Bearer $accessToken",
                     "x-api-key: $clientId"
@@ -321,6 +323,7 @@ function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_SSL_VERIFYPEER => false, // Safeguard for cPanel
             CURLOPT_HTTPHEADER => ["Content-Type: $templateType"],
             CURLOPT_POSTFIELDS => $templateData
         ]);
@@ -405,7 +408,8 @@ function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
                 $ch = curl_init($downloadUri);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_CUSTOMREQUEST => 'GET'
+                    CURLOPT_CUSTOMREQUEST => 'GET',
+                    CURLOPT_SSL_VERIFYPEER => false // Safeguard for cPanel
                 ]);
                 
                 $pdfContent = curl_exec($ch);
@@ -456,7 +460,127 @@ function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
         return false;
         
     } catch (Exception $e) {
+        $error_msg = "Adobe API Exception: " . $e->getMessage();
         error_log("convertDocxToPdf_Adobe: Exception: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Convert DOCX to PDF using CloudConvert API
+ * @param string $docx_path Path to DOCX file
+ * @param string $output_path Path to save PDF file
+ * @param string &$error_msg Optional variable to store error message
+ * @return array|false Returns array with 'pdf_path' (full path) and 'pdf_url' (relative URL) on success, false on failure
+ */
+function convertDocxToPdf_CloudConvert($docx_path, $output_path, &$error_msg = '') {
+    if (!file_exists($docx_path)) {
+        $error_msg = "File DOCX không tồn tại";
+        return false;
+    }
+    
+    $apiKey = getSetting('cloudconvert_api_key', defined('CLOUDCONVERT_API_KEY') ? CLOUDCONVERT_API_KEY : '');
+    if (empty($apiKey)) {
+        $error_msg = "Chưa cấu hình CloudConvert API Key";
+        return false;
+    }
+
+    try {
+        // 1. Create Job
+        $ch = curl_init("https://api.cloudconvert.com/v2/jobs");
+        $payload = json_encode([
+            "tasks" => [
+                "import-1" => ["operation" => "import/upload"],
+                "convert-1" => [
+                    "operation" => "convert",
+                    "input" => "import-1",
+                    "output_format" => "pdf",
+                    "engine" => "office"
+                ],
+                "export-1" => [
+                    "operation" => "export/url",
+                    "input" => "convert-1"
+                ]
+            ]
+        ]);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ["Authorization: Bearer $apiKey", "Content-Type: application/json"],
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($http_code >= 400) {
+            $data = json_decode($response, true);
+            $error_msg = "CloudConvert Job Error: " . ($data['message'] ?? 'Unknown');
+            return false;
+        }
+
+        $data = json_decode($response, true);
+        $jobId = $data['data']['id'];
+        $uploadTask = null;
+        foreach ($data['data']['tasks'] as $task) {
+            if ($task['name'] === 'import-1') { $uploadTask = $task; break; }
+        }
+
+        // 2. Upload
+        $ch = curl_init($uploadTask['result']['form']['url']);
+        $postData = $uploadTask['result']['form']['parameters'] ?? [];
+        $postData['file'] = new CURLFile($docx_path);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+
+        // 3. Wait & Download
+        $max_wait = 30;
+        while ($max_wait-- > 0) {
+            sleep(2);
+            $ch = curl_init("https://api.cloudconvert.com/v2/jobs/$jobId");
+            curl_setopt($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ["Authorization: Bearer $apiKey"],
+                CURLOPT_SSL_VERIFYPEER => false
+            ]);
+            $statusRes = curl_exec($ch);
+            curl_close($ch);
+            $statusData = json_decode($statusRes, true);
+            
+            if ($statusData['data']['status'] === 'finished') {
+                foreach ($statusData['data']['tasks'] as $task) {
+                    if ($task['name'] === 'export-1') {
+                        $downloadUrl = $task['result']['files'][0]['url'];
+                        $pdfContent = file_get_contents($downloadUrl);
+                        file_put_contents($output_path, $pdfContent);
+                        
+                        $relative_path = str_replace(__DIR__ . '/../', '', $output_path);
+                        $relative_path = str_replace('\\', '/', $relative_path);
+                        return [
+                            'pdf_path' => $output_path,
+                            'pdf_url' => $relative_path,
+                            'pdf_name' => basename($output_path)
+                        ];
+                    }
+                }
+            } elseif ($statusData['data']['status'] === 'error') {
+                $error_msg = "CloudConvert conversion failed";
+                return false;
+            }
+        }
+        $error_msg = "CloudConvert timeout";
+        return false;
+    } catch (Exception $e) {
+        $error_msg = "CloudConvert Exception: " . $e->getMessage();
         return false;
     }
 }
@@ -501,9 +625,18 @@ function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = nul
         return $adobe_result;
     }
     
-    error_log("convertDocxToPdf: Adobe API failed ($adobe_error), trying fallback methods...");
+    error_log("convertDocxToPdf: Adobe API failed ($adobe_error), trying CloudConvert fallback...");
+    $cc_error = '';
+    $cc_result = convertDocxToPdf_CloudConvert($docx_path, $pdf_path, $cc_error);
+    if ($cc_result !== false && file_exists($pdf_path) && filesize($pdf_path) > 0) {
+        error_log("convertDocxToPdf: Successfully converted using CloudConvert");
+        return $cc_result;
+    }
+    
+    error_log("convertDocxToPdf: CloudConvert failed ($cc_error), trying LibreOffice fallback...");
     
     // Fallback: Try LibreOffice
+    $error_log_msg = "Adobe: $adobe_error. CC: $cc_error. ";
     if (function_exists('shell_exec')) {
         // ... (LibreOffice code) ...
         $libreoffice_paths = [
@@ -550,9 +683,10 @@ function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = nul
         }
     } else {
         error_log("convertDocxToPdf: shell_exec is disabled (LibreOffice fallback unavailable)");
+        $error_log_msg .= "LibreOffice: shell_exec bị tắt. ";
     }
     
-    $error_msg = "Lỗi Adobe API: $adobe_error. (LibreOffice không khả dụng trên hosting này)";
+    $error_msg = $error_log_msg . "Vui lòng kiểm tra cấu hình Adobe hoặc CloudConvert API.";
     error_log("convertDocxToPdf: All conversion attempts failed for $docx_path. Error: $error_msg");
     return false;
 }

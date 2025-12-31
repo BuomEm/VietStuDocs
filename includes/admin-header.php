@@ -94,6 +94,16 @@ if (!isset($admin_active_page)) $admin_active_page = '';
         .badge-error {
             box-shadow: 0 0 10px rgba(251, 113, 133, 0.2);
         }
+
+        /* Pulse animation for notifications */
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-base-200">
@@ -105,17 +115,8 @@ if (!isset($admin_active_page)) $admin_active_page = '';
         
         <!-- Page Wrapper -->
         <div class="drawer-content flex flex-col">
-            <!-- Mobile Navbar Toggle -->
-            <div class="navbar bg-base-100 lg:hidden shadow-sm">
-                <div class="flex-none">
-                    <label for="drawer-toggle" class="btn btn-square btn-ghost">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </label>
-                </div>
-                <div class="flex-1">
-                    <a href="index.php" class="btn btn-ghost text-xl">DocShare Admin</a>
-                </div>
-            </div>
+            <!-- Admin Navbar -->
+            <?php include __DIR__ . '/admin-navbar.php'; ?>
             
             <!-- Main Content -->
             <div class="flex-1 bg-base-200 min-h-screen">

@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $category = 'site';
             } elseif (strpos($name, 'limit_') === 0) {
                 $category = 'limits';
+            } elseif (strpos($name, 'cloudconvert_') === 0) {
+                $category = 'apis';
             }
             
             if (!setSetting($name, $value, $category)) {
@@ -91,6 +93,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
                 <li><a class="tab-link active" onclick="switchTab('site')"><i class="fa-solid fa-globe w-5"></i> Cài đặt Website</a></li>
                 <li><a class="tab-link" onclick="switchTab('notifications')"><i class="fa-solid fa-bell w-5"></i> Thông báo & Telegram</a></li>
                 <li><a class="tab-link" onclick="switchTab('limits')"><i class="fa-solid fa-gauge-high w-5"></i> Giới hạn & Tốc độ</a></li>
+                <li><a class="tab-link" onclick="switchTab('apis')"><i class="fa-solid fa-code w-5"></i> API & Chuyển đổi</a></li>
             </ul>
         </div>
 
@@ -268,6 +271,58 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                     <span class="label-text-alt text-base-content/60">Số trang người dùng chưa mua có thể xem</span>
                                 </label>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: APIs & Conversion -->
+            <div id="tab-apis" class="settings-tab hidden">
+                <div class="card bg-base-100 shadow-lg mb-6">
+                    <div class="card-body">
+                        <h2 class="card-title mb-4"><i class="fa-solid fa-file-pdf text-red-500 mr-2"></i>Adobe PDF Services</h2>
+                        <div class="alert alert-info shadow-sm mb-4">
+                            <i class="fa-solid fa-info-circle"></i>
+                            <div>
+                                <h3 class="font-bold">Hướng dẫn cấu hình Adobe</h3>
+                                <div class="text-xs">
+                                    Hệ thống sử dụng Adobe API để chuyển đổi DOCX sang PDF chất lượng cao.
+                                    <br>Yêu cầu file cấu hình: <code>API/pdfservices-api-credentials.json</code>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <?php 
+                        $adobe_creds_path = __DIR__ . '/../API/pdfservices-api-credentials.json';
+                        $has_adobe = file_exists($adobe_creds_path);
+                        ?>
+                        
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="badge <?= $has_adobe ? 'badge-success' : 'badge-error' ?> p-3">
+                                <i class="fa-solid <?= $has_adobe ? 'fa-check' : 'fa-xmark' ?> mr-1"></i>
+                                <?= $has_adobe ? 'Đã tìm thấy file cấu hình' : 'Chưa tìm thấy file cấu hình' ?>
+                            </span>
+                        </div>
+
+                        <p class="text-sm text-base-content/70">
+                            Nếu bạn host trên cPanel, hãy chắc chắn đã upload file <code>pdfservices-api-credentials.json</code> vào thư mục <code>API/</code> (thường file này bị .gitignore bỏ qua khi deploy).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-lg">
+                    <div class="card-body">
+                        <h2 class="card-title mb-4"><i class="fa-solid fa-cloud text-info mr-2"></i>CloudConvert API (Dự phòng)</h2>
+                        <p class="text-sm mb-4">Sử dụng làm phương án dự phòng khi Adobe API bị lỗi hoặc hết lượt dùng. CloudConvert hỗ trợ chuyển đổi DOCX sang PDF và tạo Thumbnail.</p>
+                        
+                        <div class="form-control mb-4">
+                            <label class="label"><span class="label-text font-bold">CloudConvert API Key</span></label>
+                            <input type="password" id="cloudconvert_api_key" class="input input-bordered w-full" 
+                                   value="<?= htmlspecialchars(getSetting('cloudconvert_api_key', '')) ?>"
+                                   placeholder="sk-abc123def456...">
+                            <label class="label">
+                                <span class="label-text-alt">Lấy key tại <a href="https://cloudconvert.com/dashboard/api/v2/keys" target="_blank" class="link link-primary">CloudConvert Dashboard</a></span>
+                            </label>
                         </div>
                     </div>
                 </div>

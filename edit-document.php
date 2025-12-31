@@ -20,7 +20,11 @@ if($doc_id <= 0) {
 
 // Get document - only owner can edit
 $doc = mysqli_fetch_assoc(mysqli_query($conn, 
-    "SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id"));
+    "SELECT d.*, aa.rejection_reason, dp.notes as admin_notes 
+     FROM documents d 
+     LEFT JOIN admin_approvals aa ON d.id = aa.document_id AND d.status = 'rejected'
+     LEFT JOIN docs_points dp ON d.id = dp.document_id
+     WHERE d.id=$doc_id AND d.user_id=$user_id"));
 
 if(!$doc) {
     header("Location: dashboard.php?error=not_found");
@@ -237,26 +241,60 @@ $current_page = 'dashboard';
                             </div>
                         </div>
                         
-                        <div class="alert alert-info">
-                            <i class="fa-solid fa-circle-info fa-lg"></i>
-                            <div>
-                                <div class="font-semibold flex items-center gap-1">
-                                    <i class="fa-solid fa-circle-info w-4 h-4"></i>
+                        <?php 
+                        $alert_class = 'alert-info';
+                        $icon_class = 'fa-circle-info';
+                        if ($doc['status'] === 'approved') {
+                            $alert_class = 'alert-success';
+                            $icon_class = 'fa-circle-check';
+                        } elseif ($doc['status'] === 'rejected') {
+                            $alert_class = 'alert-error';
+                            $icon_class = 'fa-circle-xmark';
+                        }
+                        ?>
+                        <div class="alert <?= $alert_class ?> shadow-sm">
+                            <i class="fa-solid <?= $icon_class ?> fa-lg"></i>
+                            <div class="w-full">
+                                <div class="font-bold flex items-center gap-1">
                                     Thông Tin Bổ Sung
                                 </div>
                                 <div class="text-sm">
-                                    <div><strong>Trạng thái:</strong> 
-                                        <?php 
-                                        $status_icons = [
-                                            'pending' => '<i class="fa-solid fa-hourglass-half mr-1"></i> Đang Duyệt',
-                                            'approved' => '<i class="fa-solid fa-circle-check mr-1"></i> Đã Duyệt',
-                                            'rejected' => '<i class="fa-solid fa-circle-xmark mr-1"></i> Đã Từ Chối'
-                                        ];
-                                        $status_labels = $status_icons;
-                                        echo $status_labels[$doc['status']] ?? ucfirst($doc['status']);
-                                        ?>
+                                    <div class="flex items-center justify-between">
+                                        <span><strong>Trạng thái:</strong> 
+                                            <?php 
+                                            $status_icons = [
+                                                'pending' => '<i class="fa-solid fa-hourglass-half mr-1"></i> Đang Duyệt',
+                                                'approved' => '<i class="fa-solid fa-circle-check mr-1"></i> Đã Duyệt',
+                                                'rejected' => '<i class="fa-solid fa-circle-xmark mr-1"></i> Đã Từ Chối'
+                                            ];
+                                            echo $status_icons[$doc['status']] ?? ucfirst($doc['status']);
+                                            ?>
+                                        </span>
+                                        <?php if($doc['status'] === 'approved' && $doc['admin_points'] > 0): ?>
+                                            <span><strong>Điểm đánh giá:</strong> <span class="badge badge-sm badge-ghost ml-1"><?= number_format($doc['admin_points']) ?></span></span>
+                                        <?php endif; ?>
+                                        <span><strong>Ngày tạo:</strong> <?= date('d/m/Y H:i', strtotime($doc['created_at'])) ?></span>
                                     </div>
-                                    <div class="mt-1"><strong>Ngày tạo:</strong> <?= date('d/m/Y H:i', strtotime($doc['created_at'])) ?></div>
+
+                                    <?php if($doc['status'] === 'rejected' && !empty($doc['rejection_reason'])): ?>
+                                        <div class="mt-2 p-2 bg-white/20 dark:bg-black/20 rounded border border-white/30 dark:border-black/30">
+                                            <div class="font-bold flex items-center gap-1 mb-1">
+                                                <i class="fa-solid fa-comment-dots"></i>
+                                                Lý do từ chối:
+                                            </div>
+                                            <div class="italic"><?= nl2br(htmlspecialchars($doc['rejection_reason'])) ?></div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <?php if($doc['status'] === 'approved' && !empty($doc['admin_notes'])): ?>
+                                        <div class="mt-2 p-2 bg-white/20 dark:bg-black/20 rounded border border-white/30 dark:border-black/30">
+                                            <div class="font-bold flex items-center gap-1 mb-1">
+                                                <i class="fa-solid fa-comment-dots"></i>
+                                                Phản hồi từ Admin:
+                                            </div>
+                                            <div class="italic"><?= nl2br(htmlspecialchars($doc['admin_notes'])) ?></div>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
