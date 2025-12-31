@@ -4,6 +4,7 @@ require_once 'config/db.php';
 require_once 'config/auth.php';
 require_once 'config/search.php';
 require_once 'config/categories.php';
+require_once 'config/premium.php';
 
 $user_id = isset($_SESSION['user_id']) ? getCurrentUserId() : null;
 $is_logged_in = isset($_SESSION['user_id']);
@@ -93,7 +94,6 @@ $page_title = !empty($keyword) ? "Tìm kiếm: $keyword - DocShare" : "Tìm ki�
 $current_page = 'search';
 ?>
 <?php include 'includes/head.php'; ?>
-<?php include 'includes/navbar.php'; ?>
 
 <style>
     .search-container {
@@ -108,31 +108,33 @@ $current_page = 'search';
 
     .search-title {
         font-size: 28px;
-        font-weight: 700;
-        color: #333;
+        font-weight: 800;
+        color: oklch(var(--bc));
         margin-bottom: 10px;
+        letter-spacing: -0.5px;
     }
 
     .search-meta {
         font-size: 14px;
-        color: #666;
+        color: oklch(var(--bc) / 0.7);
     }
 
     .search-layout {
         display: grid;
-        grid-template-columns: 300px 1fr;
+        grid-template-columns: 320px 1fr;
         gap: 30px;
     }
 
     /* Filters Sidebar */
     .filters-sidebar {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        background: oklch(var(--b1));
+        border-radius: var(--rounded-box);
+        padding: 24px;
+        border: 1px solid oklch(var(--b3));
+        box-shadow: 0 4px 20px -10px rgba(0,0,0,0.05);
         height: fit-content;
         position: sticky;
-        top: 20px;
+        top: 100px;
     }
 
     .filters-header {
@@ -141,22 +143,22 @@ $current_page = 'search';
         align-items: center;
         margin-bottom: 20px;
         padding-bottom: 15px;
-        border-bottom: 2px solid #f3f4f6;
+        border-bottom: 2px solid oklch(var(--b3));
     }
 
     .filters-title {
         font-size: 18px;
-        font-weight: 600;
-        color: #333;
+        font-weight: 700;
+        color: oklch(var(--bc));
     }
 
     .filter-reset {
         background: none;
         border: none;
-        color: #667eea;
+        color: oklch(var(--p));
         font-size: 13px;
         cursor: pointer;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .filter-reset:hover {
@@ -164,110 +166,60 @@ $current_page = 'search';
     }
 
     .filter-group {
-        margin-bottom: 16px;
+        margin-bottom: 20px;
     }
 
     .filter-group-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #667eea;
-        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        color: oklch(var(--p));
+        margin-bottom: 10px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
     }
 
     .filter-cascade-arrow {
         text-align: center;
-        color: #667eea;
+        color: oklch(var(--p));
+        opacity: 0.5;
         font-size: 12px;
         margin: 8px 0;
     }
 
     .filter-apply-btn {
         width: 100%;
-        padding: 12px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-top: 15px;
-        transition: all 0.3s;
-    }
-
-    .filter-apply-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .active-filters {
-        background: #f3f4f6;
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 15px;
-    }
-
-    .active-filter-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        background: #667eea;
-        color: white;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        margin: 2px;
+        margin-top: 10px;
     }
 
     /* Results Section */
     .results-section {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        background: oklch(var(--b1));
+        border-radius: var(--rounded-box);
+        padding: 24px;
+        border: 1px solid oklch(var(--b3));
+        box-shadow: 0 4px 20px -10px rgba(0,0,0,0.05);
     }
 
     .results-toolbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f3f4f6;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid oklch(var(--b3));
     }
 
     .sort-options {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
     }
 
     .sort-label {
-        font-size: 14px;
-        color: #6b7280;
-        font-weight: 500;
-    }
-
-    .sort-btn {
-        padding: 8px 16px;
-        background: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
         font-size: 13px;
-        color: #374151;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .sort-btn:hover {
-        background: #f3f4f6;
-    }
-
-    .sort-btn.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-color: #667eea;
+        color: oklch(var(--bc) / 0.6);
+        font-weight: 600;
+        margin-right: 4px;
     }
 
     /* Document Cards */
@@ -278,28 +230,30 @@ $current_page = 'search';
 
     .document-card {
         display: flex;
-        gap: 20px;
+        gap: 24px;
         padding: 20px;
-        background: #f9fafb;
-        border-radius: 10px;
-        transition: all 0.3s;
-        border: 1px solid #e5e7eb;
+        background: oklch(var(--b2) / 0.3);
+        border-radius: var(--rounded-box);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid oklch(var(--b3));
     }
 
     .document-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        background: white;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -10px rgba(0,0,0,0.1);
+        background: oklch(var(--b1));
+        border-color: oklch(var(--p) / 0.3);
     }
 
     .document-thumbnail {
-        width: 120px;
-        height: 160px;
-        background: #e5e7eb;
+        width: 140px;
+        height: 190px;
+        background: oklch(var(--b3));
         border-radius: 8px;
         overflow: hidden;
         flex-shrink: 0;
         position: relative;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
     .document-thumbnail img {
@@ -309,73 +263,76 @@ $current_page = 'search';
     }
 
     .document-icon {
-        width: 120px;
-        height: 160px;
+        width: 140px;
+        height: 190px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #f3f4f6;
+        background: oklch(var(--b3) / 0.5);
         border-radius: 8px;
-        font-size: 48px;
+        font-size: 56px;
         flex-shrink: 0;
+        color: oklch(var(--p) / 0.3);
     }
 
     .document-info {
         flex: 1;
         min-width: 0;
+        padding-top: 4px;
     }
 
     .document-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #1f2937;
+        font-size: 20px;
+        font-weight: 700;
+        color: oklch(var(--bc));
         margin-bottom: 8px;
         text-decoration: none;
         display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        line-height: 1.3;
+        transition: color 0.2s;
     }
 
     .document-title:hover {
-        color: #667eea;
+        color: oklch(var(--p));
     }
 
     .document-category-path {
-        font-size: 12px;
-        color: #667eea;
-        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: oklch(var(--p));
+        margin-bottom: 12px;
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
+        gap: 6px;
     }
 
     .document-category-path span {
-        background: #ede9fe;
-        padding: 2px 8px;
-        border-radius: 4px;
+        background: oklch(var(--p) / 0.1);
+        padding: 2px 10px;
+        border-radius: 20px;
+        border: 1px solid oklch(var(--p) / 0.1);
     }
 
     .document-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 15px;
+        gap: 20px;
         font-size: 13px;
-        color: #6b7280;
-        margin-bottom: 10px;
+        color: oklch(var(--bc) / 0.7);
+        margin-bottom: 16px;
     }
 
     .document-meta span {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
     }
 
     .document-description {
         font-size: 14px;
-        color: #4b5563;
+        color: oklch(var(--bc) / 0.8);
         line-height: 1.6;
-        margin-bottom: 10px;
+        margin-bottom: 16px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -384,108 +341,71 @@ $current_page = 'search';
 
     .document-stats {
         display: flex;
-        gap: 15px;
-        font-size: 13px;
-        color: #6b7280;
+        gap: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: oklch(var(--bc) / 0.5);
     }
 
     .stat-item {
         display: flex;
         align-items: center;
-        gap: 4px;
-    }
-
-    /* Pagination */
-    .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 30px;
-    }
-
-    .pagination a,
-    .pagination span {
-        padding: 8px 14px;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        text-decoration: none;
-        color: #374151;
-        font-size: 14px;
-        transition: all 0.2s;
-    }
-
-    .pagination a:hover {
-        background: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-
-    .pagination .active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-color: #667eea;
-    }
-
-    /* No Results */
-    .no-results {
-        text-align: center;
-        padding: 60px 20px;
-    }
-
-    .no-results-icon {
-        font-size: 64px;
-        margin-bottom: 20px;
-        opacity: 0.5;
-    }
-
-    .no-results-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 10px;
-    }
-
-    .no-results-text {
-        font-size: 14px;
-        color: #6b7280;
-        margin-bottom: 20px;
+        gap: 6px;
     }
 
     /* Mobile Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
         .search-layout {
             grid-template-columns: 1fr;
         }
 
         .filters-sidebar {
             position: static;
+            margin-bottom: 20px;
         }
+    }
 
-        .results-toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .sort-options {
-            width: 100%;
-            flex-wrap: wrap;
-        }
-
+    @media (max-width: 640px) {
         .document-card {
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
         }
 
         .document-thumbnail,
         .document-icon {
             width: 100%;
-            height: 180px;
+            height: 200px;
         }
+        
+        .results-toolbar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .sort-options {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .animate-float {
+        animation: float 3s ease-in-out infinite;
     }
 </style>
 
-<div class="search-container">
+<?php include 'includes/sidebar.php'; ?>
+
+<div class="drawer-content flex flex-col min-h-screen">
+    <?php include 'includes/navbar.php'; ?>
+    
+    <main class="flex-grow p-4 lg:p-6 pb-20">
+        <div class="search-container">
     <div class="search-header">
         <h1 class="search-title">
             <?php if (!empty($keyword)): ?>
@@ -507,12 +427,15 @@ $current_page = 'search';
     </div>
 
     <div class="search-layout">
-        <!-- Filters Sidebar -->
-        <aside class="filters-sidebar">
+                <aside class="filters-sidebar">
             <div class="filters-header">
-                <h2 class="filters-title">🔍 Lọc kết quả</h2>
+                <h2 class="filters-title flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-primary"></i> Lọc kết quả
+                </h2>
                 <?php if (!empty($filters)): ?>
-                    <button class="filter-reset" onclick="resetFilters()">Xóa bộ lọc</button>
+                    <button class="filter-reset flex items-center gap-1 text-primary hover:opacity-80 transition-opacity" onclick="resetFilters()">
+                        <i class="fa-solid fa-rotate-left"></i> Xóa lọc
+                    </button>
                 <?php endif; ?>
             </div>
 
@@ -522,8 +445,10 @@ $current_page = 'search';
 
                 <!-- Cấp học -->
                 <div class="filter-group">
-                    <div class="filter-group-title">🎓 Cấp học</div>
-                    <select name="education_level" id="filter_education_level" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap"></i> Cấp học
+                    </div>
+                    <select name="education_level" id="filter_education_level" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả cấp học --</option>
                         <?php foreach ($education_levels as $level): ?>
                             <option value="<?= $level['code'] ?>" <?= $category_filters['education_level'] === $level['code'] ? 'selected' : '' ?>>
@@ -535,51 +460,56 @@ $current_page = 'search';
 
                 <!-- Lớp (for phổ thông) -->
                 <div class="filter-group hidden" id="filter_grade_container">
-                    <div class="filter-cascade-arrow">↓</div>
-                    <div class="filter-group-title">📚 Lớp</div>
-                    <select name="grade_id" id="filter_grade_id" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i> Lớp
+                    </div>
+                    <select name="grade_id" id="filter_grade_id" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả lớp --</option>
                     </select>
                 </div>
 
                 <!-- Môn học (for phổ thông) -->
                 <div class="filter-group hidden" id="filter_subject_container">
-                    <div class="filter-cascade-arrow">↓</div>
-                    <div class="filter-group-title">📖 Môn học</div>
-                    <select name="subject_code" id="filter_subject_code" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-book"></i> Môn học
+                    </div>
+                    <select name="subject_code" id="filter_subject_code" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả môn --</option>
                     </select>
                 </div>
 
                 <!-- Nhóm ngành (for đại học) -->
                 <div class="filter-group hidden" id="filter_major_group_container">
-                    <div class="filter-cascade-arrow">↓</div>
-                    <div class="filter-group-title">🎯 Nhóm ngành</div>
-                    <select name="major_group_id" id="filter_major_group_id" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-users-rectangle"></i> Nhóm ngành
+                    </div>
+                    <select name="major_group_id" id="filter_major_group_id" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả nhóm ngành --</option>
                     </select>
                 </div>
 
                 <!-- Ngành học (for đại học) -->
                 <div class="filter-group hidden" id="filter_major_container">
-                    <div class="filter-cascade-arrow">↓</div>
-                    <div class="filter-group-title">📋 Ngành học</div>
-                    <select name="major_code" id="filter_major_code" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-briefcase"></i> Ngành học
+                    </div>
+                    <select name="major_code" id="filter_major_code" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả ngành --</option>
                     </select>
                 </div>
 
                 <!-- Loại tài liệu -->
                 <div class="filter-group hidden" id="filter_doc_type_container">
-                    <div class="filter-cascade-arrow">↓</div>
-                    <div class="filter-group-title">📄 Loại tài liệu</div>
-                    <select name="doc_type_code" id="filter_doc_type_code" class="select select-bordered select-sm w-full">
+                    <div class="filter-group-title flex items-center gap-2">
+                        <i class="fa-solid fa-file-contract"></i> Loại tài liệu
+                    </div>
+                    <select name="doc_type_code" id="filter_doc_type_code" class="select select-bordered select-sm w-full bg-base-100">
                         <option value="">-- Tất cả loại --</option>
                     </select>
                 </div>
 
-                <button type="submit" class="filter-apply-btn">
-                    🔍 Tìm kiếm
+                <button type="submit" class="btn btn-primary btn-block shadow-lg mt-4">
+                    <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
                 </button>
             </form>
         </aside>
@@ -589,16 +519,18 @@ $current_page = 'search';
             <?php if (!empty($search_results['results'])): ?>
                 <div class="results-toolbar">
                     <div class="sort-options">
-                        <span class="sort-label">Sắp xếp:</span>
-                        <button class="sort-btn <?= $sort === 'relevance' ? 'active' : '' ?>" onclick="changeSort('relevance')">
-                            Phù hợp nhất
-                        </button>
-                        <button class="sort-btn <?= $sort === 'popular' ? 'active' : '' ?>" onclick="changeSort('popular')">
-                            Phổ biến
-                        </button>
-                        <button class="sort-btn <?= $sort === 'recent' ? 'active' : '' ?>" onclick="changeSort('recent')">
-                            Mới nhất
-                        </button>
+                        <span class="sort-label text-base-content/50 uppercase tracking-widest text-[10px] mr-2">Sắp xếp:</span>
+                        <div class="join shadow-sm border border-base-300">
+                            <button class="btn btn-sm join-item <?= $sort === 'relevance' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('relevance')">
+                                <i class="fa-solid fa-bolt-lightning mr-1 opacity-70"></i> Phù hợp nhất
+                            </button>
+                            <button class="btn btn-sm join-item <?= $sort === 'popular' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('popular')">
+                                <i class="fa-solid fa-fire mr-1 opacity-70"></i> Phổ biến
+                            </button>
+                            <button class="btn btn-sm join-item <?= $sort === 'recent' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('recent')">
+                                <i class="fa-solid fa-clock mr-1 opacity-70"></i> Mới nhất
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -669,47 +601,76 @@ $current_page = 'search';
 
                 <!-- Pagination -->
                 <?php if ($search_results['total_pages'] > 1): ?>
-                    <div class="pagination">
-                        <?php if ($page > 1): ?>
-                            <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">
-                                ← Trước
-                            </a>
-                        <?php endif; ?>
-
-                        <?php for ($i = max(1, $page - 2); $i <= min($search_results['total_pages'], $page + 2); $i++): ?>
-                            <?php if ($i == $page): ?>
-                                <span class="active"><?= $i ?></span>
-                            <?php else: ?>
-                                <a href="?<?= http_build_query(array_merge($_GET, ['page' => $i])) ?>">
-                                    <?= $i ?>
+                    <div class="flex justify-center mt-12">
+                        <div class="join shadow-sm border border-base-300">
+                            <?php if ($page > 1): ?>
+                                <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>" class="join-item btn btn-sm bg-base-100 border-r border-base-300">
+                                    <i class="fa-solid fa-chevron-left"></i>
                                 </a>
                             <?php endif; ?>
-                        <?php endfor; ?>
 
-                        <?php if ($page < $search_results['total_pages']): ?>
-                            <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">
-                                Sau →
-                            </a>
-                        <?php endif; ?>
+                            <?php for ($i = max(1, $page - 2); $i <= min($search_results['total_pages'], $page + 2); $i++): ?>
+                                <a href="?<?= http_build_query(array_merge($_GET, ['page' => $i])) ?>" 
+                                   class="join-item btn btn-sm <?= $i == $page ? 'btn-primary' : 'bg-base-100 hover:bg-base-200' ?>">
+                                    <?= $i ?>
+                                </a>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $search_results['total_pages']): ?>
+                                <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>" class="join-item btn btn-sm bg-base-100 border-l border-base-300">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
             <?php else: ?>
-                <!-- No Results -->
-                <div class="no-results">
-                    <div class="no-results-icon"><i class="fa-solid fa-magnifying-glass text-primary/30"></i></div>
-                    <h2 class="no-results-title">Không tìm thấy kết quả</h2>
-                    <p class="no-results-text">
+                <!-- No Results Premium View -->
+                <div class="no-results flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <div class="relative mb-8 animate-float">
+                        <div class="w-32 h-32 rounded-3xl bg-primary/5 flex items-center justify-center rotate-12">
+                            <i class="fa-solid fa-box-open text-6xl text-primary/20 -rotate-12"></i>
+                        </div>
+                        <div class="absolute -bottom-4 -right-4 w-14 h-14 rounded-2xl bg-base-100 flex items-center justify-center shadow-xl border border-base-200 text-primary">
+                            <i class="fa-solid fa-magnifying-glass text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-3xl font-extrabold text-base-content mb-3 tracking-tight">Hic! Không tìm thấy kết quả</h2>
+                    <p class="text-base-content/60 max-w-md mx-auto mb-10 leading-relaxed text-lg">
                         <?php if (!empty($keyword)): ?>
-                            Không tìm thấy tài liệu nào cho từ khóa "<strong><?= htmlspecialchars($keyword) ?></strong>"
+                            Rất tiếc, chúng mình không tìm thấy tài liệu nào khớp với từ khóa <span class="text-primary font-bold">"<?= htmlspecialchars($keyword) ?>"</span>.
                         <?php else: ?>
-                            Hãy thử tìm kiếm với từ khóa khác hoặc thay đổi bộ lọc
+                            Có vẻ như các bộ lọc hiện tại của bạn không có tài liệu nào phù hợp với các tiêu chí tìm kiếm.
                         <?php endif; ?>
                     </p>
+                    
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button class="btn btn-primary btn-wide shadow-xl shadow-primary/20 h-14" onclick="resetFilters()">
+                            <i class="fa-solid fa-rotate-left mr-2"></i> Thử lại từ đầu
+                        </button>
+                        <a href="dashboard.php" class="btn btn-ghost btn-wide h-14 border-base-300 hover:bg-base-200 transition-all">
+                            <i class="fa-solid fa-house mr-2"></i> Về Dashboard
+                        </a>
+                    </div>
+                    
+                    <div class="mt-16 pt-8 border-t border-base-300/50 w-full max-w-lg">
+                        <p class="text-xs uppercase tracking-widest text-base-content/40 font-bold mb-4 italic">Gợi ý cho bạn:</p>
+                        <ul class="text-sm text-base-content/60 space-y-2">
+                            <li>• Kiểm tra lại lỗi chính tả của từ khóa</li>
+                            <li>• Thử sử dụng các từ khóa ngắn gọn hơn</li>
+                            <li>• Tháo bớt các bộ lọc để có nhiều kết quả hơn</li>
+                        </ul>
+                    </div>
                 </div>
             <?php endif; ?>
-        </main>
-    </div>
-</div>
+        </div> <!-- Close search-layout -->
+    </div> <!-- Close search-container -->
+</main>
+            
+            <?php include 'includes/footer.php'; ?>
+        </div> <!-- Close drawer-content -->
+    </div> <!-- Close drawer from sidebar.php -->
 
 <script>
     // Current filter values from PHP
@@ -917,5 +878,3 @@ $current_page = 'search';
         window.location.href = 'search.php' + (currentFilters.q ? '?q=' + encodeURIComponent(currentFilters.q) : '');
     }
 </script>
-
-<?php include 'includes/footer.php'; ?>

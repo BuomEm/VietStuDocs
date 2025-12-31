@@ -6,6 +6,7 @@ if(!isset($current_page)) $current_page = '';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/premium.php';
 
 $has_admin = isset($_SESSION['user_id']) && hasAdminAccess();
 

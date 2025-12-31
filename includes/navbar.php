@@ -21,100 +21,85 @@ if(isset($_SESSION['user_id'])) {
 }
 ?>
 
-<div class="navbar bg-primary text-primary-content shadow-lg">
+<div class="navbar bg-base-100/80 backdrop-blur border-b border-base-300 shadow-sm transition-all duration-300">
     <div class="flex-none">
-        <label for="drawer-toggle" class="btn btn-square btn-ghost lg:hidden">
+        <label for="drawer-toggle" class="btn btn-square btn-ghost lg:hidden text-base-content">
             <i class="fa-regular fa-bars"></i>
         </label>
     </div>
     
     <div class="flex-none">
-        <a href="dashboard.php" class="btn btn-ghost text-xl">
-            <i class="fa-regular fa-file-lines mr-2"></i>
-            DocShare
+        <a href="dashboard.php" class="btn btn-ghost text-xl flex items-center gap-1 group">
+            <i class="fa-regular fa-file-lines text-primary text-2xl transition-transform group-hover:scale-110"></i>
+            <span class="font-bold text-primary tracking-tight">DocShare</span>
         </a>
     </div>
     
     <!-- Search Box -->
-    <div class="flex-1 max-w-md mx-auto px-2">
-        <form action="search.php" method="GET" class="flex gap-2 w-full">
-            <input 
-                type="text" 
-                name="q" 
-                placeholder="Tìm kiếm tài liệu..." 
-                class="input input-bordered flex-1 bg-base-100 text-base-content"
-                id="searchInput"
-                autocomplete="off"
-            />
-            <button type="submit" class="btn btn-square">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </button>
-        </form>
-        <!-- Autocomplete suggestions -->
-        <div class="dropdown-content bg-base-100 shadow-lg rounded-box w-full mt-2 z-50 hidden" id="searchSuggestions"></div>
+    <div class="flex-1 max-w-md mx-auto px-2 relative group/search">
+        <div class="relative">
+            <form action="search.php" method="GET" class="flex gap-0 w-full">
+                <input 
+                    type="text" 
+                    name="q" 
+                    placeholder="Tìm kiếm tài liệu..." 
+                    class="input input-bordered w-full bg-base-100 text-base-content rounded-r-none focus:outline-none focus:border-primary transition-all"
+                    id="searchInput"
+                    autocomplete="off"
+                />
+                <button type="submit" class="btn btn-primary rounded-l-none border-l-0">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </form>
+            <!-- Autocomplete suggestions -->
+            <div class="absolute top-full left-0 right-0 mt-2 bg-base-100 shadow-2xl rounded-box border border-base-300 overflow-hidden z-[100] hidden" id="searchSuggestions"></div>
+        </div>
     </div>
     
     <div class="flex-none gap-1 sm:gap-2 items-center">
         <?php if(isset($_SESSION['user_id'])): ?>
-            <!-- Points Display -->
-            <!-- <?php if($user_points): ?>
-                <div class="badge badge-secondary gap-1.5 px-2 sm:px-3 py-2 text-xs sm:text-sm">
-                    <i class="fa-regular fa-sack-dollar"></i>
-                    <span class="hidden sm:inline"><?= number_format($user_points['current_points']) ?></span>
-                    <span class="sm:hidden"><?= number_format($user_points['current_points']) ?></span>
-                </div>
-            <?php endif; ?> -->
-            
-            <!-- Premium Badge -->
-            <!-- <?php if($is_premium): ?>
-                <div class="badge badge-warning gap-1.5 px-2 sm:px-3 py-2 text-xs sm:text-sm">
-                    <i class="fa-regular fa-star"></i>
-                    <span class="hidden sm:inline">Premium</span>
-                </div>
-            <?php endif; ?> -->
-            
             <!-- Profile Dropdown -->
             <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar rounded-full bg-secondary text-secondary-content grid place-items-center">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                     <i class="fa-regular fa-user text-xl"></i>
                 </div>
-                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 text-base-content">
-                    <li class="menu-title flex flex-col items-start gap-1">
-                        <span><?= htmlspecialchars($user_info['username'] ?? getCurrentUsername()) ?></span>
-                        <span class="text-xs text-base-content/70 font-normal">
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-xl bg-base-100 rounded-box w-52 text-base-content border border-base-300">
+                    <li class="menu-title flex flex-col items-start gap-1 pb-2">
+                        <span class="font-bold text-primary"><?= htmlspecialchars($user_info['username'] ?? getCurrentUsername()) ?></span>
+                        <span class="text-xs opacity-60 font-normal">
                             <?= htmlspecialchars($user_info['email'] ?? '') ?>
                         </span>
-                        <hr class="border-t border-base-300 w-full mt-2 mb-0">
                     </li>
-                    <li><a href="saved.php">
+                    <div class="divider my-0"></div>
+                    <li><a href="saved.php" class="hover:text-primary">
                         <i class="fa-regular fa-bookmark"></i>
-                        Saved
+                        Đã Lưu
                     </a></li>
-                    <li><a href="profile.php">
+                    <li><a href="profile.php" class="hover:text-primary">
                         <i class="fa-regular fa-user"></i>
-                        Profile
+                        Hồ Sơ
                     </a></li>
-                    <li><a href="premium.php">
-                        <i class="fa-regular fa-star"></i>
+                    <li><a href="premium.php" class="hover:text-primary">
+                        <i class="fa-regular fa-star text-warning"></i>
                         Premium
                     </a></li>
                     <?php if($has_admin): ?>
-                        <li><a href="admin/index.php">
+                        <li><a href="admin/index.php" class="bg-primary/5 text-primary hover:bg-primary/10">
                             <i class="fa-regular fa-screwdriver-wrench"></i>
-                            Admin
+                            Quản trị viên
                         </a></li>
                     <?php endif; ?>
-                    <li><hr class="my-2"></li>
-                    <li><a href="logout.php" class="text-error">
+                    <div class="divider my-0"></div>
+                    <li><a href="logout.php" class="text-error font-medium hover:bg-error/10">
                         <i class="fa-regular fa-right-from-bracket"></i>
-                        Logout
+                        Đăng xuất
                     </a></li>
                 </ul>
             </div>
         <?php else: ?>
-            <a href="index.php" class="btn btn-ghost">
+            <a href="index.php" class="btn btn-primary btn-sm rounded-btn">
                 <i class="fa-regular fa-lock"></i>
-                Login
+                Đăng nhập
             </a>
         <?php endif; ?>
     </div>
@@ -164,11 +149,16 @@ if(isset($_SESSION['user_id'])) {
 
     function displaySuggestions(suggestions) {
         searchSuggestions.innerHTML = suggestions.map(s => `
-            <a href="search.php?q=${encodeURIComponent(s.keyword)}" class="block px-4 py-2 hover:bg-base-200 rounded-box">
-                <div class="flex items-center gap-2">
-                    <i class="fa-regular fa-magnifying-glass"></i>
-                    <span>${s.keyword}</span>
-                    ${s.search_count ? `<span class="ml-auto text-xs opacity-70">${s.search_count} lần</span>` : ''}
+            <a href="search.php?q=${encodeURIComponent(s.keyword)}" class="group block px-4 py-3 hover:bg-primary/5 transition-colors border-b last:border-0 border-base-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-base-content/50 group-hover:bg-primary group-hover:text-primary-content transition-colors">
+                        <i class="fa-regular fa-magnifying-glass text-sm"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium text-base-content group-hover:text-primary transition-colors">${s.keyword}</span>
+                        ${s.search_count ? `<span class="text-[10px] opacity-50 uppercase tracking-wider font-bold">Tìm kiếm ${s.search_count} lần</span>` : ''}
+                    </div>
+                    <i class="fa-solid fa-arrow-right ml-auto text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary"></i>
                 </div>
             </a>
         `).join('');
