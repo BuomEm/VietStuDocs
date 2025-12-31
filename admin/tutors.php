@@ -18,15 +18,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($tutor_id) {
         if ($action === 'approve') {
             $stmt = $conn->prepare("UPDATE tutors SET status='active', updated_at=NOW() WHERE user_id=?");
-            $stmt->bind_param("i", $tutor_id);
-            if ($stmt->execute()) {
-                $_SESSION['flash_message'] = "Đã duyệt gia sư thành công!";
+            if ($stmt) {
+                $stmt->bind_param("i", $tutor_id);
+                if ($stmt->execute()) {
+                    $_SESSION['flash_message'] = "Đã duyệt gia sư thành công!";
+                }
+            } else {
+                $_SESSION['flash_error'] = "Lỗi hệ thống: " . $conn->error;
             }
         } elseif ($action === 'reject') {
             $stmt = $conn->prepare("UPDATE tutors SET status='rejected', updated_at=NOW() WHERE user_id=?");
-            $stmt->bind_param("i", $tutor_id);
-            if ($stmt->execute()) {
-                $_SESSION['flash_message'] = "Đã từ chối gia sư!";
+            if ($stmt) {
+                $stmt->bind_param("i", $tutor_id);
+                if ($stmt->execute()) {
+                    $_SESSION['flash_message'] = "Đã từ chối gia sư!";
+                }
+            } else {
+                $_SESSION['flash_error'] = "Lỗi hệ thống: " . $conn->error;
             }
         }
     }
@@ -82,6 +90,14 @@ include __DIR__ . '/../includes/admin-header.php';
                 <span><?= $_SESSION['flash_message'] ?></span>
             </div>
             <?php unset($_SESSION['flash_message']); ?>
+        <?php endif; ?>
+
+        <?php if(isset($_SESSION['flash_error'])): ?>
+            <div class="alert alert-error mb-4">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span><?= $_SESSION['flash_error'] ?></span>
+            </div>
+            <?php unset($_SESSION['flash_error']); ?>
         <?php endif; ?>
 
         <div class="card bg-base-100 shadow-xl overflow-hidden">
