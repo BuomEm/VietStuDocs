@@ -61,6 +61,42 @@ $admin_username = function_exists('getCurrentUsername') ? getCurrentUsername() :
                 </a>
             </li>
             
+            <!-- Tutors (New) -->
+            <li>
+                <a href="tutors.php" class="<?= $admin_active_page === 'tutors' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-chalkboard-user w-5 h-5"></i>
+                    Quản lý Gia sư
+                    <?php 
+                    $pending_tutors_query = mysqli_query($GLOBALS['conn'], "SELECT COUNT(*) as count FROM tutors WHERE status='pending'");
+                    $pending_tutors = mysqli_fetch_assoc($pending_tutors_query)['count'] ?? 0;
+                    if($pending_tutors > 0): 
+                    ?>
+                        <span class="badge badge-sm badge-warning"><?= $pending_tutors ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
+
+            <!-- Tutor Requests (Disputes) -->
+            <li>
+                <a href="tutor_requests.php" class="<?= $admin_active_page === 'tutor_requests' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-gavel w-5 h-5"></i>
+                    Hỏi đáp & Khiếu nại
+                    <?php 
+                    // Need to check if table exists efficiently, or just surpress error
+                    try {
+                        $pdo_check = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
+                        $stmt = $pdo_check->query("SELECT COUNT(*) FROM tutor_requests WHERE status = 'disputed'");
+                        $count_disputed = $stmt->fetchColumn();
+                        if($count_disputed > 0): 
+                        ?>
+                            <span class="badge badge-sm badge-error"><?= $count_disputed ?></span>
+                        <?php 
+                        endif;
+                    } catch(Exception $e) {} 
+                    ?>
+                </a>
+            </li>
+            
             <!-- Users -->
             <li>
                 <a href="users.php" class="<?= $admin_active_page === 'users' ? 'active' : '' ?>">

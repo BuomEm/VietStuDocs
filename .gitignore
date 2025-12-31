@@ -5,6 +5,8 @@ database/
 *.pdf
 *.docx
 uploads/thumbnails/*.jpg
+uploads/tutors/*
+!uploads/tutors/.gitkeep
 config/db.php
 .env
 API/pdfservices-api-credentials.json 

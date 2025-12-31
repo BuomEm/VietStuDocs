@@ -47,7 +47,7 @@ if(isset($_SESSION['user_id'])) {
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <!-- Dashboard -->
                     <li>
-                        <a href="dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>">
+                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>">
                             <i class="fa-solid fa-house w-5 h-5"></i>
                             Dashboard
                         </a>
@@ -55,15 +55,23 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Upload -->
                     <li>
-                        <a href="upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>">
+                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>">
                             <i class="fa-solid fa-cloud-arrow-up w-5 h-5"></i>
                             Upload
+                        </a>
+                    </li>
+
+                    <!-- Tutor Dashboard -->
+                    <li>
+                        <a href="/tutors/dashboard" class="<?= ($current_page === 'tutor_dashboard' || strpos($_SERVER['PHP_SELF'], '/tutors/dashboard.php') !== false) ? 'active' : '' ?>">
+                            <i class="fa-solid fa-user-graduate w-5 h-5"></i>
+                            Thuê Gia Sư
                         </a>
                     </li>
                     
                     <!-- Saved -->
                     <li>
-                        <a href="saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>">
+                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>">
                             <i class="fa-solid fa-bookmark w-5 h-5"></i>
                             Saved
                         </a>
@@ -71,7 +79,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Premium -->
                     <li>
-                        <a href="premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>">
+                        <a href="/premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>">
                             <i class="fa-solid fa-crown w-5 h-5"></i>
                             Premium
                             <?php if($is_premium): ?>
@@ -82,7 +90,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Profile -->
                     <li>
-                        <a href="profile.php" class="<?= $current_page === 'profile' ? 'active' : '' ?>">
+                        <a href="/profile.php" class="<?= $current_page === 'profile' ? 'active' : '' ?>">
                             <i class="fa-solid fa-user w-5 h-5"></i>
                             Profile
                         </a>
@@ -91,7 +99,7 @@ if(isset($_SESSION['user_id'])) {
                     <!-- Admin -->
                     <?php if($has_admin): ?>
                         <li>
-                            <a href="admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>">
+                            <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>">
                                 <i class="fa-solid fa-user-shield w-5 h-5"></i>
                                 Admin
                             </a>
@@ -115,14 +123,14 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Logout -->
                     <li class="mt-auto">
-                        <a href="logout.php" class="text-error">
+                        <a href="/logout.php" class="text-error">
                             <i class="fa-solid fa-right-from-bracket w-5 h-5"></i>
                             Logout
                         </a>
                     </li>
                 <?php else: ?>
                     <li>
-                        <a href="index.php">
+                        <a href="/index.php">
                             <i class="fa-solid fa-right-to-bracket w-5 h-5"></i>
                             Login
                         </a>

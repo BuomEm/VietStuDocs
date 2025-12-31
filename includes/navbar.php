@@ -29,7 +29,7 @@ if(isset($_SESSION['user_id'])) {
     </div>
     
     <div class="flex-none">
-        <a href="dashboard.php" class="btn btn-ghost text-xl flex items-center gap-1 group">
+        <a href="/dashboard.php" class="btn btn-ghost text-xl flex items-center gap-1 group">
             <i class="fa-regular fa-file-lines text-primary text-2xl transition-transform group-hover:scale-110"></i>
             <span class="font-bold text-primary tracking-tight">DocShare</span>
         </a>
@@ -38,7 +38,7 @@ if(isset($_SESSION['user_id'])) {
     <!-- Search Box -->
     <div class="flex-1 max-w-md mx-auto px-2 relative group/search">
         <div class="relative">
-            <form action="search.php" method="GET" class="flex gap-0 w-full">
+            <form action="/search.php" method="GET" class="flex gap-0 w-full">
                 <input 
                     type="text" 
                     name="q" 
@@ -71,33 +71,33 @@ if(isset($_SESSION['user_id'])) {
                         </span>
                     </li>
                     <div class="divider my-0"></div>
-                    <li><a href="saved.php" class="hover:text-primary">
+                    <li><a href="/saved.php" class="hover:text-primary">
                         <i class="fa-regular fa-bookmark"></i>
                         Đã Lưu
                     </a></li>
-                    <li><a href="profile.php" class="hover:text-primary">
+                    <li><a href="/profile.php" class="hover:text-primary">
                         <i class="fa-regular fa-user"></i>
                         Hồ Sơ
                     </a></li>
-                    <li><a href="premium.php" class="hover:text-primary">
+                    <li><a href="/premium.php" class="hover:text-primary">
                         <i class="fa-regular fa-star text-warning"></i>
                         Premium
                     </a></li>
                     <?php if($has_admin): ?>
-                        <li><a href="admin/index.php" class="bg-primary/5 text-primary hover:bg-primary/10">
+                        <li><a href="/admin/index.php" class="bg-primary/5 text-primary hover:bg-primary/10">
                             <i class="fa-regular fa-screwdriver-wrench"></i>
                             Quản trị viên
                         </a></li>
                     <?php endif; ?>
                     <div class="divider my-0"></div>
-                    <li><a href="logout.php" class="text-error font-medium hover:bg-error/10">
+                    <li><a href="/logout.php" class="text-error font-medium hover:bg-error/10">
                         <i class="fa-regular fa-right-from-bracket"></i>
                         Đăng xuất
                     </a></li>
                 </ul>
             </div>
         <?php else: ?>
-            <a href="index.php" class="btn btn-primary btn-sm rounded-btn">
+            <a href="/index.php" class="btn btn-primary btn-sm rounded-btn">
                 <i class="fa-regular fa-lock"></i>
                 Đăng nhập
             </a>
@@ -122,7 +122,7 @@ if(isset($_SESSION['user_id'])) {
             }
 
             searchTimeout = setTimeout(() => {
-                fetch(`handler/search_suggestions.php?q=${encodeURIComponent(keyword)}`)
+                fetch(`/handler/search_suggestions.php?q=${encodeURIComponent(keyword)}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.success && data.suggestions.length > 0) {
@@ -149,7 +149,7 @@ if(isset($_SESSION['user_id'])) {
 
     function displaySuggestions(suggestions) {
         searchSuggestions.innerHTML = suggestions.map(s => `
-            <a href="search.php?q=${encodeURIComponent(s.keyword)}" class="group block px-4 py-3 hover:bg-primary/5 transition-colors border-b last:border-0 border-base-200">
+            <a href="/search.php?q=${encodeURIComponent(s.keyword)}" class="group block px-4 py-3 hover:bg-primary/5 transition-colors border-b last:border-0 border-base-200">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-base-content/50 group-hover:bg-primary group-hover:text-primary-content transition-colors">
                         <i class="fa-regular fa-magnifying-glass text-sm"></i>
