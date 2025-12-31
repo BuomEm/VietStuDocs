@@ -2,14 +2,14 @@ RewriteEngine On
 
 # 1. Redirect .php to extensionless (Redirect public URL)
 # For specific whitelisted root files
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(dashboard|edit-document|error|index|logout|premium|profile|saved|search|testapi|upload|view)\.php [NC]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(dashboard|edit-document|error|index|login|logout|premium|profile|saved|search|testapi|upload|view)\.php [NC]
 RewriteRule ^ /%1 [R=301,L]
 
 # 2. Rewrite extensionless to .php (Internal handling)
 # For specific whitelisted root files
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(dashboard|edit-document|error|index|logout|premium|profile|saved|search|testapi|upload|view)$ $1.php [L]
+RewriteRule ^(dashboard|edit-document|error|index|login|logout|premium|profile|saved|search|testapi|upload|view)$ $1.php [L]
 
 # For Admin directory
 RewriteCond %{REQUEST_URI} ^/admin/

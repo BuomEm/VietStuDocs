@@ -7,7 +7,7 @@ function isUserLoggedIn() {
 
 function redirectIfNotLoggedIn() {
     if(!isUserLoggedIn()) {
-        header("Location: index");
+        header("Location: login");
         exit;
     }
 }

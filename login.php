@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/error_handler.php';
 session_start();
 if(isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
+    header("Location: dashboard");
     exit();
 }
 
@@ -32,7 +32,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
     $password = $_POST['password'];
     
     if(loginUser($email, $password)) {
-        header("Location: dashboard.php");
+        header("Location: dashboard");
         exit();
     } else {
         $error = "Email hoặc mật khẩu không chính xác";
@@ -154,7 +154,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             <!-- Login Form -->
             <div id="login-section" class="form-fade">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">Chào mừng trở lại!</h2>
-                <form method="POST" action="login.php" class="space-y-5">
+                <form method="POST" action="login" class="space-y-5">
                     <div class="form-control">
                         <label class="label px-1">
                             <span class="label-text font-bold text-gray-600">Email</span>
@@ -201,7 +201,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             <!-- Register Form -->
             <div id="register-section" class="form-fade hidden-form">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">Tạo tài khoản mới</h2>
-                <form method="POST" action="login.php" class="space-y-4">
+                <form method="POST" action="login" class="space-y-4">
                     <div class="form-control">
                         <label class="label px-1">
                             <span class="label-text font-bold text-gray-600">Tên người dùng</span>
