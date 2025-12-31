@@ -852,14 +852,14 @@ include __DIR__ . '/../includes/admin-header.php';
 
                     try {
                         if (!['pdf', 'docx', 'doc'].includes(doc.file_ext)) {
-                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name} (${doc.file_ext})</span>`;
+                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name} (Định dạng .${doc.file_ext} không hỗ trợ tự động)</span>`;
                             skipCount++;
                             continue;
                         }
 
                         const docInfoResponse = await fetch('../handler/batch_generate_thumbnails.php', {
                             method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ doc_id: doc.id })
                         });
 
@@ -868,17 +868,17 @@ include __DIR__ . '/../includes/admin-header.php';
                             throw new Error(`HTTP ${docInfoResponse.status}: ${text.substring(0, 100)}`);
                         }
 
-                    const docInfoText = await docInfoResponse.text();
-                    
-                    if (docInfoText.trim().startsWith('<')) {
-                        throw new Error('Server returned HTML instead of JSON');
-                    }
-                    
+                        const docInfoText = await docInfoResponse.text();
+                        
+                        if (docInfoText.trim().startsWith('<')) {
+                            throw new Error('Server returned HTML instead of JSON');
+                        }
+                        
                         let docInfo;
                         try {
-                        docInfo = JSON.parse(docInfoText);
+                            docInfo = JSON.parse(docInfoText);
                         } catch (parseError) {
-                        throw new Error('Invalid JSON response');
+                            throw new Error('Invalid JSON response');
                         }
 
                         if (!docInfo.success) {
@@ -887,21 +887,22 @@ include __DIR__ . '/../includes/admin-header.php';
 
                         if (['docx', 'doc'].includes(doc.file_ext)) {
                             const delaySeconds = 5;
-                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${delaySeconds}s...</span>`;
+                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${delaySeconds}s (Đang chuyển đổi)...</span>`;
                             
                             for (let countdown = delaySeconds; countdown > 0; countdown--) {
                                 await new Promise(resolve => setTimeout(resolve, 1000));
-                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${countdown}s...</span>`;
-                        }
-                        
-                        if (docInfo.skip === true || !docInfo.converted_pdf_path) {
-                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name}</span>`;
+                                logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏳ Đợi ${countdown}s (Đang chuyển đổi)...</span>`;
+                            }
+                            
+                            if (docInfo.skip === true || !docInfo.converted_pdf_path) {
+                                const skipReason = docInfo.message || 'Không thể chuyển đổi sang PDF';
+                                logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name} (${skipReason})</span>`;
                                 skipCount++;
                                 continue;
                             }
-                        
-                        docInfo.file_path = docInfo.converted_pdf_path;
-                        docInfo.file_ext = 'pdf';
+                            
+                            docInfo.file_path = docInfo.converted_pdf_path;
+                            docInfo.file_ext = 'pdf';
                         }
 
                         if (docInfo.file_ext === 'pdf') {
@@ -911,34 +912,34 @@ include __DIR__ . '/../includes/admin-header.php';
                                 throw new Error('No PDF path available');
                             }
 
-                        let pdfUrl = pdfPath;
-                        if (!pdfPath.startsWith('http://') && !pdfPath.startsWith('https://') && !pdfPath.startsWith('data:')) {
-                            if (!pdfPath.startsWith('../') && !pdfPath.startsWith('/')) {
-                                pdfUrl = '../' + pdfPath;
-                            } else if (pdfPath.startsWith('/')) {
-                                pdfUrl = '..' + pdfPath;
+                            let pdfUrl = pdfPath;
+                            if (!pdfPath.startsWith('http://') && !pdfPath.startsWith('https://') && !pdfPath.startsWith('data:')) {
+                                if (!pdfPath.startsWith('../') && !pdfPath.startsWith('/')) {
+                                    pdfUrl = '../' + pdfPath;
+                                } else if (pdfPath.startsWith('/')) {
+                                    pdfUrl = '..' + pdfPath;
+                                }
                             }
-                        }
 
-                        const result = await processPdfDocument(pdfUrl, docInfo.doc_id, {
-                            countPages: true,
-                            generateThumbnail: true,
-                            thumbnailWidth: 400
-                        });
-                        
-                        let successMessage = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-success">✓ ${doc.original_name}`;
-                        if (result.pages && result.pages > 0) {
-                            successMessage += ` (${result.pages} trang)`;
-                        }
-                        successMessage += '</span>';
+                            const result = await processPdfDocument(pdfUrl, docInfo.doc_id, {
+                                countPages: true,
+                                generateThumbnail: true,
+                                thumbnailWidth: 400
+                            });
+                            
+                            let successMessage = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-success">✓ ${doc.original_name}`;
+                            if (result.pages && result.pages > 0) {
+                                successMessage += ` (${result.pages} trang)`;
+                            }
+                            successMessage += '</span>';
                             
                             logEntry.innerHTML = successMessage;
                             successCount++;
                         } else {
-                        logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name}</span>`;
+                            const skipReason = docInfo.message || 'Định dạng không được hỗ trợ';
+                            logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-warning">⏭️ Bỏ qua: ${doc.original_name} (${skipReason})</span>`;
                             skipCount++;
                         }
-
                     } catch (error) {
                     logEntry.innerHTML = `<span class="text-base-content/70">[${current}/${total}]</span> <span class="text-error">✗ ${doc.original_name} - ${error.message}</span>`;
                         failCount++;
