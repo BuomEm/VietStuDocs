@@ -191,21 +191,25 @@ function generateThumbnail($file_path, $file_ext, $doc_id) {
  * Convert DOCX to PDF using Adobe PDF Services API
  * @param string $docx_path Path to DOCX file
  * @param string $output_path Path to save PDF file
+ * @param string &$error_msg Optional variable to store error message
  * @return array|false Returns array with 'pdf_path' (full path) and 'pdf_url' (relative URL) on success, false on failure
  */
-function convertDocxToPdf_Adobe($docx_path, $output_path) {
+function convertDocxToPdf_Adobe($docx_path, $output_path, &$error_msg = '') {
     if (!file_exists($docx_path)) {
+        $error_msg = "File DOCX không tồn tại: " . basename($docx_path);
         error_log("convertDocxToPdf_Adobe: File not found: $docx_path");
         return false;
     }
     
     if (!function_exists('curl_init')) {
+        $error_msg = "PHP cURL extension chưa được bật (Yêu cầu Adobe API)";
         error_log("convertDocxToPdf_Adobe: cURL not available");
         return false;
     }
     
     $credentials_path = __DIR__ . '/../API/pdfservices-api-credentials.json';
     if (!file_exists($credentials_path)) {
+        $error_msg = "Thiếu file cấu hình Adobe: API/pdfservices-api-credentials.json (Có thể bạn quên upload file này lên cPanel?)";
         error_log("convertDocxToPdf_Adobe: Credentials file not found: $credentials_path");
         return false;
     }
@@ -239,6 +243,8 @@ function convertDocxToPdf_Adobe($docx_path, $output_path) {
         curl_close($ch);
         
         if ($httpCode !== 200) {
+            $error_data = json_decode($response, true);
+            $error_msg = "Adobe Auth Error ($httpCode): " . ($error_data['error_description'] ?? 'Không xác định');
             error_log("convertDocxToPdf_Adobe: OAuth error ($httpCode): " . substr($response, 0, 200));
             return false;
         }
@@ -460,9 +466,10 @@ function convertDocxToPdf_Adobe($docx_path, $output_path) {
  * @param string $docx_path Path to DOCX file
  * @param string|null $output_dir Optional output directory (defaults to UPLOAD_DIR)
  * @param string|null $output_filename Optional output filename (defaults to auto-generated)
+ * @param string &$error_msg Optional variable to store error message
  * @return array|false Returns array with 'pdf_path' (full path) and 'pdf_url' (relative URL) on success, false on failure
  */
-function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = null) {
+function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = null, &$error_msg = '') {
     if (!file_exists($docx_path)) {
         error_log("convertDocxToPdf: File not found: $docx_path");
         return false;
@@ -487,17 +494,18 @@ function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = nul
     
     // Try Adobe API first
     error_log("convertDocxToPdf: Attempting Adobe API conversion...");
-    $adobe_result = convertDocxToPdf_Adobe($docx_path, $pdf_path);
+    $adobe_error = '';
+    $adobe_result = convertDocxToPdf_Adobe($docx_path, $pdf_path, $adobe_error);
     if ($adobe_result !== false && file_exists($pdf_path) && filesize($pdf_path) > 0) {
         error_log("convertDocxToPdf: Successfully converted using Adobe API");
         return $adobe_result;
     }
     
-    error_log("convertDocxToPdf: Adobe API failed, trying fallback methods...");
+    error_log("convertDocxToPdf: Adobe API failed ($adobe_error), trying fallback methods...");
     
     // Fallback: Try LibreOffice
     if (function_exists('shell_exec')) {
-        // Try different LibreOffice paths (Windows)
+        // ... (LibreOffice code) ...
         $libreoffice_paths = [
             'soffice',
             'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
@@ -540,9 +548,12 @@ function convertDocxToPdf($docx_path, $output_dir = null, $output_filename = nul
                 'pdf_name' => $output_filename
             ];
         }
+    } else {
+        error_log("convertDocxToPdf: shell_exec is disabled (LibreOffice fallback unavailable)");
     }
     
-    error_log("convertDocxToPdf: All conversion attempts failed for $docx_path");
+    $error_msg = "Lỗi Adobe API: $adobe_error. (LibreOffice không khả dụng trên hosting này)";
+    error_log("convertDocxToPdf: All conversion attempts failed for $docx_path. Error: $error_msg");
     return false;
 }
 

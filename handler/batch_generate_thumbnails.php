@@ -212,7 +212,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
             // Convert DOCX to PDF - this will try Adobe API first, then fallback
             // PDF will be saved to uploads/ directory and NOT deleted
             $pdf_filename = $doc['id'] . '_converted_' . time() . '.pdf';
-            $conversion_result = convertDocxToPdf($full_path, UPLOAD_DIR, $pdf_filename);
+            $conversion_error = '';
+            $conversion_result = convertDocxToPdf($full_path, UPLOAD_DIR, $pdf_filename, $conversion_error);
             
             if($conversion_result && isset($conversion_result['pdf_path']) && file_exists($conversion_result['pdf_path'])) {
                 $converted_pdf_full_path = $conversion_result['pdf_path'];
@@ -220,7 +221,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
                 error_log("Document {$doc['id']}: Converted DOCX to PDF at $converted_pdf_path");
             } else {
                 // PDF conversion failed
-                $error_message = 'PDF conversion failed (Adobe API and fallback methods)';
+                $error_message = $conversion_error ?: 'PDF conversion failed (Adobe API and fallback methods)';
                 
                 // Try to get more specific error
                 if (!function_exists('curl_init')) {
