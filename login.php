@@ -60,27 +60,26 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            min-height: 100vh;
             overflow-x: hidden;
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.82);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
         }
 
         .orb {
-            position: absolute;
+            position: fixed; /* Fixed to prevent pushing the body height */
             border-radius: 50%;
-            filter: blur(80px);
+            filter: blur(100px);
             z-index: 0;
-            opacity: 0.35;
+            opacity: 0.3;
         }
 
-        .orb-1 { width: 400px; height: 400px; background: #800000; top: -10%; left: -10%; }
-        .orb-2 { width: 300px; height: 300px; background: #ffcc00; bottom: -5%; right: -5%; }
+        .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
+        .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
 
         .input-premium {
             background: rgba(255, 255, 255, 0.5);
@@ -121,18 +120,20 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         }
     </style>
 </head>
-<body class="flex items-center justify-center relative p-4">
+<body class="min-h-screen flex items-center justify-center relative p-4">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
     <div class="w-full max-w-md relative z-10">
         <!-- Logo Section -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl mb-4 rotate-3 border border-white">
-                <i class="fa-solid fa-file-contract text-3xl" style="color: #800000;"></i>
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <div class="flex-shrink-0 flex items-center justify-center w-12 h-12 bg-white rounded-2xl shadow-xl rotate-3 border border-white">
+                    <i class="fa-solid fa-file-contract text-2xl" style="color: #800000;"></i>
+                </div>
+                <h1 class="text-4xl font-extrabold text-[#800000] tracking-tight">DocShare</h1>
             </div>
-            <h1 class="text-4xl font-extrabold text-[#800000] tracking-tight">DocShare</h1>
-            <p class="text-gray-500 mt-2 font-medium">Chia sẻ tri thức, kết nối cộng đồng</p>
+            <p class="text-gray-500 font-medium">Chia sẻ tri thức, kết nối cộng đồng</p>
         </div>
 
         <div class="glass-card rounded-[2.5rem] p-8 md:p-10">

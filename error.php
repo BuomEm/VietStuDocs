@@ -57,35 +57,26 @@ $random_quote = $quotes[array_rand($quotes)];
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
             min-height: 100vh;
-            overflow-x: hidden; /* Ngăn thanh cuộn ngang */
-            position: relative;
+            overflow-x: hidden;
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.82);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
         }
 
         .error-title-glitch {
-            font-family: "Bangers", system-ui; /* Sử dụng font mới cho tiêu đề */
             background: linear-gradient(to right, #800000, #ff4d4d);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 2px 4px rgba(128, 0, 0, 0.1));
-            font-size: 3rem; /* Tăng kích thước font một chút */
-        }
-        
-        @media (min-width: 768px) {
-            .error-title-glitch {
-                font-size: 4.5rem; /* Kích thước lớn hơn trên màn hình lớn */
-            }
         }
 
         @keyframes float-hero {
             0%, 100% { transform: translateY(0) rotate(-2deg); }
-            50% { transform: translateY(-20px) rotate(2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
         }
 
         .hero-animation {
@@ -93,45 +84,27 @@ $random_quote = $quotes[array_rand($quotes)];
         }
 
         .orb {
-            position: fixed; /* Đổi sang fixed để bám theo viewport */
+            position: fixed;
             border-radius: 50%;
-            filter: blur(80px);
-            z-index: -1; /* Đảm bảo nằm dưới nội dung */
-            opacity: 0.4;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.3;
         }
 
-        /* Điều chỉnh kích thước và vị trí để phủ kín tốt hơn */
-        .orb-1 { 
-            width: 70vw; 
-            height: 70vw; 
-            background: #800000; 
-            top: -20%; 
-            left: -20%; 
-        }
-        .orb-2 { 
-            width: 60vw; 
-            height: 60vw; 
-            background: #ffcc00; 
-            bottom: -15%; 
-            right: -15%; 
-        }
-
-        @media (min-width: 1024px) {
-            .orb-1 { width: 50vw; height: 50vw; top: -15%; left: -10%; }
-            .orb-2 { width: 40vw; height: 40vw; bottom: -10%; right: -5%; }
-        }
+        .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
+        .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
 
         .btn-premium {
             background: #800000;
             color: white;
             border: none;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .btn-premium:hover {
             background: #a00000;
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 30px -10px rgba(128, 0, 0, 0.4);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 20px -5px rgba(128, 0, 0, 0.3);
         }
 
         .btn-outline-premium {
@@ -149,8 +122,8 @@ $random_quote = $quotes[array_rand($quotes)];
 
         .fade-in {
             opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInUp 0.8s ease forwards;
+            transform: translateY(15px);
+            animation: fadeInUp 0.6s ease forwards;
         }
 
         @keyframes fadeInUp {
@@ -158,7 +131,7 @@ $random_quote = $quotes[array_rand($quotes)];
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center">
+<body class="min-h-screen flex items-center justify-center relative p-4">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
