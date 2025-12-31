@@ -1,12 +1,17 @@
 <?php
+// Include Error Handler First
+require_once __DIR__ . '/includes/error_handler.php';
+
 session_start();
 if(!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: index");
+    exit;
 }
 
 require_once 'config/db.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
+require_once 'config/settings.php'; // Needed for site currency/info if any
 
 redirectIfNotLoggedIn();
 
@@ -17,498 +22,304 @@ $verified_docs = getVerifiedDocumentsCount($user_id);
 
 // Calculate Premium expiration countdown
 $days_remaining = null;
-$hours_remaining = null;
-$minutes_remaining = null;
 $show_expiration_warning = false;
 
 if($is_premium && $premium_info) {
-    $end_date = new DateTime($premium_info['end_date']);
-    $now = new DateTime();
-    $interval = $now->diff($end_date);
-    
-    $days_remaining = $interval->days;
-    $hours_remaining = $interval->h;
-    $minutes_remaining = $interval->i;
-    
-    // Show warning if less than 7 days
-    if($days_remaining < 7) {
-        $show_expiration_warning = true;
+    // Check if end_date is valid
+    if (isset($premium_info['end_date'])) {
+        try {
+            $end_date = new DateTime($premium_info['end_date']);
+            $now = new DateTime();
+            
+            if ($end_date > $now) {
+                $interval = $now->diff($end_date);
+                $days_remaining = $interval->days;
+                
+                // Show warning if less than 7 days
+                if($days_remaining < 7) {
+                    $show_expiration_warning = true;
+                }
+            } else {
+                // Expired but maybe status not updated yet
+                $is_premium = false; 
+            }
+        } catch (Exception $e) {
+            // Invalid date format, ignore
+        }
     }
 }
 
-// Handle payment (Simple mock payment)
+// Handle payment
 if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['buy_premium'])) {
-    // In real application, integrate with payment gateway (Stripe, PayPal, etc.)
-    // For now, we'll just activate premium
-    activateMonthlyPremium($user_id);
+    // Instead of auto-activating, redirect to payment modal
+    // activateMonthlyPremium($user_id);
     
-    // Log transaction
+    // Log intent (optional)
+    /*
     mysqli_query($conn, "
         INSERT INTO transactions (user_id, amount, transaction_type, status) 
-        VALUES ($user_id, 29.00, 'monthly', 'success')
+        VALUES ($user_id, 29000, 'monthly', 'pending')
     ");
+    */
     
-    header("Location: premium.php?success=1");
+    header("Location: premium?payment=bank_transfer");
     exit;
 }
 
-mysqli_close($conn);
+// Do NOT close connection, needed for navbar
+// mysqli_close($conn); 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium - DocShare</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-        nav {
-            background: #667eea;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 32px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 16px;
-        }
-        .alert {
-            padding: 15px;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            text-align: center;
-        }
-        .countdown-warning {
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
-            border-left: 6px solid #ff6f00;
-        }
-        .countdown-warning h4 {
-            margin-bottom: 12px;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .countdown-timer {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin: 15px 0;
-        }
-        .time-unit {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .time-number {
-            font-size: 24px;
-            font-weight: 700;
-            display: block;
-        }
-        .time-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            opacity: 0.9;
-        }
-        .renew-btn {
-            display: inline-block;
-            margin-top: 15px;
-            background: white;
-            color: #ff9800;
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        .renew-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 50px;
-        }
-        .pricing-card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-        }
-        .pricing-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .pricing-card.popular {
-            border: 3px solid #ffd700;
-            transform: scale(1.05);
-        }
-        .popular-badge {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #333;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 12px;
-        }
-        .pricing-card h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 24px;
-        }
-        .price {
-            font-size: 36px;
-            font-weight: bold;
-            color: #333;
-            margin: 20px 0;
-        }
-        .currency {
-            font-size: 16px;
-            color: #666;
-        }
-        .period {
-            color: #999;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        .features {
-            text-align: left;
-            margin: 30px 0;
-            list-style: none;
-        }
-        .features li {
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
-        .features li:before {
-            content: "✓ ";
-            color: #28a745;
-            font-weight: bold;
-            margin-right: 8px;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #764ba2;
-        }
-        .btn-popular {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #333;
-        }
-        .btn-popular:hover {
-            opacity: 0.9;
-        }
-        .free-trial-section {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .free-trial-section h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-        .progress-bar {
-            background: #f0f0f0;
-            height: 30px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .stat-box {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .back-link {
-            display: inline-block;
-            margin-bottom: 30px;
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-        .badge-active {
-            background: #d4edda;
-            color: #155724;
-        }
-        .badge-inactive {
-            background: #f8d7da;
-            color: #721c24;
-        }
-    </style>
+    <?php include 'includes/head.php'; ?>
+    <title>Nâng cấp Premium - DocShare</title>
 </head>
 <body>
-    <?php include 'includes/head.php'; ?>
-    <?php include 'includes/navbar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
+    
+    <div class="drawer-content flex flex-col bg-base-200 min-h-screen">
+        <?php include 'includes/navbar.php'; ?>
 
-    <div class="container">
-        <a href="dashboard.php" class="back-link">← Back to Dashboard</a>
-
-        <h1>👑 Premium Membership</h1>
-        <p class="subtitle">Nâng cấp để xem và tải toàn bộ tài liệu được chia sẻ</p>
-
-        <?php if(isset($_GET['success'])): ?>
-            <div class="alert">✅ Nâng cấp thành công! Bạn hiện là thành viên Premium.</div>
-        <?php endif; ?>
-
-        <!-- Premium Expiration Warning -->
-        <?php if($show_expiration_warning && $is_premium): ?>
-            <div class="countdown-warning">
-                <h4>⏰ Premium sắp hết hạn!</h4>
-                <p style="margin-bottom: 15px; font-size: 14px;">
-                    Premium của bạn sẽ hết hạn vào lúc:
-                    <strong><?= date('d/m/Y H:i', strtotime($premium_info['end_date'])) ?></strong>
-                </p>
-                
-                <div class="countdown-timer">
-                    <div class="time-unit">
-                        <span class="time-number"><?= $days_remaining ?></span>
-                        <span class="time-label">Days</span>
-                    </div>
-                    <div class="time-unit">
-                        <span class="time-number"><?= $hours_remaining ?></span>
-                        <span class="time-label">Hours</span>
-                    </div>
-                    <div class="time-unit">
-                        <span class="time-number"><?= $minutes_remaining ?></span>
-                        <span class="time-label">Minutes</span>
-                    </div>
-                </div>
-                
-                <p style="font-size: 13px; margin-top: 15px;">
-                    Hãy gia hạn ngay để không mất quyền truy cập!
-                </p>
-                <a href="#pricing" class="renew-btn">🔄 Gia hạn Premium</a>
-            </div>
-        <?php endif; ?>
-
-        <!-- Current Status -->
-        <div style="text-align: center; margin-bottom: 30px;">
-            <?php if($is_premium): ?>
-                <span class="status-badge badge-active">⭐ Bạn đang là Premium</span>
-                <div style="font-size: 13px; color: #666; margin-top: 10px;">
-                    Hết hạn: <strong><?= date('d/m/Y H:i', strtotime($premium_info['end_date'])) ?></strong>
-                </div>
-            <?php else: ?>
-                <span class="status-badge badge-inactive">📄 Bạn đang là Free User</span>
-            <?php endif; ?>
-        </div>
-
-        <!-- Free Trial Section -->
-        <div class="free-trial-section">
-            <h3>🎁 Cách lấy Premium Miễn Phí</h3>
-            <p style="margin-bottom: 20px;">Đăng 3 tài liệu đạt tiêu chuẩn → Nhận <strong>7 ngày Premium miễn phí!</strong></p>
+        <main class="flex-1 p-6">
+            <!-- Breadcrumbs -->
             
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: <?= min(100, ($verified_docs / 3) * 100) ?>%">
-                    <?php if($verified_docs < 3): ?>
-                        <?= $verified_docs ?>/3
-                    <?php else: ?>
-                        ✓ Hoàn thành!
-                    <?php endif; ?>
-                </div>
+
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-primary mb-4 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-crown text-yellow-500"></i>
+                    Nâng cấp Premium
+                </h1>
+                <p class="text-base-content/70 text-lg">Mở khóa toàn bộ kho tài liệu và tải xuống không giới hạn</p>
             </div>
 
-            <div class="stats">
-                <div class="stat-box">
-                    <div class="stat-number"><?= $verified_docs ?>/3</div>
-                    <div class="stat-label">Tài liệu đạt chuẩn</div>
+            <?php if(isset($_GET['success'])): ?>
+                <div class="alert alert-success shadow-lg mb-8 max-w-2xl mx-auto">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <h3 class="font-bold">Thành công!</h3>
+                        <div class="text-xs">Tài khoản của bạn đã được nâng cấp lên Premium.</div>
+                    </div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-number"><?= max(0, 3 - $verified_docs) ?></div>
-                    <div class="stat-label">Còn cần</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number">7</div>
-                    <div class="stat-label">Ngày miễn phí</div>
-                </div>
-            </div>
-
-            <?php if($verified_docs >= 3): ?>
-                <p style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 6px; color: #2e7d32; border-left: 4px solid #28a745;">
-                    <strong>✅ Bạn đã đủ điều kiện!</strong><br>
-                    Tiếp tục đăng tài liệu để kích hoạt Premium miễn phí 7 ngày.
-                </p>
-            <?php else: ?>
-                <p style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 6px; color: #664d03; border-left: 4px solid #ffc107;">
-                    Bạn cần đăng thêm <strong><?= 3 - $verified_docs ?></strong> tài liệu nữa để nhận Premium miễn phí.
-                </p>
-                <a href="upload.php" style="display: inline-block; margin-top: 15px; color: white; background: #667eea; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">📤 Đăng tài liệu ngay →</a>
             <?php endif; ?>
-        </div>
 
-        <!-- Pricing Plans -->
-        <h2 id="pricing" style="text-align: center; color: #667eea; margin-bottom: 30px; font-size: 24px;">Gói Premium Có Trả Phí</h2>
-        
-        <div class="pricing-grid">
-            <!-- Monthly Plan -->
-            <div class="pricing-card popular">
-                <div class="popular-badge">⭐ PHỔ BIẾN NHẤT</div>
-                <h2>Premium 1 Tháng</h2>
-                <div class="price">
-                    <span class="currency">₫</span>29.000
+            <!-- Expiration Warning -->
+            <?php if($show_expiration_warning && $is_premium): ?>
+                <div class="alert alert-warning shadow-lg mb-8 max-w-2xl mx-auto">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div class="flex-1">
+                        <h3 class="font-bold">Premium sắp hết hạn!</h3>
+                        <div class="text-xs">Gói Premium của bạn sẽ hết hạn trong <?= $days_remaining ?> ngày tới. Gia hạn ngay để không bị gián đoạn.</div>
+                    </div>
+                    <a href="#pricing" class="btn btn-sm">Gia hạn ngay</a>
                 </div>
-                <div class="period">1 tháng (30 ngày)</div>
+            <?php endif; ?>
+
+            <!-- Current Status Logic -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
                 
-                <ul class="features">
-                    <li>Xem toàn bộ tài liệu được chia sẻ</li>
-                    <li>Tải xuống không giới hạn</li>
-                    <li>Chia sẻ tài liệu với bạn bè</li>
-                    <li>Ưu tiên hỗ trợ</li>
-                    <li>Không quảng cáo</li>
-                </ul>
+                <!-- Left Column: Current Status & Benefits -->
+                <div class="space-y-8">
+                    
+                    <!-- Status Card -->
+                    <div class="card bg-base-100 shadow-xl border border-base-200">
+                        <div class="card-body">
+                            <h2 class="card-title">
+                                <i class="fa-solid fa-user-tag"></i> Trạng thái hiện tại
+                            </h2>
+                            
+                            <div class="flex items-center gap-4 mt-4">
+                                <div class="avatar placeholder">
+                                    <div class="bg-neutral text-neutral-content rounded-full w-16">
+                                        <span class="text-xl">
+                                            <?= strtoupper(substr($user_info['username'] ?? 'U', 0, 1)) ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg"><?= htmlspecialchars($user_info['username'] ?? 'User') ?></h3>
+                                    <?php if($is_premium): ?>
+                                        <div class="badge badge-warning gap-1">
+                                            <i class="fa-solid fa-crown text-xs"></i> Premium Member
+                                        </div>
+                                        <p class="text-sm mt-1 opacity-70">
+                                            Hết hạn: <?= date('d/m/Y', strtotime($premium_info['end_date'])) ?>
+                                        </p>
+                                    <?php else: ?>
+                                        <div class="badge badge-ghost">Free Member</div>
+                                        <p class="text-sm mt-1 opacity-70">Chưa kích hoạt Premium</p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <form method="POST">
-                    <button type="submit" name="buy_premium" class="btn btn-popular">Mua Ngay</button>
-                </form>
-            </div>
+                    <!-- Benefits List (Expanded) -->
+                    <div class="card bg-base-100 shadow-xl">
+                        <div class="card-body">
+                            <h2 class="card-title text-primary"><i class="fa-solid fa-star"></i> Quyền lợi Premium</h2>
+                            
+                            <div class="grid grid-cols-1 gap-4 mt-4">
+                                <div class="flex items-start gap-4 p-3 bg-base-200 rounded-lg">
+                                    <div class="p-2 bg-success/20 rounded-full text-success">
+                                        <i class="fa-solid fa-lock-open"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold">Truy cập không giới hạn</h3>
+                                        <p class="text-sm opacity-70">Xem và tải xuống hàng ngàn tài liệu chất lượng cao.</p>
+                                    </div>
+                                </div>
 
-            <!-- Lifetime Plan (Future) -->
-            <div class="pricing-card">
-                <h2>Premium Vĩnh Viễn</h2>
-                <div class="price">
-                    <span class="currency">₫</span>99.000
+                                <div class="flex items-start gap-4 p-3 bg-base-200 rounded-lg">
+                                    <div class="p-2 bg-info/20 rounded-full text-info">
+                                        <i class="fa-solid fa-bolt"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold">Tốc độ cao</h3>
+                                        <p class="text-sm opacity-70">Tải tài liệu với tốc độ tối đa, không cần chờ đợi.</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-4 p-3 bg-base-200 rounded-lg">
+                                    <div class="p-2 bg-warning/20 rounded-full text-warning">
+                                        <i class="fa-solid fa-ban"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold">Không quảng cáo</h3>
+                                        <p class="text-sm opacity-70">Trải nghiệm học tập mượt mà không bị làm phiền.</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-4 p-3 bg-base-200 rounded-lg">
+                                    <div class="p-2 bg-secondary/20 rounded-full text-secondary">
+                                        <i class="fa-solid fa-headset"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold">Hỗ trợ ưu tiên</h3>
+                                        <p class="text-sm opacity-70">Được ưu tiên hỗ trợ khi gặp vấn đề về tài liệu.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="period">Một lần thanh toán</div>
-                
-                <ul class="features">
-                    <li>Xem toàn bộ tài liệu được chia sẻ</li>
-                    <li>Tải xuống không giới hạn</li>
-                    <li>Chia sẻ tài liệu với bạn bè</li>
-                    <li>Hỗ trợ ưu tiên</li>
-                    <li>Không quảng cáo</li>
-                    <li>Truy cập vĩnh viễn</li>
-                </ul>
 
-                <button class="btn btn-primary" onclick="alert('Tính năng sắp ra mắt!')">Sắp Ra Mắt</button>
-            </div>
-        </div>
+                 <!-- Right Column: Paid Plans -->
+                 <div class="space-y-8" id="pricing">
+                    
+                    <!-- Monthly Plan -->
+                    <div class="card bg-base-100 shadow-xl border-2 border-primary transform hover:-translate-y-1 transition-transform duration-300">
+                        <div class="absolute top-0 right-0">
+                            <div class="badge badge-primary rounded-bl-lg rounded-tr-lg p-3 font-bold shadow-md">PHỔ BIẾN NHẤT</div>
+                        </div>
+                        
+                        <div class="card-body text-center">
+                            <h2 class="text-2xl font-bold text-base-content">Gói 1 Tháng</h2>
+                            <div class="my-6">
+                                <span class="text-5xl font-extrabold text-primary">29.000đ</span>
+                                <span class="text-base-content/60">/ tháng</span>
+                            </div>
+                            
+                            <p class="mb-6 text-base-content/80">Truy cập đầy đủ tính năng trong 30 ngày. Hủy bất kỳ lúc nào.</p>
+                            
+                            <form method="POST" class="w-full">
+                                <button type="submit" name="buy_premium" class="btn btn-primary btn-block btn-lg shadow-lg hover:shadow-primary/50 transition-all">
+                                    <i class="fa-solid fa-cart-shopping mr-2"></i>
+                                    Mua Gói Ngay
+                                </button>
+                            </form>
+                            
+                            <div class="divider">hoặc</div>
 
-        <!-- FAQ Section -->
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h3 style="color: #667eea; margin-bottom: 20px;">❓ Câu Hỏi Thường Gặp</h3>
-            
-            <div style="margin-bottom: 20px;">
-                <h4 style="color: #333; margin-bottom: 8px;">Tôi có thể hủy bỏ Premium bất cứ lúc nào không?</h4>
-                <p style="color: #666; font-size: 14px;">Có, bạn có thể hủy bỏ bất cứ lúc nào. Bạn sẽ vẫn sử dụng Premium cho đến khi gói hết hạn.</p>
+                            <!-- Lifetime Mockup -->
+                            <div class="opacity-60 grayscale filter hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+                                 <h3 class="font-bold text-lg mb-2">Gói Vĩnh Viễn</h3>
+                                 <p class="text-2xl font-bold">99.000đ</p>
+                                 <button class="btn btn-outline btn-sm mt-3" disabled>Sắp ra mắt</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ -->
+                    <div class="collapse collapse-plus bg-base-100 shadow-xl">
+                        <input type="checkbox" /> 
+                        <div class="collapse-title text-lg font-medium">
+                            <i class="fa-regular fa-circle-question mr-2"></i> Câu hỏi thường gặp
+                        </div>
+                        <div class="collapse-content"> 
+                            <div class="space-y-4 pt-2">
+                                <div>
+                                    <h4 class="font-bold text-sm">Tôi có thể hủy gói bất cứ lúc nào?</h4>
+                                    <p class="text-xs opacity-70">Đúng vậy, bạn có thể hủy gia hạn bất kỳ lúc nào và vẫn giữ quyền lợi đến hết chu kỳ.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm">Thanh toán như thế nào?</h4>
+                                    <p class="text-xs opacity-70">Chúng tôi hỗ trợ chuyển khoản ngân hàng, MoMo và thẻ tín dụng (sắp ra mắt).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                 </div>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <h4 style="color: #333; margin-bottom: 8px;">Làm thế nào để tài liệu của tôi được xác nhận?</h4>
-                <p style="color: #666; font-size: 14px;">Các tài liệu bạn đăng lên sẽ được tự động xác nhận trong hệ thống. Bạn cần đăng 3 tài liệu khác nhau.</p>
-            </div>
+            <!-- Payment Modal (Hidden by default, shown via query param) -->
+            <?php if(isset($_GET['payment']) && $_GET['payment'] == 'bank_transfer'): ?>
+            <input type="checkbox" id="payment-modal" class="modal-toggle" checked />
+            <div class="modal modal-bottom sm:modal-middle">
+                <div class="modal-box">
+                    <h3 class="font-bold text-lg text-primary flex items-center gap-2">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Thông tin chuyển khoản
+                    </h3>
+                    <p class="py-4">Vui lòng chuyển khoản theo thông tin dưới đây để kích hoạt Premium:</p>
+                    
+                    <div class="bg-base-200 p-4 rounded-lg space-y-3 mb-4">
+                        <div class="flex justify-between border-b border-base-content/10 pb-2">
+                            <span class="opacity-70">Ngân hàng:</span>
+                            <span class="font-bold">MB Bank (Quân Đội)</span>
+                        </div>
+                        <div class="flex justify-between border-b border-base-content/10 pb-2">
+                            <span class="opacity-70">Số tài khoản:</span>
+                            <span class="font-bold flex items-center gap-2">
+                                999999999
+                                <button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText('999999999')"><i class="fa-regular fa-copy"></i></button>
+                            </span>
+                        </div>
+                         <div class="flex justify-between border-b border-base-content/10 pb-2">
+                            <span class="opacity-70">Chủ tài khoản:</span>
+                            <span class="font-bold">ADMIN DOCSHARE</span>
+                        </div>
+                        <div class="flex justify-between border-b border-base-content/10 pb-2">
+                            <span class="opacity-70">Số tiền:</span>
+                            <span class="font-bold text-primary">29.000 VNĐ</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="opacity-70">Nội dung:</span>
+                            <span class="font-bold text-secondary">PREMIUM <?= $user_id ?></span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info shadow-sm text-xs">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Sau khi chuyển khoản, vui lòng chụp màn hình và gửi cho Admin qua Telegram/Zalo để được kích hoạt nhanh nhất.</span>
+                    </div>
 
-            <div style="margin-bottom: 20px;">
-                <h4 style="color: #333; margin-bottom: 8px;">Có hoàn tiền nếu không hài lòng không?</h4>
-                <p style="color: #666; font-size: 14px;">Bạn sẽ nhận được hoàn tiền 100% nếu không hài lòng trong vòng 7 ngày đầu tiên.</p>
+                    <div class="modal-action">
+                        <a href="premium" class="btn">Đóng</a>
+                        <a href="https://t.me/admin" target="_blank" class="btn btn-primary">
+                            <i class="fa-brands fa-telegram"></i> Liên hệ Admin
+                        </a>
+                    </div>
+                </div>
+                <label class="modal-backdrop" for="payment-modal">Close</label>
             </div>
+            <?php endif; ?>
+        </main>
 
-            <div style="margin-bottom: 20px;">
-                <h4 style="color: #333; margin-bottom: 8px;">Premium miễn phí hết hạn sau bao lâu?</h4>
-                <p style="color: #666; font-size: 14px;">Premium miễn phí từ việc đăng 3 tài liệu sẽ hết hạn sau 7 ngày. Sau đó, bạn có thể mua gói Premium hoặc đăng thêm tài liệu để nhận lại miễn phí.</p>
-            </div>
-
-            <div>
-                <h4 style="color: #333; margin-bottom: 8px;">❓ Tôi đã có Premium nhưng nó hết hạn, làm sao lấy lại?</h4>
-                <p style="color: #666; font-size: 14px;">Sau khi Premium hết hạn, bạn có thể bắt đầu lại từ đầu - đăng 3 tài liệu mới để nhận 7 ngày Premium miễn phí, hoặc mua gói Premium trả phí.</p>
-            </div>
-        </div>
+        <?php include 'includes/footer.php'; ?>
     </div>
+    </div> <!-- Close drawer -->
 </body>
 </html>

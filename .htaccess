@@ -1,0 +1,43 @@
+RewriteEngine On
+
+# 1. Redirect .php to extensionless (Redirect public URL)
+# For specific whitelisted root files
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(dashboard|edit-document|error|index|logout|premium|profile|saved|search|testapi|upload|view)\.php [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# 2. Rewrite extensionless to .php (Internal handling)
+# For specific whitelisted root files
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(dashboard|edit-document|error|index|logout|premium|profile|saved|search|testapi|upload|view)$ $1.php [L]
+
+# For Admin directory
+RewriteCond %{REQUEST_URI} ^/admin/
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^admin/(.*)$ admin/$1.php [L]
+
+# 3. Handle index.php redirect (Hide index.php)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s(.*)/index\.php [NC]
+RewriteRule ^ %1/ [R=301,L]
+# Error Pages
+ErrorDocument 400 /error.php?code=400
+ErrorDocument 401 /error.php?code=401
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500
+
+
+# Protect Sensitive Files
+<FilesMatch "^(\.env|\.git|composer\.lock|composer\.json)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block access to protected directories
+<IfModule mod_rewrite.c>
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule ^AAA/ - [F,L]
+</IfModule>

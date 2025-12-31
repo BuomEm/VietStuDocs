@@ -29,11 +29,27 @@ if(canUserDownloadDocument($user_id, $document_id)) {
 // Purchase the document
 try {
     $result = purchaseDocument($user_id, $document_id);
-    echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    
+    if(!$result || !is_array($result)) {
+        error_log("Purchase error: purchaseDocument returned invalid result for user_id=$user_id, document_id=$document_id");
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.'
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
 } catch(Exception $e) {
+    error_log("Purchase exception: " . $e->getMessage() . " for user_id=$user_id, document_id=$document_id");
     echo json_encode([
         'success' => false, 
-        'message' => 'Đã xảy ra lỗi: ' . $e->getMessage()
+        'message' => 'Đã xảy ra lỗi: ' . htmlspecialchars($e->getMessage())
+    ], JSON_UNESCAPED_UNICODE);
+} catch(Error $e) {
+    error_log("Purchase fatal error: " . $e->getMessage() . " for user_id=$user_id, document_id=$document_id");
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.'
     ], JSON_UNESCAPED_UNICODE);
 }
 

@@ -36,9 +36,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             <div class="card bg-primary text-primary-content shadow-lg">
                 <div class="card-body text-center">
                     <div class="flex items-center justify-center gap-2 mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
+                        <i class="fa-solid fa-coins text-lg"></i>
                         <h3 class="text-sm font-semibold uppercase tracking-wide opacity-90">Your Points Balance</h3>
                     </div>
                     <div class="text-4xl font-bold my-2"><?= number_format($user_points['current_points']) ?></div>
@@ -50,9 +48,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             <div class="card bg-base-100 shadow-lg">
                 <div class="card-body">
                     <h3 class="card-title text-lg mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-                        </svg>
+                        <i class="fa-solid fa-file-invoice text-lg"></i>
                         Your Documents
                     </h3>
                     <div class="stats stats-horizontal shadow-sm w-full">
@@ -72,9 +68,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-3xl font-bold flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                    </svg>
+                    <i class="fa-solid fa-cloud-arrow-up text-primary text-2xl"></i>
                     Upload Documents
                 </h1>
                 <p class="text-base-content/70 mt-2">Upload and share your documents with the community</p>
@@ -86,9 +80,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
         <form id="uploadForm" class="upload-form">
             <!-- Drag Drop Area -->
             <div id="dragDropArea" class="card bg-base-200 border-dashed border-4 border-primary cursor-pointer hover:bg-base-300 transition-colors min-h-[400px] flex flex-col items-center justify-center p-8 mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 text-primary mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                </svg>
+                <i class="fa-solid fa-cloud-arrow-up text-primary text-6xl mb-4"></i>
                 <p class="text-2xl font-bold text-primary mb-2">Drag & Drop Files Here</p>
                 <p class="text-base-content/70">or click to select files from your device</p>
             </div>
@@ -99,9 +91,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             <div id="fileList" class="card bg-base-100 shadow-md mb-6 hidden">
                 <div class="card-body">
                     <h3 class="card-title text-lg mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-1.932-2.639l-3.866-2.437a3.375 3.375 0 0 0-2.932-1.305H8.25a3.375 3.375 0 0 0-3.375 3.375v2.625M19.5 14.25l-3.866 2.437M19.5 14.25v2.625M15.634 16.687l-3.866-2.437M8.25 10.5v2.625m0-2.625l3.866 2.437M8.25 10.5H4.875a3.375 3.375 0 0 0-3.375 3.375v2.625M8.25 10.5v-2.625a3.375 3.375 0 0 1 3.375-3.375h3.866a3.375 3.375 0 0 1 3.375 3.375v2.625" />
-                        </svg>
+                        <i class="fa-solid fa-list-ul text-lg"></i>
                         Files to Upload (<span id="fileCount">0</span>)
                     </h3>
                     <div id="fileListContent" class="space-y-4 max-h-[600px] overflow-y-auto"></div>
@@ -112,9 +102,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             <div id="uploadProgress" class="card bg-base-100 shadow-md mb-6 hidden">
                 <div class="card-body">
                     <h3 class="card-title text-lg mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
+                        <i class="fa-solid fa-spinner fa-spin text-lg"></i>
                         Upload Progress
                     </h3>
                     <div id="progressContainer" class="space-y-4"></div>
@@ -124,9 +112,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
             <!-- Submit Button -->
             <div class="flex gap-4 mt-6">
                 <button type="submit" id="submitBtn" class="btn btn-primary btn-lg flex-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                    </svg>
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
                     Upload Files
                 </button>
             </div>
@@ -245,9 +231,7 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
                                 <div class="text-sm text-base-content/70">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
                             </div>
                             <button type="button" onclick="removeFile(${index})" class="btn btn-sm btn-error">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                                </svg>
+                                <i class="fa-solid fa-trash-can"></i>
                                 Remove
                             </button>
                         </div>

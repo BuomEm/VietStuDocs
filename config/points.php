@@ -308,9 +308,9 @@ function purchaseDocument($buyer_id, $document_id) {
     // Get document points from docs_points table if available
     $doc_points = getDocumentPoints($document_id);
     if($doc_points) {
-        $points_to_pay = $doc_points['user_price'] > 0 ? $doc_points['user_price'] : ($doc_points['admin_points'] ?? 0);
+        $points_to_pay = $doc_points['user_price'] > 0 ? intval($doc_points['user_price']) : (isset($doc_points['admin_points']) ? intval($doc_points['admin_points']) : 0);
     } else {
-        $points_to_pay = $doc['user_price'] > 0 ? $doc['user_price'] : ($doc['admin_points'] ?? 0);
+        $points_to_pay = isset($doc['user_price']) && $doc['user_price'] > 0 ? intval($doc['user_price']) : (isset($doc['admin_points']) ? intval($doc['admin_points']) : 0);
     }
     
     // If document is free, just record the purchase without deducting points
@@ -328,42 +328,68 @@ function purchaseDocument($buyer_id, $document_id) {
     
     // Check if user has enough points
     $user_points = getUserPoints($buyer_id);
-    if($user_points['current_points'] < $points_to_pay) {
+    if(!$user_points || !isset($user_points['current_points'])) {
+        error_log("Purchase error: Cannot get user points for user_id=$buyer_id");
+        return ['success' => false, 'message' => 'Không thể kiểm tra số điểm của bạn. Vui lòng thử lại sau.'];
+    }
+    
+    $current_points = intval($user_points['current_points'] ?? 0);
+    if($current_points < $points_to_pay) {
         $needed = number_format($points_to_pay, 0, ',', '.');
-        $current = number_format($user_points['current_points'], 0, ',', '.');
+        $current = number_format($current_points, 0, ',', '.');
         return ['success' => false, 'message' => "Bạn không đủ điểm. Bạn cần $needed điểm nhưng chỉ có $current điểm"];
     }
     
     // Deduct points from buyer (this already creates a transaction record)
-    $doc_name = mysqli_real_escape_string($conn, $doc['original_name']);
+    $doc_name = mysqli_real_escape_string($conn, $doc['original_name'] ?? 'Unknown');
     $transaction_id = deductPoints($buyer_id, $points_to_pay, "Mua tài liệu: " . $doc_name, $document_id);
     
     if(!$transaction_id) {
-        return ['success' => false, 'message' => 'Không thể xử lý thanh toán'];
+        error_log("Purchase error: Cannot deduct points for user_id=$buyer_id, document_id=$document_id, points=$points_to_pay");
+        return ['success' => false, 'message' => 'Không thể xử lý thanh toán. Vui lòng kiểm tra lại số điểm của bạn.'];
     }
     
     // Record in document_sales
-    $seller_id = $doc['user_id'];
+    $seller_id = intval($doc['user_id'] ?? 0);
+    if($seller_id <= 0) {
+        // Rollback: refund points if seller_id is invalid
+        addPoints($buyer_id, $points_to_pay, "Hoàn tiền do lỗi: seller_id không hợp lệ", $document_id);
+        error_log("Purchase error: Invalid seller_id for document_id=$document_id");
+        return ['success' => false, 'message' => 'Lỗi: Thông tin người bán không hợp lệ. Điểm đã được hoàn lại.'];
+    }
+    
     $sales_query = "INSERT INTO document_sales (document_id, buyer_user_id, seller_user_id, points_paid, transaction_id)
                     VALUES ($document_id, $buyer_id, $seller_id, $points_to_pay, $transaction_id)";
     
     if(!mysqli_query($conn, $sales_query)) {
+        $error_msg = mysqli_error($conn);
+        error_log("Purchase error: Cannot insert into document_sales. SQL Error: $error_msg. document_id=$document_id, buyer_id=$buyer_id, seller_id=$seller_id");
         // Rollback: refund points if sale record fails
         addPoints($buyer_id, $points_to_pay, "Hoàn tiền do lỗi ghi nhận giao dịch", $document_id);
-        return ['success' => false, 'message' => 'Không thể ghi nhận giao dịch. Điểm đã được hoàn lại.'];
+        return ['success' => false, 'message' => 'Không thể ghi nhận giao dịch. Điểm đã được hoàn lại. Vui lòng thử lại sau.'];
     }
     
     // Award points to seller (document owner) when document is purchased
-    $seller_id = $doc['user_id'];
-    $doc_name = mysqli_real_escape_string($conn, $doc['original_name']);
     if($seller_id > 0 && $points_to_pay > 0) {
-        addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id);
+        $doc_name = mysqli_real_escape_string($conn, $doc['original_name'] ?? 'Unknown');
+        $add_result = addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id);
+        if(!$add_result) {
+            error_log("Purchase warning: Cannot add points to seller_id=$seller_id for document_id=$document_id. Purchase still recorded.");
+            // Don't fail the purchase if awarding points to seller fails
+        }
     }
     
     // Notify admin (optional, don't fail if this fails)
-    require_once __DIR__ . '/notifications.php';
-    $message = "Tài liệu đã được bán với giá $points_to_pay điểm";
-    sendNotificationToAllAdmins('document_sold', $message, $document_id);
+    try {
+        if(file_exists(__DIR__ . '/notifications.php')) {
+            require_once __DIR__ . '/notifications.php';
+            $message = "Tài liệu đã được bán với giá $points_to_pay điểm";
+            sendNotificationToAllAdmins('document_sold', $message, $document_id);
+        }
+    } catch(Exception $e) {
+        error_log("Purchase warning: Cannot send notification. Error: " . $e->getMessage());
+        // Don't fail the purchase if notification fails
+    }
     
     return ['success' => true, 'message' => 'Mua tài liệu thành công', 'transaction_id' => $transaction_id];
 }

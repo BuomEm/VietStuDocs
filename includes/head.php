@@ -9,8 +9,8 @@
     <!-- DaisyUI -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
     <!-- Font Awesome 7.0.1 -->
-    <link rel="stylesheet" href="./css/fontawesome/all.css" integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script src="./css/fontawesome/all.js"></script>
+    <link rel="stylesheet" href="/css/fontawesome/all.css" />
+    <script src="/css/fontawesome/all.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

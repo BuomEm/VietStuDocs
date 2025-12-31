@@ -85,25 +85,19 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
     
     <main class="flex-1 p-6">
         <h1 class="text-3xl font-bold text-primary mb-6 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-            </svg>
+            <i class="fa-solid fa-user-gear text-primary text-3xl"></i>
             Profile Settings
         </h1>
 
         <?php if($error): ?>
             <div class="alert alert-error mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                    <i class="fa-solid fa-circle-xmark fa-lg"></i>
                 <span><?= htmlspecialchars($error) ?></span>
             </div>
         <?php endif; ?>
         <?php if($success): ?>
             <div class="alert alert-success mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                    <i class="fa-solid fa-circle-check fa-lg"></i>
                 <span><?= htmlspecialchars($success) ?></span>
             </div>
         <?php endif; ?>
@@ -114,17 +108,13 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
                 <div class="flex items-center gap-4 mb-6 pb-6 border-b border-base-300">
                     <div class="avatar placeholder">
                         <div class="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                            </svg>
+                            <i class="fa-solid fa-user text-3xl text-primary-content"></i>
                         </div>
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold"><?= htmlspecialchars($user['username']) ?></h2>
                         <p class="text-base-content/70 flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                            </svg>
+                            <i class="fa-solid fa-envelope w-4 h-4"></i>
                             <?= htmlspecialchars($user['email']) ?>
                         </p>
                         <p class="text-sm text-base-content/50">Joined: <?= date('M d, Y', strtotime($user['created_at'])) ?></p>
@@ -155,9 +145,7 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div>
                     <h3 style="color: #333; font-size: 16px; margin-bottom: 5px;" class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
+                        <i class="fa-solid fa-hourglass-half"></i>
                         Premium Expiring Soon
                     </h3>
                     <p style="color: #555; font-size: 13px;">Your Premium membership will expire in:</p>
@@ -192,9 +180,7 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
         <?php elseif($is_premium): ?>
         <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745; color: #155724;">
             <p style="font-size: 14px; margin: 0;" class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
+                <i class="fa-solid fa-circle-check"></i>
                 Your Premium membership is active and will expire on <strong><?= date('M d, Y', strtotime($premium_info['end_date'])) ?></strong>
             </p>
         </div>
@@ -202,9 +188,7 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
         <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
             <p style="font-size: 14px; color: #333; margin-bottom: 10px;">
                 <span class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m-8.25 3.75h16.5" />
-                    </svg>
+                    <i class="fa-solid fa-gift"></i>
                     You don't have Premium yet. <strong>Upload 3 documents to get 7 days free trial!</strong>
                 </span>
             </p>
@@ -220,9 +204,7 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
         <div class="card bg-base-100 shadow-xl mb-6">
             <div class="card-body">
                 <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                    </svg>
+                    <i class="fa-solid fa-user-pen w-5 h-5"></i>
                     Update Profile
                 </h3>
 
@@ -254,9 +236,7 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
         <div class="card bg-base-100 shadow-xl mb-6">
             <div class="card-body">
                 <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                    </svg>
+                    <i class="fa-solid fa-lock w-5 h-5"></i>
                     Change Password
                 </h3>
 

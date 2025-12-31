@@ -7,6 +7,7 @@ require_once 'config/file.php';
 require_once 'config/points.php';
 require_once 'config/categories.php';
 require_once 'config/document_stats.php';
+require_once 'config/settings.php';
 
 // Cho phép xem mà không cần đăng nhập
 $user_id = isset($_SESSION['user_id']) ? getCurrentUserId() : null;
@@ -271,6 +272,68 @@ while($row = mysqli_fetch_assoc($similar_docs_result)) {
     $similar_docs[] = $row;
 }
 
+// Function to download file with speed limit
+function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100) {
+    // Open file
+    $file = fopen($file_path, 'rb');
+    if (!$file) {
+        return false;
+    }
+    
+    // Get file size
+    $file_size = filesize($file_path);
+    
+    // Calculate chunk size (e.g., 100KB per chunk)
+    $chunk_size = 100 * 1024; // 100KB
+    
+    // Calculate delay between chunks to achieve desired speed
+    // speed_limit_kbps is in KB/s, so we need to send chunk_size bytes
+    // Time per chunk = (chunk_size / 1024) / speed_limit_kbps seconds
+    $delay_microseconds = (($chunk_size / 1024) / $speed_limit_kbps) * 1000000;
+    
+    // Send headers
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename="' . basename($file_path) . '"');
+    header('Content-Length: ' . $file_size);
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    
+    // Disable output buffering
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Send file in chunks with speed limit
+    $bytes_sent = 0;
+    while (!feof($file) && $bytes_sent < $file_size) {
+        // Check if client disconnected
+        if (connection_aborted()) {
+            break;
+        }
+        
+        // Read chunk
+        $chunk = fread($file, $chunk_size);
+        if ($chunk === false) {
+            break;
+        }
+        
+        // Send chunk
+        echo $chunk;
+        flush();
+        
+        // Update bytes sent
+        $bytes_sent += strlen($chunk);
+        
+        // Apply speed limit delay (except for last chunk)
+        if ($bytes_sent < $file_size && $delay_microseconds > 0) {
+            usleep($delay_microseconds);
+        }
+    }
+    
+    fclose($file);
+    return true;
+}
+
 // Handle download
 if(isset($_GET['download'])) {
     if(!$is_logged_in) {
@@ -287,10 +350,15 @@ if(isset($_GET['download'])) {
     // Increment download count every time download button is clicked
     incrementDocumentDownloads($doc_id);
     
-    header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="' . basename($doc['original_name']) . '"');
-    header('Content-Length: ' . filesize($file_path));
-    readfile($file_path);
+    // Download with speed limit (from settings)
+    $download_speed_kbps = (int)getSetting('limit_download_speed_free', 100);
+    
+    // For premium users or document owners, allow faster download
+    if($is_premium || ($is_logged_in && $doc['user_id'] == $user_id)) {
+        $download_speed_kbps = (int)getSetting('limit_download_speed_premium', 500);
+    }
+    
+    downloadFileWithSpeedLimit($file_path, $download_speed_kbps);
     exit;
 }
 ?>
@@ -499,6 +567,46 @@ include 'includes/sidebar.php';
         #documentViewer .alert.alert-warning .text-sm {
             text-align: center;
             width: 100%;
+        }
+        
+        /* Download Queue Widget */
+        .download-queue-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 280px;
+            max-width: 350px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 16px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .download-queue-widget.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .download-queue-widget.hidden {
+            display: none;
+        }
+        
+        .download-queue-content {
+            width: 100%;
+        }
+        
+        .download-queue-widget .progress {
+            height: 8px;
+        }
+        
+        .download-queue-widget #downloadSpeedIcon {
+            font-size: 14px;
         }
         
         .preview-limit-warning h3 {
@@ -1315,6 +1423,31 @@ include 'includes/sidebar.php';
         </form>
     </dialog>
 
+    <!-- Download Queue Widget -->
+    <div id="downloadQueueWidget" class="download-queue-widget hidden">
+        <div class="download-queue-content">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-download text-primary text-lg"></i>
+                    <span class="font-semibold">Đang tải xuống</span>
+                </div>
+                <button class="btn btn-ghost btn-xs btn-circle" onclick="hideDownloadQueue()" title="Ẩn">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div>
+                <div class="flex items-center justify-between text-xs mb-2">
+                    <span id="downloadProgressPercent" class="font-bold text-primary">0%</span>
+                    <div id="downloadSpeedBadge" class="badge badge-error badge-sm gap-1 py-3 px-3">
+                        <i id="downloadSpeedIcon" class="fa-solid fa-hourglass-half"></i>
+                        <span id="downloadSpeed">0 KB/s</span>
+                    </div>
+                </div>
+                <progress id="downloadProgressBar" class="progress progress-primary w-full h-2" value="0" max="100"></progress>
+            </div>
+        </div>
+    </div>
+
     <!-- Report Modal -->
     <dialog id="reportModal" class="modal">
         <div class="modal-box">
@@ -1387,7 +1520,7 @@ include 'includes/sidebar.php';
         ?>
         const pdfPath = <?= $pdf_path_js ? '"' . htmlspecialchars($pdf_path_js, ENT_QUOTES, 'UTF-8') . '"' : 'null' ?>;
         const hasPurchased = <?= $has_purchased ? 'true' : 'false' ?>;
-        const maxPreviewPages = 3;
+        const maxPreviewPages = <?= (int)getSetting('limit_preview_pages', 3) ?>;
         
         // Protection against copy and screenshot
         <?php if(!$has_purchased): ?>
@@ -1888,7 +2021,7 @@ include 'includes/sidebar.php';
             <?php if(!$is_logged_in): ?>
                 showAlert('Vui lòng đăng nhập để tải xuống tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
                 setTimeout(() => {
-                    window.location.href = 'index.php';
+                    window.location.href = '/index.php';
                 }, 2000);
                 return;
             <?php endif; ?>
@@ -1898,7 +2031,144 @@ include 'includes/sidebar.php';
                 openPurchaseModal(<?= $doc_id ?>, price);
                 return;
             <?php endif; ?>
-            window.location.href = '?id=<?= $doc_id ?>&download=1';
+            
+            // Show download queue widget
+            showDownloadQueue();
+            
+            // Start download with progress tracking
+            const downloadUrl = '?id=<?= $doc_id ?>&download=1';
+            const fileName = '<?= htmlspecialchars($doc['original_name'], ENT_QUOTES) ?>';
+            
+            downloadWithProgress(downloadUrl, fileName);
+        }
+        
+        // Download with progress tracking
+        function downloadWithProgress(url, fileName) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.responseType = 'blob';
+            
+            let startTime = Date.now();
+            let lastLoaded = 0;
+            let lastTime = startTime;
+            
+            xhr.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const currentTime = Date.now();
+                    const loaded = e.loaded;
+                    const total = e.total;
+                    const percent = Math.round((loaded / total) * 100);
+                    
+                    // Calculate speed (bytes per second)
+                    const timeDiff = (currentTime - lastTime) / 1000; // seconds
+                    const bytesDiff = loaded - lastLoaded;
+                    const speedBps = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+                    
+                    // Update UI
+                    updateDownloadProgress(percent, speedBps, loaded, total);
+                    
+                    lastLoaded = loaded;
+                    lastTime = currentTime;
+                }
+            };
+            
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Create blob and download
+                    const blob = xhr.response;
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(downloadUrl);
+                    
+                    // Hide download queue after a delay
+                    setTimeout(() => {
+                        hideDownloadQueue();
+                    }, 1000);
+                } else {
+                    hideDownloadQueue();
+                    showAlert('Lỗi khi tải xuống tài liệu', 'error', 'Lỗi');
+                }
+            };
+            
+            xhr.onerror = function() {
+                hideDownloadQueue();
+                showAlert('Lỗi kết nối khi tải xuống', 'error', 'Lỗi');
+            };
+            
+            xhr.send();
+        }
+        
+        // Show download queue widget
+        function showDownloadQueue() {
+            const widget = document.getElementById('downloadQueueWidget');
+            if (widget) {
+                widget.classList.remove('hidden');
+                widget.classList.add('show');
+            }
+        }
+        
+        // Hide download queue widget
+        function hideDownloadQueue() {
+            const widget = document.getElementById('downloadQueueWidget');
+            if (widget) {
+                widget.classList.remove('show');
+                setTimeout(() => {
+                    widget.classList.add('hidden');
+                }, 300);
+            }
+        }
+        
+        // Update download progress
+        function updateDownloadProgress(percent, speedBps, loaded, total) {
+            const progressBar = document.getElementById('downloadProgressBar');
+            const progressPercent = document.getElementById('downloadProgressPercent');
+            const downloadSpeed = document.getElementById('downloadSpeed');
+            const speedIcon = document.getElementById('downloadSpeedIcon');
+            
+            if (progressBar) {
+                progressBar.value = percent;
+            }
+            
+            if (progressPercent) {
+                progressPercent.textContent = percent + '%';
+            }
+            
+            if (downloadSpeed) {
+                const speedKBps = (speedBps / 1024).toFixed(1);
+                const speedMBps = (speedBps / (1024 * 1024)).toFixed(2);
+                
+                if (speedBps >= 1024 * 1024) {
+                    downloadSpeed.textContent = speedMBps + ' MB/s';
+                } else {
+                    downloadSpeed.textContent = speedKBps + ' KB/s';
+                }
+                
+                // Update icon and badge based on speed
+                const speedBadge = document.getElementById('downloadSpeedBadge');
+                if (speedIcon && speedBadge) {
+                    if (speedBps >= 200 * 1024) {
+                        // Fast: >= 200 KB/s
+                        speedIcon.className = 'fa-solid fa-bolt';
+                        speedBadge.className = 'badge badge-success badge-sm gap-1 py-3 px-3 text-white';
+                        speedIcon.title = 'Tải nhanh';
+                    } else if (speedBps >= 50 * 1024) {
+                        // Medium: >= 50 KB/s
+                        speedIcon.className = 'fa-solid fa-gauge';
+                        speedBadge.className = 'badge badge-warning badge-sm gap-1 py-3 px-3 text-warning-content';
+                        speedIcon.title = 'Tải trung bình';
+                    } else {
+                        // Slow: < 50 KB/s
+                        speedIcon.className = 'fa-solid fa-hourglass-half';
+                        speedBadge.className = 'badge badge-error badge-sm gap-1 py-3 px-3 text-white';
+                        speedIcon.title = 'Tải chậm';
+                    }
+                }
+            }
         }
         
         function goToSaved() {
@@ -1965,7 +2235,7 @@ include 'includes/sidebar.php';
             confirmBtn.style.opacity = '0.6';
             confirmBtn.style.cursor = 'not-allowed';
             
-            fetch('handler/purchase_handler.php', {
+            fetch('/handler/purchase_handler.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'document_id=' + currentPurchaseDocId
@@ -1978,7 +2248,13 @@ include 'includes/sidebar.php';
             })
             .then(text => {
                 try {
+                    // Check if response is empty
+                    if(!text || text.trim() === '') {
+                        throw new Error('Server trả về phản hồi trống');
+                    }
+                    
                     const data = JSON.parse(text);
+                    
                     if(data.success) {
                         closePurchaseModal();
                         // Show success message
@@ -1995,7 +2271,9 @@ include 'includes/sidebar.php';
                         confirmBtn.textContent = originalText;
                         confirmBtn.style.opacity = '1';
                         confirmBtn.style.cursor = 'pointer';
-                        showAlert(data.message || 'Không thể mua tài liệu', 'error', 'Lỗi');
+                        const errorMsg = data.message || 'Không thể mua tài liệu. Vui lòng thử lại sau.';
+                        console.error('Purchase failed:', errorMsg, data);
+                        showAlert(errorMsg, 'error', 'Lỗi Mua Tài Liệu');
                     }
                 } catch(e) {
                     // Re-enable button
@@ -2004,7 +2282,7 @@ include 'includes/sidebar.php';
                     confirmBtn.style.opacity = '1';
                     confirmBtn.style.cursor = 'pointer';
                     console.error('Parse error:', e, 'Response:', text);
-                    showAlert('Lỗi xử lý phản hồi từ server', '❌', 'Lỗi');
+                    showAlert('Lỗi xử lý phản hồi từ server. Vui lòng thử lại sau.', 'error', 'Lỗi');
                 }
             })
             .catch(error => {

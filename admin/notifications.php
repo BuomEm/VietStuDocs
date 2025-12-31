@@ -112,6 +112,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $category = strpos($name, 'telegram_') === 0 ? 'telegram' : 'notifications';
             } elseif (strpos($name, 'site_') === 0) {
                 $category = 'site';
+            } elseif (strpos($name, 'limit_') === 0) {
+                $category = 'limits';
             }
             
             if (!setSetting($name, $value, null, $category)) {
@@ -403,6 +405,7 @@ include __DIR__ . '/../includes/admin-header.php';
         <div class="tabs tabs-boxed mb-4">
             <a class="tab tab-active" onclick="switchTab('notifications')">Thông báo</a>
             <a class="tab" onclick="switchTab('site')">Cài đặt Website</a>
+            <a class="tab" onclick="switchTab('limits')">Giới hạn & Tốc độ</a>
         </div>
         
         <!-- Notifications Tab -->
@@ -543,6 +546,33 @@ include __DIR__ . '/../includes/admin-header.php';
                     </label>
                     <input type="text" class="input input-bordered" id="site_author" 
                            value="<?= htmlspecialchars(getSetting('site_author', '')) ?>">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Limits & Speed Tab -->
+        <div id="tab-limits" class="tab-panel hidden">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Tốc độ tải (Free) - KB/s</span>
+                    </label>
+                    <input type="number" class="input input-bordered" id="limit_download_speed_free" 
+                           value="<?= htmlspecialchars(getSetting('limit_download_speed_free', 100)) ?>">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text text-warning">Tốc độ tải (Premium) - KB/s</span>
+                    </label>
+                    <input type="number" class="input input-bordered border-warning" id="limit_download_speed_premium" 
+                           value="<?= htmlspecialchars(getSetting('limit_download_speed_premium', 500)) ?>">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Số trang xem trước tối đa</span>
+                    </label>
+                    <input type="number" class="input input-bordered" id="limit_preview_pages" 
+                           value="<?= htmlspecialchars(getSetting('limit_preview_pages', 3)) ?>">
                 </div>
             </div>
         </div>
@@ -813,7 +843,8 @@ include __DIR__ . '/../includes/admin-header.php';
         tabs.forEach(tab => {
             const tabText = tab.textContent.trim();
             if((tabName === 'notifications' && tabText === 'Thông báo') || 
-               (tabName === 'site' && tabText === 'Cài đặt Website')) {
+               (tabName === 'site' && tabText === 'Cài đặt Website') ||
+               (tabName === 'limits' && tabText === 'Giới hạn & Tốc độ')) {
                 tab.classList.add('tab-active');
             }
         });
@@ -841,6 +872,11 @@ include __DIR__ . '/../includes/admin-header.php';
         settings['site_description'] = document.getElementById('site_description').value;
         settings['site_keywords'] = document.getElementById('site_keywords').value;
         settings['site_author'] = document.getElementById('site_author').value;
+        
+        // Limit settings
+        settings['limit_download_speed_free'] = document.getElementById('limit_download_speed_free').value;
+        settings['limit_download_speed_premium'] = document.getElementById('limit_download_speed_premium').value;
+        settings['limit_preview_pages'] = document.getElementById('limit_preview_pages').value;
         
         fetch('notifications.php', {
             method: 'POST',

@@ -619,7 +619,7 @@ $current_page = 'search';
                                     <?php endif; ?>
                                 </div>
                             <?php else: ?>
-                                <div class="document-icon">📄</div>
+                                <div class="document-icon"><i class="fa-solid fa-file-lines text-primary/30"></i></div>
                             <?php endif; ?>
                             <div class="document-info">
                                 <a href="view.php?id=<?= $doc['id'] ?>" class="document-title">
@@ -640,17 +640,17 @@ $current_page = 'search';
                                 <?php endif; ?>
                                 
                                 <div class="document-meta">
-                                    <span>👤 <?= htmlspecialchars($doc['username']) ?></span>
-                                    <span>📅 <?= date('d/m/Y', strtotime($doc['created_at'])) ?></span>
+                                    <span><i class="fa-solid fa-user mr-1 text-xs"></i> <?= htmlspecialchars($doc['username']) ?></span>
+                                    <span><i class="fa-solid fa-calendar-days mr-1 text-xs"></i> <?= date('d/m/Y', strtotime($doc['created_at'])) ?></span>
                                     <?php 
                                     $points = $doc['points'] ?? 0;
                                     if ($points > 0): ?>
-                                        <span>💰 <?= number_format($points) ?> điểm</span>
+                                        <span><i class="fa-solid fa-coins mr-1 text-xs"></i> <?= number_format($points) ?> điểm</span>
                                     <?php else: ?>
-                                        <span style="color: #10b981;">🎁 Miễn phí</span>
+                                         <span style="color: #10b981;"><i class="fa-solid fa-gift mr-1 text-xs"></i> Miễn phí</span>
                                     <?php endif; ?>
                                     <?php if ($total_pages): ?>
-                                        <span>📄 <?= $total_pages ?> trang</span>
+                                        <span><i class="fa-solid fa-file-lines mr-1 text-xs"></i> <?= $total_pages ?> trang</span>
                                     <?php endif; ?>
                                 </div>
                                 <?php if (!empty($doc['description'])): ?>
@@ -659,8 +659,8 @@ $current_page = 'search';
                                     </div>
                                 <?php endif; ?>
                                 <div class="document-stats">
-                                    <span class="stat-item">👁️ <?= number_format($doc['views'] ?? 0) ?> lượt xem</span>
-                                    <span class="stat-item">⬇️ <?= number_format($doc['downloads'] ?? 0) ?> tải xuống</span>
+                                    <span class="stat-item"><i class="fa-solid fa-eye mr-1 text-xs"></i> <?= number_format($doc['views'] ?? 0) ?> lượt xem</span>
+                                    <span class="stat-item"><i class="fa-solid fa-download mr-1 text-xs"></i> <?= number_format($doc['downloads'] ?? 0) ?> tải xuống</span>
                                 </div>
                             </div>
                         </div>
@@ -696,7 +696,7 @@ $current_page = 'search';
             <?php else: ?>
                 <!-- No Results -->
                 <div class="no-results">
-                    <div class="no-results-icon">🔍</div>
+                    <div class="no-results-icon"><i class="fa-solid fa-magnifying-glass text-primary/30"></i></div>
                     <h2 class="no-results-title">Không tìm thấy kết quả</h2>
                     <p class="no-results-text">
                         <?php if (!empty($keyword)): ?>

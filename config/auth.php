@@ -7,7 +7,7 @@ function isUserLoggedIn() {
 
 function redirectIfNotLoggedIn() {
     if(!isUserLoggedIn()) {
-        header("Location: index.php");
+        header("Location: index");
         exit;
     }
 }
@@ -138,7 +138,7 @@ function isAdmin($user_id) {
 
 function redirectIfNotAdmin() {
     if(!isUserLoggedIn() || !isAdmin(getCurrentUserId())) {
-        header("Location: index.php");
+        header("Location: ../error?code=session_expired");
         exit;
     }
 }
