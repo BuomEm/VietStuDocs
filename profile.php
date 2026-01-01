@@ -190,7 +190,7 @@ $saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN d
             <p style="font-size: 14px; color: #333; margin-bottom: 10px;">
                 <span class="flex items-center gap-2">
                     <i class="fa-solid fa-gift"></i>
-                    You don't have Premium yet. <strong>Upload 3 documents to get 7 days free trial!</strong>
+                    You don't have Premium yet.
                 </span>
             </p>
             <a href="premium.php" style="display: inline-block; padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">

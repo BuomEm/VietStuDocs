@@ -1,7 +1,9 @@
 <?php
-// Note: This requires composer require minishlink/web-push
-// If not available, this script will fail gracefully with error logging.
-
+// Kiểm tra nếu là Windows thì set đường dẫn openssl.cnf
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    $path = "D:\laragon\bin\php\php-8.3.28-Win32-vs16-x64\extras\ssl\openssl.cnf"; // Thay 'php-8.x.x' bằng phiên bản bạn đang dùng
+    putenv("OPENSSL_CONF=$path");
+}
 require_once __DIR__ . '/../config/function.php';
 global $VSD;
 

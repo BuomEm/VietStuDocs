@@ -24,6 +24,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Notify user
         $VSD->insert('notifications', [
             'user_id' => $user_id,
+            'title' => 'Cập nhật vai trò',
             'type' => 'role_updated',
             'ref_id' => $admin_id,
             'message' => "Vai trò của bạn đã được Admin thay đổi thành: " . strtoupper($new_role)
@@ -45,6 +46,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Notify user
             $VSD->insert('notifications', [
                 'user_id' => $user_id,
+                'title' => 'Bạn được cộng điểm',
                 'type' => 'points_added',
                 'ref_id' => $admin_id,
                 'message' => "Admin đã cộng cho bạn $points điểm. Lý do: $reason"
@@ -67,6 +69,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Notify user
                 $VSD->insert('notifications', [
                     'user_id' => $user_id,
+                    'title' => 'Bạn bị trừ điểm',
                     'type' => 'points_deducted',
                     'ref_id' => $admin_id,
                     'message' => "Admin đã trừ của bạn $points điểm. Lý do: $reason"

@@ -263,7 +263,25 @@ $stats = $VSD->get_row($stats_query);
                             <?php foreach($notifs_result as $notif): ?>
                                 <div class="py-4 flex items-start gap-4 <?= $notif['is_read'] == 0 ? 'bg-primary/5 rounded-lg px-4' : '' ?>">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center bg-base-200 shrink-0">
-                                        <i class="fa-solid <?= $notif['type'] == 'chat' ? 'fa-comment' : 'fa-info-circle' ?> text-primary"></i>
+                                        <?php
+                                        $icon = 'fa-info-circle';
+                                        $icon_color = 'text-primary';
+                                        
+                                        switch($notif['type']) {
+                                            case 'document_approved': $icon = 'fa-check-circle'; $icon_color = 'text-success'; break;
+                                            case 'document_rejected': $icon = 'fa-times-circle'; $icon_color = 'text-error'; break;
+                                            case 'document_deleted': $icon = 'fa-trash-can'; $icon_color = 'text-error'; break;
+                                            case 'points_added': $icon = 'fa-coins'; $icon_color = 'text-success'; break;
+                                            case 'points_deducted': $icon = 'fa-circle-minus'; $icon_color = 'text-error'; break;
+                                            case 'tutor_request_new': $icon = 'fa-graduation-cap'; $icon_color = 'text-info'; break;
+                                            case 'tutor_answer': $icon = 'fa-comment-dots'; $icon_color = 'text-success'; break;
+                                            case 'tutor_rated': $icon = 'fa-star'; $icon_color = 'text-warning'; break;
+                                            case 'dispute_resolved': $icon = 'fa-handshake'; $icon_color = 'text-info'; break;
+                                            case 'admin_reply': $icon = 'fa-user-shield'; $icon_color = 'text-secondary'; break;
+                                            case 'role_updated': $icon = 'fa-user-gear'; $icon_color = 'text-accent'; break;
+                                        }
+                                        ?>
+                                        <i class="fa-solid <?= $icon ?> <?= $icon_color ?>"></i>
                                     </div>
                                     <div class="flex-1">
                                         <p class="text-sm font-bold text-primary"><?= htmlspecialchars($notif['title'] ?? 'DocShare') ?></p>

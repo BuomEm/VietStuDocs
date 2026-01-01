@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 redirectIfNotAdmin();
 
@@ -21,12 +22,43 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
+            // Get user_id for notification
+            $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+            if($doc_info) {
+                $VSD->insert('notifications', [
+                    'user_id' => $doc_info['user_id'],
+                    'title' => 'Tài liệu đã được duyệt',
+                    'message' => "Tài liệu '{$doc_info['original_name']}' của bạn đã được duyệt bởi Admin. +{$points} điểm.",
+                    'type' => 'document_approved',
+                    'ref_id' => $document_id
+                ]);
+                sendPushToUser($doc_info['user_id'], [
+                    'title' => 'Tài liệu đã được duyệt! 🎉',
+                    'body' => "Tài liệu '{$doc_info['original_name']}' đã được duyệt. Bạn nhận được {$points} điểm.",
+                    'url' => '/history.php?tab=notifications'
+                ]);
+            }
             header("Location: all-documents.php?msg=approved&id=$document_id");
             exit;
         }
     } elseif($action === 'reject') {
         $reason = $VSD->escape($_POST['rejection_reason'] ?? '');
+        $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
         rejectDocument($document_id, $admin_id, $reason);
+        if($doc_info) {
+            $VSD->insert('notifications', [
+                'user_id' => $doc_info['user_id'],
+                'title' => 'Tài liệu bị từ chối',
+                'message' => "Tài liệu '{$doc_info['original_name']}' đã bị từ chối. Lý do: $reason",
+                'type' => 'document_rejected',
+                'ref_id' => $document_id
+            ]);
+            sendPushToUser($doc_info['user_id'], [
+                'title' => 'Tài liệu bị từ chối ❌',
+                'body' => "Tài liệu '{$doc_info['original_name']}' đã bị từ chối. Nhấn để xem lý do.",
+                'url' => '/history.php?tab=notifications'
+            ]);
+        }
         header("Location: all-documents.php?msg=rejected&id=$document_id");
         exit;
     } elseif($action === 'delete') {
@@ -37,6 +69,21 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 unlink($file_path);
             }
             $VSD->remove('documents', "id=$document_id");
+            
+            // Notify user of deletion
+            $VSD->insert('notifications', [
+                'user_id' => $doc['user_id'],
+                'title' => 'Tài liệu bị xóa',
+                'message' => "Tài liệu '{$doc['original_name']}' của bạn đã bị Admin xóa khỏi hệ thống.",
+                'type' => 'document_deleted',
+                'ref_id' => $admin_id
+            ]);
+            sendPushToUser($doc['user_id'], [
+                'title' => 'Tài liệu đã bị xóa 🗑️',
+                'body' => "Tài liệu '{$doc['original_name']}' đã bị Admin gỡ bỏ.",
+                'url' => '/history.php?tab=notifications'
+            ]);
+
             header("Location: all-documents.php?msg=deleted");
             exit;
         }
@@ -44,6 +91,24 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $new_status = $VSD->escape($_POST['new_status']);
         if(in_array($new_status, ['pending', 'approved', 'rejected'])) {
             $VSD->update('documents', ['status' => $new_status], "id=$document_id");
+            
+            // Notify user
+            $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+            if($doc_info) {
+                 $VSD->insert('notifications', [
+                    'user_id' => $doc_info['user_id'],
+                    'title' => 'Thay đổi trạng thái tài liệu',
+                    'message' => "Admin đã thay đổi trạng thái tài liệu '{$doc_info['original_name']}' sang: " . strtoupper($new_status),
+                    'type' => 'document_status_updated',
+                    'ref_id' => $document_id
+                ]);
+                sendPushToUser($doc_info['user_id'], [
+                    'title' => 'Cập nhật trạng thái! 🔄',
+                    'body' => "Tài liệu của bạn đã được chuyển sang trạng thái " . strtoupper($new_status),
+                    'url' => '/history.php?tab=notifications'
+                ]);
+            }
+
             header("Location: all-documents.php?msg=status_changed&id=$document_id");
             exit;
         }

@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Notify Tutor
                         $VSD->insert('notifications', [
                             'user_id' => $request['tutor_id'],
+                            'title' => 'Khiếu nại đã giải quyết',
                             'type' => 'dispute_resolved',
                             'ref_id' => $req_id,
                             'message' => "Yêu cầu #$req_id đã được giải quyết: Bạn đã nhận được {$request['points_used']} pts."
@@ -63,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Notify Student
                         $VSD->insert('notifications', [
                             'user_id' => $request['student_id'],
+                            'title' => 'Khiếu nại thành công',
                             'type' => 'dispute_resolved',
                             'ref_id' => $req_id,
                             'message' => "Khiếu nại yêu cầu #$req_id thành công: Bạn đã được hoàn lại {$request['points_used']} pts."
@@ -131,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Notify Student of Admin Reply
                 $VSD->insert('notifications', [
                     'user_id' => $request['student_id'],
+                    'title' => 'Phản hồi từ Admin',
                     'type' => 'admin_reply',
                     'ref_id' => $req_id,
                     'message' => "Admin đã phản hồi yêu cầu hỗ trợ của bạn cho Request #$req_id."
@@ -157,6 +160,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $stmt = $pdo->prepare("UPDATE tutor_requests SET points_used = ? WHERE id = ?");
                 $stmt->execute([$new_points, $req_id]);
+                
+                // Notify both Student and Tutor of point change
+                $req_data = getRequestDetails($req_id);
+                if($req_data) {
+                    $msg = "Admin đã điều chỉnh số điểm cho yêu cầu #$req_id thành $new_points pts. Lý do: Điều chỉnh hệ thống.";
+                    
+                    // Notify Student
+                    $VSD->insert('notifications', [
+                        'user_id' => $req_data['student_id'],
+                        'title' => 'Điều chỉnh điểm yêu cầu',
+                        'message' => $msg,
+                        'type' => 'request_points_updated',
+                        'ref_id' => $req_id
+                    ]);
+                    
+                    // Notify Tutor
+                    $VSD->insert('notifications', [
+                        'user_id' => $req_data['tutor_id'],
+                        'title' => 'Điều chỉnh điểm yêu cầu',
+                        'message' => $msg,
+                        'type' => 'request_points_updated',
+                        'ref_id' => $req_id
+                    ]);
+
+                    sendPushToUser($req_data['student_id'], [
+                        'title' => 'Cập nhật điểm yêu cầu 💰',
+                        'body' => "Admin đã điều chỉnh điểm cho yêu cầu #$req_id.",
+                        'url' => '/history.php?tab=notifications'
+                    ]);
+                }
+
                 $success = "Đã cập nhật số điểm cho yêu cầu #$req_id thành $new_points pts.";
             }
         } catch (Exception $e) {

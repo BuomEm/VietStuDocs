@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 redirectIfNotAdmin();
 
@@ -21,12 +22,50 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
+            
+            // Get user_id and document title for notification
+            $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+            if($doc_info) {
+                $VSD->insert('notifications', [
+                    'user_id' => $doc_info['user_id'],
+                    'title' => 'Tài liệu đã được duyệt',
+                    'message' => "Tài liệu '{$doc_info['original_name']}' của bạn đã được duyệt bởi Admin. +{$points} điểm.",
+                    'type' => 'document_approved',
+                    'ref_id' => $document_id
+                ]);
+                sendPushToUser($doc_info['user_id'], [
+                    'title' => 'Tài liệu đã được duyệt! 🎉',
+                    'body' => "Tài liệu '{$doc_info['original_name']}' đã được duyệt. Bạn nhận được {$points} điểm.",
+                    'url' => '/history.php?tab=notifications'
+                ]);
+            }
+
             header("Location: pending-docs.php?status=approved");
             exit;
         }
     } elseif($action === 'reject') {
         $reason = $VSD->escape($_POST['rejection_reason'] ?? '');
+        
+        // Get user_id and document title before rejection (if it marks as deleted or something)
+        $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+        
         rejectDocument($document_id, $admin_id, $reason);
+        
+        if($doc_info) {
+            $VSD->insert('notifications', [
+                'user_id' => $doc_info['user_id'],
+                'title' => 'Tài liệu bị từ chối',
+                'message' => "Tài liệu '{$doc_info['original_name']}' đã bị từ chối. Lý do: $reason",
+                'type' => 'document_rejected',
+                'ref_id' => $document_id
+            ]);
+            sendPushToUser($doc_info['user_id'], [
+                'title' => 'Tài liệu bị từ chối ❌',
+                'body' => "Tài liệu '{$doc_info['original_name']}' đã bị từ chối. Nhấn để xem lý do.",
+                'url' => '/history.php?tab=notifications'
+            ]);
+        }
+
         header("Location: pending-docs.php?status=rejected");
         exit;
     }

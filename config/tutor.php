@@ -2,6 +2,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/points.php';
 require_once __DIR__ . '/premium.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 /**
  * Get PDO Database Connection
@@ -168,6 +169,21 @@ function createTutorRequest($student_id, $tutor_id, $data) {
 
         $pdo->commit();
         
+        // Notify Tutor of New Request
+        global $VSD;
+        $VSD->insert('notifications', [
+            'user_id' => $tutor_id,
+            'title' => 'Câu hỏi mới',
+            'message' => "Bạn nhận được một câu hỏi mới: '{$data['title']}' từ học viên.",
+            'type' => 'tutor_request_new',
+            'ref_id' => $request_id
+        ]);
+        sendPushToUser($tutor_id, [
+            'title' => 'Bạn có câu hỏi mới! 🎓',
+            'body' => "Học viên vừa gửi cho bạn câu hỏi: '{$data['title']}'",
+            'url' => '/tutors/request.php?id=' . $request_id
+        ]);
+
         return ['success' => true, 'message' => 'Đặt câu hỏi thành công!', 'request_id' => $request_id];
 
     } catch (Exception $e) {
@@ -243,6 +259,22 @@ function answerTutorRequest($tutor_id, $request_id, $content, $attachment = null
         $stmt->execute([$tutor_id]);
 
         $pdo->commit();
+
+        // Notify Student of Answer
+        global $VSD;
+        $VSD->insert('notifications', [
+            'user_id' => $request['student_id'],
+            'title' => 'Gia sư đã trả lời',
+            'message' => "Gia sư '{$request['tutor_name']}' đã trả lời câu hỏi của bạn: '{$request['title']}'.",
+            'type' => 'tutor_answer',
+            'ref_id' => $request_id
+        ]);
+        sendPushToUser($request['student_id'], [
+            'title' => 'Có câu trả lời mới! ✅',
+            'body' => "Gia sư vừa trả lời câu hỏi của bạn. Nhấn để xem ngay.",
+            'url' => '/tutors/request.php?id=' . $request_id
+        ]);
+
         return ['success' => true, 'message' => 'Đã gửi câu trả lời thành công! Điểm sẽ được cộng khi học viên đánh giá tốt.'];
 
     } catch (Exception $e) {
@@ -305,6 +337,27 @@ function rateTutor($student_id, $request_id, $rating, $review = '') {
         $stmt->execute([$new_rating, $tutor_id]);
 
         $pdo->commit();
+
+        // Notify Tutor of Rating
+        global $VSD;
+        $notif_msg = "Học viên '{$request['student_name']}' đã đánh giá $rating sao cho câu trả lời của bạn.";
+        if ($new_status === 'completed') {
+            $notif_msg .= " Bạn nhận được {$request['points_used']} points.";
+        }
+        
+        $VSD->insert('notifications', [
+            'user_id' => $request['tutor_id'],
+            'title' => ($rating >= 4 ? 'Đánh giá tích cực' : 'Khiếu nại đánh giá'),
+            'message' => $notif_msg,
+            'type' => 'tutor_rated',
+            'ref_id' => $request_id
+        ]);
+        sendPushToUser($request['tutor_id'], [
+            'title' => ($rating >= 4 ? 'Bạn được đánh giá tốt! ⭐' : 'Khiếu nại từ học viên ⚠️'),
+            'body' => $notif_msg,
+            'url' => '/tutors/request.php?id=' . $request_id
+        ]);
+
         return ['success' => true, 'message' => $msg];
 
     } catch (Exception $e) {

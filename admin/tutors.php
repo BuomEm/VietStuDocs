@@ -3,7 +3,9 @@ require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/tutor.php'; // Use tutor config specially for PDO if needed, but existing admin uses mysqli. We can mix or use PDO.
+require_once __DIR__ . '/../config/tutor.php';
+require_once __DIR__ . '/../push/send_push.php';
+require_once __DIR__ . '/../config/function.php'; // Ensure VSD and global functions are available
 
 redirectIfNotAdmin();
 $admin_id = getCurrentUserId();
@@ -21,6 +23,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("i", $tutor_id);
                 if ($stmt->execute()) {
+                    // Notify user
+                    $VSD->insert('notifications', [
+                        'user_id' => $tutor_id,
+                        'title' => 'Đăng ký Gia sư thành công',
+                        'message' => "Chúc mừng! Đăng ký làm Gia sư của bạn đã được Admin phê duyệt. Bây giờ bạn có thể nhận yêu cầu hỗ trợ.",
+                        'type' => 'tutor_approved',
+                        'ref_id' => $tutor_id
+                    ]);
+                    sendPushToUser($tutor_id, [
+                        'title' => 'Đăng ký Gia sư thành công! 🎓',
+                        'body' => "Bạn đã trở thành Gia sư chính thức. Chúc mừng!",
+                        'url' => '/history.php?tab=notifications'
+                    ]);
                     $_SESSION['flash_message'] = "Đã duyệt gia sư thành công!";
                 }
             } else {
@@ -31,6 +46,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("i", $tutor_id);
                 if ($stmt->execute()) {
+                    // Notify user
+                    $VSD->insert('notifications', [
+                        'user_id' => $tutor_id,
+                        'title' => 'Cập nhật trạng thái Gia sư',
+                        'message' => "Yêu cầu đăng ký hoặc trạng thái Gia sư của bạn đã bị từ chối/khóa bởi Admin.",
+                        'type' => 'tutor_rejected',
+                        'ref_id' => $tutor_id
+                    ]);
+                    sendPushToUser($tutor_id, [
+                        'title' => 'Cập nhật trạng thái Gia sư ⚠️',
+                        'body' => "Trạng thái Gia sư của bạn đã bị thay đổi. Nhấn để xem.",
+                        'url' => '/history.php?tab=notifications'
+                    ]);
                     $_SESSION['flash_message'] = "Đã từ chối gia sư!";
                 }
             } else {
@@ -44,6 +72,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("iiii", $basic, $standard, $premium, $tutor_id);
                 if ($stmt->execute()) {
+                    // Notify user
+                    $VSD->insert('notifications', [
+                        'user_id' => $tutor_id,
+                        'title' => 'Điều chỉnh bảng giá',
+                        'message' => "Admin đã điều chỉnh bảng giá dịch vụ Gia sư của bạn: Basic ($basic), Standard ($standard), Premium ($premium).",
+                        'type' => 'tutor_prices_updated',
+                        'ref_id' => $tutor_id
+                    ]);
+                    sendPushToUser($tutor_id, [
+                        'title' => 'Cập nhật bảng giá 💰',
+                        'body' => "Admin đã điều chỉnh bảng giá dịch vụ của bạn.",
+                        'url' => '/history.php?tab=notifications'
+                    ]);
                     $_SESSION['flash_message'] = "Đã cập nhật bảng giá gia sư!";
                 }
             } else {
