@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 redirectIfNotAdmin();
 
@@ -19,6 +20,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $user_data = $VSD->get_row("SELECT * FROM users WHERE id=$user_id");
         $new_role = ($user_data && $user_data['role'] === 'admin') ? 'user' : 'admin';
         $VSD->update('users', ['role' => $new_role], "id=$user_id");
+        
+        // Notify user
+        $VSD->insert('notifications', [
+            'user_id' => $user_id,
+            'type' => 'role_updated',
+            'ref_id' => $admin_id,
+            'message' => "Vai trò của bạn đã được Admin thay đổi thành: " . strtoupper($new_role)
+        ]);
+        sendPushToUser($user_id, [
+            'title' => 'Cập nhật vai trò',
+            'body' => "Vai trò của bạn hiện là: " . strtoupper($new_role),
+            'url' => '/history.php?tab=notifications'
+        ]);
+
         header("Location: users.php?msg=role_updated");
         exit;
     } elseif($action === 'add_points') {
@@ -26,6 +41,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             addPoints($user_id, $points, $reason);
+            
+            // Notify user
+            $VSD->insert('notifications', [
+                'user_id' => $user_id,
+                'type' => 'points_added',
+                'ref_id' => $admin_id,
+                'message' => "Admin đã cộng cho bạn $points điểm. Lý do: $reason"
+            ]);
+            sendPushToUser($user_id, [
+                'title' => 'Bạn được cộng điểm',
+                'body' => "Admin đã cộng cho bạn $points điểm.",
+                'url' => '/history.php?tab=notifications'
+            ]);
+
             header("Location: users.php?msg=points_added");
             exit;
         }
@@ -34,8 +63,19 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             $result = deductPoints($user_id, $points, $reason);
-            if(!$result) {
-                // Handle error if needed
+            if($result) {
+                // Notify user
+                $VSD->insert('notifications', [
+                    'user_id' => $user_id,
+                    'type' => 'points_deducted',
+                    'ref_id' => $admin_id,
+                    'message' => "Admin đã trừ của bạn $points điểm. Lý do: $reason"
+                ]);
+                sendPushToUser($user_id, [
+                    'title' => 'Bạn bị trừ điểm',
+                    'body' => "Admin đã trừ của bạn $points điểm.",
+                    'url' => '/history.php?tab=notifications'
+                ]);
             }
             header("Location: users.php?msg=points_deducted");
             exit;

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/function.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 // ============ USER POINTS FUNCTIONS ============
 
@@ -187,7 +188,25 @@ function approveDocument($document_id, $admin_id, $points, $notes = '') {
                           VALUES ($document_id, $admin_id, 'approved', $points, NOW())";
     }
     
-    return db_query($approval_query);
+    if(!db_query($approval_query)) {
+        return false;
+    }
+
+    // Notify user
+    global $VSD;
+    $VSD->insert('notifications', [
+        'user_id' => $owner_id,
+        'type' => 'document_approved',
+        'ref_id' => $document_id,
+        'message' => "Tài liệu của bạn đã được duyệt thành công và định giá $points điểm."
+    ]);
+    sendPushToUser($owner_id, [
+        'title' => 'Tài liệu đã được duyệt',
+        'body' => "Tài liệu của bạn đã được duyệt và định giá $points điểm.",
+        'url' => '/history.php?tab=notifications'
+    ]);
+
+    return true;
 }
 
 function rejectDocument($document_id, $admin_id, $reason = '') {
@@ -214,7 +233,29 @@ function rejectDocument($document_id, $admin_id, $reason = '') {
                           VALUES ($document_id, $admin_id, 'rejected', '$reason', NOW())";
     }
     
-    return db_query($approval_query);
+    if(!db_query($approval_query)) {
+        return false;
+    }
+
+    // Notify user
+    $doc_info = db_get_row("SELECT user_id FROM documents WHERE id=$document_id");
+    if($doc_info) {
+        $owner_id = intval($doc_info['user_id']);
+        global $VSD;
+        $VSD->insert('notifications', [
+            'user_id' => $owner_id,
+            'type' => 'document_rejected',
+            'ref_id' => $document_id,
+            'message' => "Tài liệu của bạn đã bị từ chối. Lý do: $reason"
+        ]);
+        sendPushToUser($owner_id, [
+            'title' => 'Tài liệu bị từ chối',
+            'body' => "Tài liệu của bạn đã bị từ chối. Nhấn để xem lý do.",
+            'url' => '/history.php?tab=notifications'
+        ]);
+    }
+
+    return true;
 }
 
 // ============ DOCUMENT PURCHASE FUNCTIONS ============
@@ -312,6 +353,20 @@ function purchaseDocument($buyer_id, $document_id) {
     // Award points to seller
     addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id);
     
+    // Notify Seller
+    global $VSD;
+    $VSD->insert('notifications', [
+        'user_id' => $seller_id,
+        'type' => 'document_sold',
+        'ref_id' => $document_id,
+        'message' => "Tài liệu '$doc_name' của bạn vừa được mua. Bạn nhận được $points_to_pay điểm."
+    ]);
+    sendPushToUser($seller_id, [
+        'title' => 'Tài liệu đã được bán',
+        'body' => "Tài liệu của bạn vừa được mua. +$points_to_pay điểm.",
+        'url' => '/history.php?tab=notifications'
+    ]);
+
     // Notify admin
     try {
         if(file_exists(__DIR__ . '/notifications.php')) {

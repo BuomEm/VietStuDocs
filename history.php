@@ -24,6 +24,17 @@ $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $per_page = 10;
 $offset = ($page - 1) * $per_page;
 
+// Get Notifications History
+$notifs_query = "
+    SELECT *
+    FROM notifications
+    WHERE user_id = $user_id
+    ORDER BY created_at DESC
+    LIMIT $per_page OFFSET $offset
+";
+$notifs_result = $VSD->get_list($notifs_query);
+$total_notifs = $VSD->num_rows("SELECT id FROM notifications WHERE user_id = $user_id");
+
 // Get Purchase History
 $purchases_query = "
     SELECT 
@@ -227,10 +238,65 @@ $stats = $VSD->get_row($stats_query);
                 <i class="fa-solid fa-cloud-upload mr-2"></i>
                 Lịch Sử Upload
             </a>
+            <a href="?tab=notifications" class="tab <?= $active_tab === 'notifications' ? 'tab-active' : '' ?>">
+                <i class="fa-solid fa-bell mr-2"></i>
+                Thông báo
+            </a>
         </div>
 
         <!-- Tab Content -->
         <div class="bg-base-100 rounded-box shadow-lg p-6">
+            
+            <!-- Notifications Tab -->
+            <?php if($active_tab === 'notifications'): ?>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-bell text-primary"></i>
+                            Thông báo của bạn
+                        </h2>
+                        <button onclick="markRead()" class="btn btn-sm btn-ghost text-primary text-xs">Đánh dấu tất cả là đã đọc</button>
+                    </div>
+                    
+                    <?php if(count($notifs_result) > 0): ?>
+                        <div class="divide-y divide-base-200">
+                            <?php foreach($notifs_result as $notif): ?>
+                                <div class="py-4 flex items-start gap-4 <?= $notif['is_read'] == 0 ? 'bg-primary/5 rounded-lg px-4' : '' ?>">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center bg-base-200 shrink-0">
+                                        <i class="fa-solid <?= $notif['type'] == 'chat' ? 'fa-comment' : 'fa-info-circle' ?> text-primary"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium"><?= htmlspecialchars($notif['message']) ?></p>
+                                        <p class="text-[10px] opacity-50 mt-1"><?= date('H:i:s d/m/Y', strtotime($notif['created_at'])) ?></p>
+                                    </div>
+                                    <?php if($notif['is_read'] == 1): ?>
+                                        <span class="badge badge-sm opacity-50">Đã xem</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <!-- Pagination for Notifications -->
+                        <?php if($total_notifs > $per_page): ?>
+                            <div class="flex justify-center mt-8">
+                                <div class="join">
+                                    <?php 
+                                    $total_pages = ceil($total_notifs / $per_page);
+                                    for($i = 1; $i <= $total_pages; $i++): ?>
+                                        <a href="?tab=notifications&page=<?= $i ?>" class="join-item btn btn-sm <?= $page == $i ? 'btn-active' : '' ?>"><?= $i ?></a>
+                                    <?php endfor; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                    <?php else: ?>
+                        <div class="text-center py-12">
+                            <i class="fa-solid fa-bell-slash text-4xl opacity-20 mb-3"></i>
+                            <p class="opacity-50 italic">Bạn chưa có thông báo nào.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
             
             <!-- Purchase History Tab -->
             <?php if($active_tab === 'purchases'): ?>

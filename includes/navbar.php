@@ -58,6 +58,26 @@ if(isset($_SESSION['user_id'])) {
     
     <div class="flex-none gap-1 sm:gap-2 items-center">
         <?php if(isset($_SESSION['user_id'])): ?>
+            <!-- Notifications Dropdown -->
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-circle relative" onclick="markRead()">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span id="notif-badge" class="badge badge-error badge-xs absolute top-2 right-2 hidden"></span>
+                </div>
+                <div tabindex="0" class="dropdown-content mt-3 z-[100] p-0 shadow-2xl bg-base-100 rounded-box w-80 text-base-content border border-base-300 overflow-hidden">
+                    <div class="p-3 bg-base-200 flex justify-between items-center">
+                        <span class="font-bold text-sm">Thông báo (<span id="notif-count">0</span>)</span>
+                        <button onclick="markRead()" class="text-[10px] text-primary hover:underline">Đã xem tất cả</button>
+                    </div>
+                    <ul id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-base-200">
+                        <li class="p-8 text-center"><span class="loading loading-spinner loading-sm opacity-20"></span></li>
+                    </ul>
+                    <div class="p-2 border-t border-base-200 text-center">
+                        <a href="/history.php" class="text-xs text-primary hover:underline font-medium">Xem tất cả lịch sử</a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Profile Dropdown -->
             <div class="dropdown dropdown-end">
                 <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">

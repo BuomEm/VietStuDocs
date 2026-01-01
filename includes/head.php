@@ -73,4 +73,4 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-base-200">
+<body class="min-h-screen bg-base-200" data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>">

@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/tutor.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 // Check Admin Access
 if (!isset($_SESSION['user_id']) || !hasAdminAccess()) {
@@ -36,6 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($add) {
                         $stmt = $pdo->prepare("UPDATE tutor_requests SET status = 'completed', review = CONCAT(review, ' [Admin: Đã thanh toán cho Gia sư]') WHERE id = ?");
                         $stmt->execute([$req_id]);
+                        
+                        // Notify Tutor
+                        $VSD->insert('notifications', [
+                            'user_id' => $request['tutor_id'],
+                            'type' => 'dispute_resolved',
+                            'ref_id' => $req_id,
+                            'message' => "Yêu cầu #$req_id đã được giải quyết: Bạn đã nhận được {$request['points_used']} pts."
+                        ]);
+                        sendPushToUser($request['tutor_id'], [
+                            'title' => 'Khiếu nại đã giải quyết',
+                            'body' => "Bạn đã nhận được tiền cho yêu cầu #$req_id.",
+                            'url' => '/history.php?tab=notifications'
+                        ]);
+                        
                         $success = "Đã giải quyết: Thanh toán cho Gia sư.";
                     }
                 } elseif ($resolution === 'refund_student') {
@@ -44,6 +59,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($add) {
                         $stmt = $pdo->prepare("UPDATE tutor_requests SET status = 'completed', review = CONCAT(review, ' [Admin: Đã hoàn tiền cho Học viên]') WHERE id = ?");
                         $stmt->execute([$req_id]);
+                        
+                        // Notify Student
+                        $VSD->insert('notifications', [
+                            'user_id' => $request['student_id'],
+                            'type' => 'dispute_resolved',
+                            'ref_id' => $req_id,
+                            'message' => "Khiếu nại yêu cầu #$req_id thành công: Bạn đã được hoàn lại {$request['points_used']} pts."
+                        ]);
+                        sendPushToUser($request['student_id'], [
+                            'title' => 'Hoàn tiền thành công',
+                            'body' => "Yêu cầu #$req_id đã được hoàn tiền.",
+                            'url' => '/history.php?tab=notifications'
+                        ]);
+
                         $success = "Đã giải quyết: Hoàn tiền cho Học viên.";
                     }
                 }
@@ -99,6 +128,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("UPDATE tutor_requests SET status = 'answered' WHERE id = ?")->execute([$req_id]);
                 }
                 
+                // Notify Student of Admin Reply
+                $VSD->insert('notifications', [
+                    'user_id' => $request['student_id'],
+                    'type' => 'admin_reply',
+                    'ref_id' => $req_id,
+                    'message' => "Admin đã phản hồi yêu cầu hỗ trợ của bạn cho Request #$req_id."
+                ]);
+                sendPushToUser($request['student_id'], [
+                    'title' => 'Phản hồi từ Admin',
+                    'body' => "Admin đã trả lời yêu cầu #$req_id của bạn.",
+                    'url' => '/history.php?tab=notifications'
+                ]);
+
                 $success = "Đã gửi phản hồi thành công.";
             } catch (Exception $e) {
                 $error = "Lỗi gửi phản hồi: " . $e->getMessage();
