@@ -72,7 +72,7 @@
             background-color: oklch(var(--b1));
         }
     </style>
-    <script src="/assets/js/notifications.js?v=3"></script>
+    <script src="/assets/js/notifications.js?v=4"></script>
 </head>
 <body class="min-h-screen bg-base-200" 
       data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>"

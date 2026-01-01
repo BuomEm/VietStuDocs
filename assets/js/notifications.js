@@ -1,6 +1,9 @@
 // Notification system logic
-console.log('🔔 Notifications.js loaded v2');
-const VAPID_PUBLIC_KEY = document.body.dataset.vapidKey;
+console.log('🔔 Notifications.js loaded v3');
+
+function getVapidKey() {
+    return document.body.dataset.vapidKey;
+}
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -46,7 +49,7 @@ async function subscribePush() {
 
         const subscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            applicationServerKey: urlBase64ToUint8Array(getVapidKey())
         });
 
         await fetch('/API/save_subscription.php', {
