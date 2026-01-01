@@ -62,7 +62,7 @@ if(isset($_SESSION['user_id'])) {
             <div class="dropdown dropdown-end">
                 <div tabindex="0" role="button" class="btn btn-ghost btn-circle relative" onclick="markRead()">
                     <i class="fa-regular fa-bell text-xl"></i>
-                    <span id="notif-badge" class="badge badge-error badge-xs absolute top-2 right-2 hidden"></span>
+                    <span id="notif-badge" class="badge badge-error badge-xs absolute -top-0.5 -right-0.5 hidden"></span>
                 </div>
                 <div tabindex="0" class="dropdown-content mt-3 z-[100] p-0 shadow-2xl bg-base-100 rounded-box w-80 text-base-content border border-base-300 overflow-hidden">
                     <div class="p-3 bg-base-200 flex justify-between items-center">

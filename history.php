@@ -266,7 +266,8 @@ $stats = $VSD->get_row($stats_query);
                                         <i class="fa-solid <?= $notif['type'] == 'chat' ? 'fa-comment' : 'fa-info-circle' ?> text-primary"></i>
                                     </div>
                                     <div class="flex-1">
-                                        <p class="text-sm font-medium"><?= htmlspecialchars($notif['message']) ?></p>
+                                        <p class="text-sm font-bold text-primary"><?= htmlspecialchars($notif['title'] ?? 'DocShare') ?></p>
+                                        <p class="text-sm mt-0.5"><?= htmlspecialchars($notif['message']) ?></p>
                                         <p class="text-[10px] opacity-50 mt-1"><?= date('H:i:s d/m/Y', strtotime($notif['created_at'])) ?></p>
                                     </div>
                                     <?php if($notif['is_read'] == 1): ?>

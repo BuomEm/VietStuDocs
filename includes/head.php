@@ -72,7 +72,8 @@
             background-color: oklch(var(--b1));
         }
     </style>
-    <script src="/assets/js/notifications.js?v=4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/favico.js@0.3.10/favico.min.js"></script>
+    <script src="/assets/js/notifications.js?v=6"></script>
 </head>
 <body class="min-h-screen bg-base-200" 
       data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>"

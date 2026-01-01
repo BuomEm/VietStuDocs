@@ -1,5 +1,20 @@
 // Notification system logic
-console.log('🔔 Notifications.js loaded v3');
+console.log('🔔 Notifications.js loaded v6');
+
+// Initial states
+let lastNotifCount = 0;
+const favicon = typeof Favico !== 'undefined' ? new Favico({
+    animation: 'popFade',
+    bgColor: '#dc2626',
+    textColor: '#fff'
+}) : null;
+
+// Notification sound
+const notifSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+function playNotificationSound() {
+    notifSound.play().catch(e => console.warn('Sound play blocked:', e));
+}
 
 function getVapidKey() {
     return document.body.dataset.vapidKey;
@@ -18,7 +33,6 @@ function urlBase64ToUint8Array(base64String) {
 async function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return null;
     try {
-        // Luôn đăng ký sw.js ở root để có scope toàn trang
         const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         console.log('Service Worker Registered correctly at root');
         return reg;
@@ -38,10 +52,8 @@ async function subscribePush() {
         const reg = await registerServiceWorker();
         if (!reg) return false;
 
-        // Đảm bảo SW đã sẵn sàng
         await navigator.serviceWorker.ready;
 
-        // Xóa đăng ký cũ nếu có để tránh lỗi push service error
         const oldSub = await reg.pushManager.getSubscription();
         if (oldSub) {
             await oldSub.unsubscribe();
@@ -63,7 +75,7 @@ async function subscribePush() {
         return true;
     } catch (e) {
         if (e.name === 'AbortError') {
-            console.error('❌ Brave/Chrome Push Service Error. Hãy kiểm tra brave://settings/privacy -> "Use Google services for push messaging"');
+            console.error('❌ Brave/Chrome Push Service Error.');
         } else {
             console.error('❌ Subscription error:', e);
         }
@@ -114,7 +126,7 @@ async function updateNotificationUI() {
         }
     } else {
         toggle.checked = false;
-        if (statusEl) statusEl.innerText = status === 'denied' ? 'Đã chặn (vào cài đặt trình duyệt để mở)' : 'Trạng thái: Chưa bật';
+        if (statusEl) statusEl.innerText = status === 'denied' ? 'Đã chặn' : 'Trạng thái: Chưa bật';
     }
 }
 
@@ -125,17 +137,46 @@ function checkUnread() {
             const badge = document.getElementById('notif-badge');
             const countEl = document.getElementById('notif-count');
             const list = document.getElementById('notif-list');
-            if (badge && countEl) {
-                if (data.count > 0) {
+
+            const count = parseInt(data.count) || 0;
+
+            // Update badge on button
+            if (badge) {
+                if (count > 0) {
                     badge.classList.remove('hidden');
-                    countEl.innerText = data.count;
+                    badge.innerText = count > 9 ? '9+' : count;
+                    // Smaller badge style for count
+                    badge.className = "badge badge-error badge-xs absolute -top-1 -right-1 flex items-center justify-center text-[8px] font-bold p-0 w-4 h-4";
                 } else {
                     badge.classList.add('hidden');
                 }
             }
+
+            // Update counter in dropdown title
+            if (countEl) countEl.innerText = count;
+
+            // Favicon badge
+            if (favicon) {
+                favicon.badge(count);
+            }
+
+            // Sound check
+            if (count > lastNotifCount) {
+                playNotificationSound();
+            }
+            lastNotifCount = count;
+
+            // Render list
             if (list && data.notifications) {
                 list.innerHTML = data.notifications.length > 0
-                    ? data.notifications.map(n => `<li class="${n.is_read == 0 ? 'bg-primary/5' : ''}"><a href="javascript:void(0)" onclick="markRead(${n.id})" class="flex flex-col items-start p-3"><span>${n.message}</span></a></li>`).join('')
+                    ? data.notifications.map(n => `
+                            <li class="${n.is_read == 0 ? 'bg-primary/5' : ''} border-b border-base-200 last:border-0">
+                                <a href="javascript:void(0)" onclick="markRead(${n.id})" class="flex flex-col items-start p-3 hover:bg-base-200 transition-colors">
+                                    <span class="font-bold text-xs text-primary mb-0.5 line-clamp-1">${n.title}</span>
+                                    <span class="text-sm opacity-90 line-clamp-2">${n.message}</span>
+                                    <span class="text-[9px] opacity-40 mt-1">${n.time}</span>
+                                </a>
+                            </li>`).join('')
                     : '<li class="p-4 text-center text-xs opacity-50">Không có thông báo mới</li>';
             }
         });
@@ -151,7 +192,9 @@ if (document.body.dataset.loggedin === 'true') {
         if (Notification.permission === 'granted') subscribePush();
         updateNotificationUI();
     });
+    // First run
     checkUnread();
-    setInterval(checkUnread, 30000);
+    // Poll every 15 seconds for more responsive feel
+    setInterval(checkUnread, 15000);
     setInterval(() => fetch('/API/ping.php'), 60000);
 }

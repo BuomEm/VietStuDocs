@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // 1. Insert into database notifications (for the in-app list)
         $VSD->insert('notifications', [
             'user_id' => $user_id,
+            'title' => $title,
             'type' => 'test',
             'ref_id' => 0,
             'message' => $body,

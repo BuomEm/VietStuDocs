@@ -21,6 +21,7 @@ $notifications = [];
 while ($n = mysqli_fetch_assoc($notifs_res)) {
     $notifications[] = [
         'id' => $n['id'],
+        'title' => $n['title'] ?? 'DocShare',
         'type' => $n['type'],
         'message' => $n['message'],
         'is_read' => $n['is_read'],
