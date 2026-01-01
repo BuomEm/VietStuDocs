@@ -5,6 +5,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 
@@ -15,13 +16,13 @@ $current_page = 'saved';
 // Handle unsave
 if(isset($_GET['unsave'])) {
     $doc_id = intval($_GET['unsave']);
-    mysqli_query($conn, "DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'");
+    $VSD->query("DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'");
     header("Location: saved.php?msg=unsaved");
     exit;
 }
 
 // Fetch saved documents (AFTER unsave logic) - only approved documents
-$saved_docs = mysqli_query($conn, "
+$all_saved_docs = $VSD->get_list("
     SELECT d.*, u.username FROM documents d 
     JOIN users u ON d.user_id = u.id 
     JOIN document_interactions di ON d.id = di.document_id
@@ -29,7 +30,7 @@ $saved_docs = mysqli_query($conn, "
     ORDER BY di.created_at DESC
 ");
 
-$total_saved = mysqli_num_rows($saved_docs);
+$total_saved = count($all_saved_docs);
 ?>
 <?php include 'includes/head.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
@@ -59,7 +60,7 @@ $total_saved = mysqli_num_rows($saved_docs);
         <?php if($total_saved > 0): ?>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 <?php
-                while($doc = mysqli_fetch_assoc($saved_docs)) {
+                foreach($all_saved_docs as $doc) {
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                     $thumbnail = $doc['thumbnail'] ?? null;
                     $total_pages = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : null;
@@ -129,6 +130,4 @@ $total_saved = mysqli_num_rows($saved_docs);
 </div>
 </div>
 
-<?php 
-mysqli_close($conn);
 ?>

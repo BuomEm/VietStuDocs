@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 require_once 'config/file.php';
@@ -21,7 +22,7 @@ $doc_id = intval($_GET['id'] ?? 0);
 $check_query = "SELECT d.*, u.username FROM documents d 
                 JOIN users u ON d.user_id = u.id 
                 WHERE d.id=$doc_id";
-$doc_check = mysqli_fetch_assoc(mysqli_query($conn, $check_query));
+$doc_check = $VSD->get_row($check_query);
 
 // Determine error type
 $error_type = null;
@@ -97,7 +98,7 @@ if($error_type) {
     </div>
     </div>
     <?php
-    mysqli_close($conn);
+    // db connection cleaned up by app flow
     exit;
 }
 
@@ -158,7 +159,7 @@ if(!file_exists($file_path)) {
     </div>
     </div>
     <?php
-    mysqli_close($conn);
+    // db connection cleaned up by app flow
     exit;
 }
 
@@ -166,18 +167,17 @@ if(!file_exists($file_path)) {
 if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
     $action = $_POST['action'] ?? '';
     
-    if($action === 'like' || $action === 'dislike') {
+        if($action === 'like' || $action === 'dislike') {
         // Toggle like/dislike
-        $existing = mysqli_fetch_assoc(mysqli_query($conn, 
-            "SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='$action'"));
+        $existing = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='$action'");
         
         if($existing) {
-            mysqli_query($conn, "DELETE FROM document_interactions WHERE id={$existing['id']}");
+            $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
         } else {
             // Remove opposite reaction if exists
-            mysqli_query($conn, "DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id");
+            $VSD->query("DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id");
             // Add new reaction
-            mysqli_query($conn, "INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, '$action')");
+            $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, '$action')");
         }
         echo json_encode(['success' => true]);
         exit;
@@ -185,42 +185,39 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
     
     if($action === 'save') {
         // Toggle save
-        $existing = mysqli_fetch_assoc(mysqli_query($conn, 
-            "SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'"));
+        $existing = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'");
         
         if($existing) {
-            mysqli_query($conn, "DELETE FROM document_interactions WHERE id={$existing['id']}");
+            $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
             echo json_encode(['success' => true, 'saved' => false]);
         } else {
-            mysqli_query($conn, "INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, 'save')");
+            $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, 'save')");
             echo json_encode(['success' => true, 'saved' => true]);
         }
         exit;
     }
     
     if($action === 'report') {
-        $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? 'Inappropriate content');
-        mysqli_query($conn, "INSERT INTO document_reports (document_id, user_id, reason) VALUES ($doc_id, $user_id, '$reason')");
+        $reason = $VSD->escape($_POST['reason'] ?? 'Inappropriate content');
+        $VSD->query("INSERT INTO document_reports (document_id, user_id, reason) VALUES ($doc_id, $user_id, '$reason')");
         echo json_encode(['success' => true, 'message' => 'Report submitted']);
         exit;
     }
 }
 
 // Get interaction stats
-$likes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'"));
-$dislikes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'"));
-$saves = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='save'"));
+$likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
+$dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
+$saves = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='save'");
 
 // Get user's current reactions
 $user_reaction = null;
 $user_saved = false;
 if($is_logged_in) {
-    $reaction = mysqli_fetch_assoc(mysqli_query($conn, 
-        "SELECT type FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')"));
+    $reaction = $VSD->get_row("SELECT type FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')");
     $user_reaction = $reaction['type'] ?? null;
     
-    $saved = mysqli_fetch_assoc(mysqli_query($conn, 
-        "SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'"));
+    $saved = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'");
     $user_saved = $saved ? true : false;
 }
 
@@ -228,49 +225,33 @@ if($is_logged_in) {
 $category_docs = [];
 if($doc_category) {
     // Build WHERE clause based on category type
-    $cat_where = "dc.education_level = '" . mysqli_real_escape_string($conn, $doc_category['education_level']) . "'";
+    $cat_where = "dc.education_level = '" . $VSD->escape($doc_category['education_level']) . "'";
     
     // For phổ thông: match by subject
     if(isset($doc_category['subject_code']) && $doc_category['subject_code']) {
-        $cat_where .= " AND dc.subject_code = '" . mysqli_real_escape_string($conn, $doc_category['subject_code']) . "'";
+        $cat_where .= " AND dc.subject_code = '" . $VSD->escape($doc_category['subject_code']) . "'";
     }
     // For đại học: match by major
     elseif(isset($doc_category['major_code']) && $doc_category['major_code']) {
-        $cat_where .= " AND dc.major_code = '" . mysqli_real_escape_string($conn, $doc_category['major_code']) . "'";
+        $cat_where .= " AND dc.major_code = '" . $VSD->escape($doc_category['major_code']) . "'";
     }
-    
-    $category_query = "
-        SELECT DISTINCT d.*, u.username
-        FROM documents d
-        JOIN users u ON d.user_id = u.id
-        JOIN document_categories dc ON d.id = dc.document_id
-        WHERE $cat_where
-        AND d.id != $doc_id
-        AND d.status = 'approved'
-        AND d.is_public = TRUE
-        ORDER BY d.created_at DESC
-        LIMIT 8
-    ";
-    $category_result = mysqli_query($conn, $category_query);
-    if($category_result) {
-        while($row = mysqli_fetch_assoc($category_result)) {
-            $category_docs[] = $row;
-        }
-    }
+    $category_query = "SELECT d.*, u.username 
+                       FROM documents d 
+                       JOIN users u ON d.user_id = u.id 
+                       JOIN document_categories dc ON d.id = dc.document_id
+                       WHERE $cat_where AND d.id != $doc_id AND d.status = 'approved' AND d.is_public = TRUE
+                       LIMIT 4";
+    $category_docs = $VSD->get_list($category_query);
 }
 
 // Get similar documents for "Recommended for you" (only approved)
-$similar_docs_result = mysqli_query($conn, "
+$similar_docs = $VSD->get_list("
     SELECT d.*, u.username FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE d.is_public = TRUE AND d.status = 'approved' AND d.id != $doc_id
     ORDER BY (d.views + d.downloads * 2) DESC, d.created_at DESC
     LIMIT 8
 ");
-$similar_docs = [];
-while($row = mysqli_fetch_assoc($similar_docs_result)) {
-    $similar_docs[] = $row;
-}
 
 // Function to download file with speed limit
 function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100) {
@@ -2304,6 +2285,4 @@ include 'includes/sidebar.php';
     </script>
 </body>
 </html>
-<?php
-mysqli_close($conn);
 ?>

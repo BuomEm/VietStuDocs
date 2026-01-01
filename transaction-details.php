@@ -6,6 +6,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/points.php';
 
@@ -22,15 +23,13 @@ $transaction = null;
 // Get transaction details based on type
 if($type === 'points') {
     $query = "SELECT * FROM point_transactions WHERE id = $transaction_id AND user_id = $user_id";
-    $result = mysqli_query($conn, $query);
-    $transaction = mysqli_fetch_assoc($result);
+    $transaction = db_get_row($query);
     
     if($transaction) {
         // Get related document if exists
         if($transaction['document_id']) {
             $doc_query = "SELECT * FROM documents WHERE id = " . $transaction['document_id'];
-            $doc_result = mysqli_query($conn, $doc_query);
-            $transaction['related_document'] = mysqli_fetch_assoc($doc_result);
+            $transaction['related_document'] = db_get_row($doc_query);
         }
     }
 } 
@@ -51,16 +50,13 @@ elseif($type === 'purchase') {
         LEFT JOIN users u ON ds.seller_user_id = u.id
         WHERE ds.id = $transaction_id AND ds.buyer_user_id = $user_id
     ";
-    $result = mysqli_query($conn, $query);
-    $transaction = mysqli_fetch_assoc($result);
+    $transaction = db_get_row($query);
 }
 elseif($type === 'premium') {
     // Check if table exists
-    $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'transactions'");
-    if(mysqli_num_rows($table_check) > 0) {
+    if(db_table_exists('transactions')) {
         $query = "SELECT * FROM transactions WHERE id = $transaction_id AND user_id = $user_id";
-        $result = mysqli_query($conn, $query);
-        $transaction = mysqli_fetch_assoc($result);
+        $transaction = db_get_row($query);
     } else {
         $transaction = null;
     }
@@ -353,4 +349,4 @@ if(!$transaction) {
     }
 </style>
 
-<?php mysqli_close($conn); ?>
+?>

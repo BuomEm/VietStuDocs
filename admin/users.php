@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 
@@ -15,14 +16,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     $action = $_POST['action'];
     
     if($action === 'toggle_role') {
-        $current_role = mysqli_fetch_assoc(mysqli_query($conn, "SELECT role FROM users WHERE id=$user_id"));
-        $new_role = $current_role['role'] === 'admin' ? 'user' : 'admin';
-        mysqli_query($conn, "UPDATE users SET role='$new_role' WHERE id=$user_id");
+        $user_data = $VSD->get_row("SELECT * FROM users WHERE id=$user_id");
+        $new_role = ($user_data && $user_data['role'] === 'admin') ? 'user' : 'admin';
+        $VSD->update('users', ['role' => $new_role], "id=$user_id");
         header("Location: users.php?msg=role_updated");
         exit;
     } elseif($action === 'add_points') {
         $points = intval($_POST['points']);
-        $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? 'Admin adjustment');
+        $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             addPoints($user_id, $points, $reason);
             header("Location: users.php?msg=points_added");
@@ -30,7 +31,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     } elseif($action === 'deduct_points') {
         $points = intval($_POST['points']);
-        $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? 'Admin adjustment');
+        $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             $result = deductPoints($user_id, $points, $reason);
             if(!$result) {
@@ -43,8 +44,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get filter parameters
-$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
-$role_filter = isset($_GET['role']) ? mysqli_real_escape_string($conn, $_GET['role']) : 'all';
+$search = isset($_GET['search']) ? $VSD->escape($_GET['search']) : '';
+$role_filter = isset($_GET['role']) ? $VSD->escape($_GET['role']) : 'all';
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
@@ -61,8 +62,8 @@ $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses
 
 // Get total count
 $total_query = "SELECT COUNT(*) as total FROM users u $where_sql";
-$total_result = mysqli_fetch_assoc(mysqli_query($conn, $total_query));
-$total_users = $total_result['total'];
+$total_result = $VSD->get_row($total_query);
+$total_users = $total_result['total'] ?? 0;
 $total_pages = ceil($total_users / $per_page);
 
 // Get users with points
@@ -79,10 +80,9 @@ $users_query = "
     ORDER BY u.created_at DESC
     LIMIT $per_page OFFSET $offset
 ";
-$users = mysqli_query($conn, $users_query);
+$users = $VSD->get_list($users_query);
 
-// Get statistics
-$stats = mysqli_fetch_assoc(mysqli_query($conn, "
+$stats = $VSD->get_row("
     SELECT 
         COUNT(*) as total_users,
         SUM(CASE WHEN role='admin' THEN 1 ELSE 0 END) as admin_count,
@@ -92,10 +92,9 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, "
         SUM(COALESCE(up.total_spent, 0)) as total_points_spent_all_time
     FROM users u
     LEFT JOIN user_points up ON u.id = up.user_id
-"));
+");
 
-$unread_notifications = mysqli_num_rows(mysqli_query($conn, 
-    "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
+$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
 // For shared admin sidebar
 $admin_active_page = 'users';
@@ -217,7 +216,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
 
             <!-- Table -->
-            <?php if(mysqli_num_rows($users) > 0): ?>
+            <?php if(count($users) > 0): ?>
                 <div class="overflow-x-auto">
                     <table class="table table-zebra">
                         <thead>
@@ -232,7 +231,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while($user = mysqli_fetch_assoc($users)): ?>
+                            <?php foreach($users as $user): ?>
                                 <tr>
                                     <td class="text-base-content/70"><?= $user['id'] ?></td>
                                     <td>
@@ -297,7 +296,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -447,5 +446,4 @@ include __DIR__ . '/../includes/admin-header.php';
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
 ?>

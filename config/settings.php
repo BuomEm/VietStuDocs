@@ -4,7 +4,7 @@
  * Quản lý tất cả cấu hình hệ thống từ bảng settings
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/function.php';
 
 /**
  * Lấy giá trị setting
@@ -13,12 +13,11 @@ require_once __DIR__ . '/db.php';
  * @return mixed Giá trị setting hoặc default
  */
 function getSetting($name, $default = null) {
-    global $conn;
-    $name = mysqli_real_escape_string($conn, $name);
-    $result = mysqli_query($conn, "SELECT value FROM settings WHERE name='$name' LIMIT 1");
+    global $VSD;
+    $name = $VSD->escape($name);
+    $row = $VSD->get_row("SELECT value FROM settings WHERE name='$name' LIMIT 1");
     
-    if ($result && mysqli_num_rows($result) > 0) {
-        $row = mysqli_fetch_assoc($result);
+    if ($row) {
         return $row['value'];
     }
     
@@ -34,21 +33,19 @@ function getSetting($name, $default = null) {
  * @return bool Thành công hay không
  */
 function setSetting($name, $value, $description = null, $category = 'general') {
-    global $conn;
-    $name = mysqli_real_escape_string($conn, $name);
-    $value = mysqli_real_escape_string($conn, $value);
+    global $VSD;
+    $name = $VSD->escape($name);
+    $value = $VSD->escape($value);
     
     // Check if setting exists
-    $check = mysqli_query($conn, "SELECT id FROM settings WHERE name='$name' LIMIT 1");
+    $count = $VSD->num_rows("SELECT id FROM settings WHERE name='$name' LIMIT 1");
     
-    if (mysqli_num_rows($check) > 0) {
+    if ($count > 0) {
         // Update existing
-        $update_query = "UPDATE settings SET value='$value' WHERE name='$name'";
-        return mysqli_query($conn, $update_query);
+        return $VSD->update('settings', ['value' => $value], "name='$name'");
     } else {
         // Insert new
-        $insert_query = "INSERT INTO settings (name, value) VALUES ('$name', '$value')";
-        return mysqli_query($conn, $insert_query);
+        return $VSD->insert('settings', ['name' => $name, 'value' => $value]);
     }
 }
 
@@ -58,8 +55,7 @@ function setSetting($name, $value, $description = null, $category = 'general') {
  * @return array Mảng các settings
  */
 function getSettingsByCategory($category) {
-    global $conn;
-    $category = mysqli_real_escape_string($conn, $category);
+    global $VSD;
     
     // Map category to name patterns
     $patterns = [
@@ -78,13 +74,13 @@ function getSettingsByCategory($category) {
     $settings = [];
     
     if (isset($patterns[$category])) {
-        $name_list = "'" . implode("','", array_map(function($name) use ($conn) {
-            return mysqli_real_escape_string($conn, $name);
+        $name_list = "'" . implode("','", array_map(function($name) use ($VSD) {
+            return $VSD->escape($name);
         }, $patterns[$category])) . "'";
         
-        $result = mysqli_query($conn, "SELECT name, value FROM settings WHERE name IN ($name_list) ORDER BY name");
+        $rows = $VSD->get_list("SELECT name, value FROM settings WHERE name IN ($name_list) ORDER BY name");
         
-        while ($row = mysqli_fetch_assoc($result)) {
+        foreach ($rows as $row) {
             $settings[$row['name']] = [
                 'value' => $row['value']
             ];

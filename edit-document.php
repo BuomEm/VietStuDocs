@@ -6,6 +6,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 require_once 'config/categories.php';
@@ -19,12 +20,11 @@ if($doc_id <= 0) {
 }
 
 // Get document - only owner can edit
-$doc = mysqli_fetch_assoc(mysqli_query($conn, 
-    "SELECT d.*, aa.rejection_reason, dp.notes as admin_notes 
+$doc = db_get_row("SELECT d.*, aa.rejection_reason, dp.notes as admin_notes 
      FROM documents d 
      LEFT JOIN admin_approvals aa ON d.id = aa.document_id AND d.status = 'rejected'
      LEFT JOIN docs_points dp ON d.id = dp.document_id
-     WHERE d.id=$doc_id AND d.user_id=$user_id"));
+     WHERE d.id=$doc_id AND d.user_id=$user_id");
 
 if(!$doc) {
     header("Location: dashboard.php?error=not_found");
@@ -39,7 +39,7 @@ $education_levels = getEducationLevels();
 
 // Handle form submission
 if($_SERVER["REQUEST_METHOD"] == "POST") {
-    $description = !empty($_POST['description']) ? mysqli_real_escape_string($conn, trim($_POST['description'])) : '';
+    $description = !empty($_POST['description']) ? db_escape(trim($_POST['description'])) : '';
     $is_public = isset($_POST['is_public']) && $_POST['is_public'] == '1' ? 1 : 0;
     
     // Get category data
@@ -54,7 +54,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
                      is_public=$is_public
                      WHERE id=$doc_id AND user_id=$user_id";
     
-    if(mysqli_query($conn, $update_query)) {
+    if(db_query($update_query)) {
         // Save category data if provided
         if ($category_data && !empty($category_data['education_level'])) {
             saveDocumentCategory(
@@ -71,7 +71,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: dashboard.php?msg=updated");
         exit;
     } else {
-        $error = "Có lỗi xảy ra khi cập nhật: " . mysqli_error($conn);
+        $error = "Có lỗi xảy ra khi cập nhật: " . db_error();
     }
 }
 
@@ -615,6 +615,4 @@ function updateSummary() {
 }
 </script>
 
-<?php 
-mysqli_close($conn);
 ?>

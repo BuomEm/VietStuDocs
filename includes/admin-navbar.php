@@ -4,11 +4,7 @@
  */
 $admin_id = getCurrentUserId();
 $admin_username = getCurrentUsername();
-$unread_notifications_count = 0;
-if (isset($conn)) {
-    $unread_notifications_count = mysqli_num_rows(mysqli_query($conn, 
-        "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
-}
+$unread_notifications_count = db_num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 ?>
 
 <div class="navbar bg-base-100 border-b border-base-300 px-4 sticky top-0 z-30 shadow-sm backdrop-blur bg-base-100/80">

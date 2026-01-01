@@ -6,6 +6,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 require_once 'config/points.php';
@@ -42,8 +43,8 @@ $purchases_query = "
     ORDER BY ds.purchased_at DESC
     LIMIT $per_page OFFSET $offset
 ";
-$purchases_result = mysqli_query($conn, $purchases_query);
-$total_purchases = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM document_sales WHERE buyer_user_id = $user_id"));
+$purchases_result = $VSD->get_list($purchases_query);
+$total_purchases = $VSD->num_rows("SELECT id FROM document_sales WHERE buyer_user_id = $user_id");
 
 // Get Point Transactions History
 $points_query = "
@@ -53,12 +54,11 @@ $points_query = "
     ORDER BY created_at DESC
     LIMIT $per_page OFFSET $offset
 ";
-$points_result = mysqli_query($conn, $points_query);
-$total_points = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM point_transactions WHERE user_id = $user_id"));
+$points_result = $VSD->get_list($points_query);
+$total_points = $VSD->num_rows("SELECT id FROM point_transactions WHERE user_id = $user_id");
 
 // Get Premium Transactions (check if table exists first)
-$table_check = mysqli_query($conn, "SHOW TABLES LIKE 'transactions'");
-if(mysqli_num_rows($table_check) > 0) {
+if(db_table_exists('transactions')) {
     $premium_query = "
         SELECT *
         FROM transactions
@@ -66,11 +66,11 @@ if(mysqli_num_rows($table_check) > 0) {
         ORDER BY created_at DESC
         LIMIT $per_page OFFSET $offset
     ";
-    $premium_result = mysqli_query($conn, $premium_query);
-    $total_premium = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM transactions WHERE user_id = $user_id"));
+    $premium_result = $VSD->get_list($premium_query);
+    $total_premium = $VSD->num_rows("SELECT id FROM transactions WHERE user_id = $user_id");
 } else {
-    // Create empty result if table doesn't exist
-    $premium_result = mysqli_query($conn, "SELECT 1 WHERE 0");
+    // Create empty array if table doesn't exist
+    $premium_result = [];
     $total_premium = 0;
 }
 
@@ -82,8 +82,8 @@ $uploads_query = "
     ORDER BY created_at DESC
     LIMIT $per_page OFFSET $offset
 ";
-$uploads_result = mysqli_query($conn, $uploads_query);
-$total_uploads = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents WHERE user_id = $user_id"));
+$uploads_result = $VSD->get_list($uploads_query);
+$total_uploads = $VSD->num_rows("SELECT id FROM documents WHERE user_id = $user_id");
 
 // Get Statistics
 $stats_query = "
@@ -94,7 +94,7 @@ $stats_query = "
         (SELECT SUM(views) FROM documents WHERE user_id = $user_id) as total_views,
         (SELECT SUM(downloads) FROM documents WHERE user_id = $user_id) as total_downloads
 ";
-$stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
+$stats = $VSD->get_row($stats_query);
 
 
 ?>
@@ -235,8 +235,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
             <!-- Purchase History Tab -->
             <?php if($active_tab === 'purchases'): ?>
                 <div class="space-y-4">
-                    <?php if(mysqli_num_rows($purchases_result) > 0): ?>
-                        <?php while($purchase = mysqli_fetch_assoc($purchases_result)): ?>
+                    <?php if(count($purchases_result) > 0): ?>
+                        <?php foreach($purchases_result as $purchase): ?>
                             <div class="history-card bg-base-200 rounded-lg p-4 flex items-center gap-4 relative timeline-item">
                                 <div class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-success rounded-full flex items-center justify-center z-10">
                                     <i class="fa-solid fa-check text-white"></i>
@@ -273,7 +273,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                     </div>
                                 </div>
                             </div>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="text-center py-12">
                             <i class="fa-regular fa-folder-open text-6xl text-base-content/30 mb-4"></i>
@@ -290,8 +290,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
             <!-- Points Transaction Tab -->
             <?php if($active_tab === 'points'): ?>
                 <div class="space-y-4">
-                    <?php if(mysqli_num_rows($points_result) > 0): ?>
-                        <?php while($trans = mysqli_fetch_assoc($points_result)): ?>
+                    <?php if(count($points_result) > 0): ?>
+                        <?php foreach($points_result as $trans): ?>
                             <?php 
                                 $is_earn = $trans['transaction_type'] === 'earn';
                                 $icon_class = $is_earn ? 'fa-arrow-up text-success' : 'fa-arrow-down text-error';
@@ -324,7 +324,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                     </div>
                                 </div>
                             </div>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="text-center py-12">
                             <i class="fa-solid fa-coins text-6xl text-base-content/30 mb-4"></i>
@@ -337,8 +337,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
             <!-- Premium Transaction Tab -->
             <?php if($active_tab === 'premium'): ?>
                 <div class="space-y-4">
-                    <?php if(mysqli_num_rows($premium_result) > 0): ?>
-                        <?php while($trans = mysqli_fetch_assoc($premium_result)): ?>
+                    <?php if(count($premium_result) > 0): ?>
+                        <?php foreach($premium_result as $trans): ?>
                             <?php 
                                 $status_classes = [
                                     'completed' => 'badge-success',
@@ -377,7 +377,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                     </div>
                                 </div>
                             </div>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="text-center py-12">
                             <i class="fa-solid fa-crown text-6xl text-base-content/30 mb-4"></i>
@@ -394,8 +394,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
             <!-- Upload History Tab -->
             <?php if($active_tab === 'uploads'): ?>
                 <div class="space-y-4">
-                    <?php if(mysqli_num_rows($uploads_result) > 0): ?>
-                        <?php while($doc = mysqli_fetch_assoc($uploads_result)): ?>
+                    <?php if(count($uploads_result) > 0): ?>
+                        <?php foreach($uploads_result as $doc): ?>
                             <?php 
                                 $status_classes = [
                                     'approved' => 'badge-success',
@@ -456,7 +456,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                     </div>
                                 </div>
                             </div>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="text-center py-12">
                             <i class="fa-solid fa-cloud-upload text-6xl text-base-content/30 mb-4"></i>
@@ -530,4 +530,4 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
 </div>
 </div>
 
-<?php mysqli_close($conn); ?>
+<?php // db connection cleaned up by app flow ?>

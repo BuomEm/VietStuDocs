@@ -1,7 +1,7 @@
 <?php
 // Search System Functions
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/categories.php';
 
 /**
@@ -15,8 +15,6 @@ require_once __DIR__ . '/categories.php';
  * @return array - search results and metadata
  */
 function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $page = 1, $per_page = 20, $user_id = null) {
-    global $conn;
-    
     $keyword = trim($keyword);
     $offset = ($page - 1) * $per_page;
     
@@ -25,9 +23,11 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
     $join_clauses = [];
     $having_clauses = [];
     
+    $keyword_escaped = "";
+    
     // Search keyword with FULLTEXT
     if (!empty($keyword) && strlen($keyword) >= 2) {
-        $keyword_escaped = mysqli_real_escape_string($conn, $keyword);
+        $keyword_escaped = db_escape($keyword);
         
         // FULLTEXT search
         $where_clauses[] = "MATCH(d.original_name, d.description) AGAINST('$keyword_escaped' IN NATURAL LANGUAGE MODE)";
@@ -107,8 +107,7 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
         ";
     }
     
-    $count_result = mysqli_query($conn, $count_query);
-    $total_results = mysqli_fetch_assoc($count_result)['total'];
+    $total_results = db_get_row($count_query)['total'] ?? 0;
     
     // Get search results
     $search_query = "
@@ -127,12 +126,7 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
         LIMIT $per_page OFFSET $offset
     ";
     
-    $result = mysqli_query($conn, $search_query);
-    
-    $documents = [];
-    while($row = mysqli_fetch_assoc($result)) {
-        $documents[] = $row;
-    }
+    $documents = db_get_results($search_query);
     
     // Log search history
     if (!empty($keyword)) {
@@ -155,20 +149,18 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
  * Log search history
  */
 function logSearchHistory($keyword, $filters, $results_count, $user_id = null) {
-    global $conn;
-    
-    $keyword_escaped = mysqli_real_escape_string($conn, $keyword);
-    $filters_json = mysqli_real_escape_string($conn, json_encode($filters));
+    $keyword_escaped = db_escape($keyword);
+    $filters_json = db_escape(json_encode($filters));
     $user_id_sql = $user_id ? intval($user_id) : 'NULL';
     
     // Insert into search_history
-    mysqli_query($conn, "
+    db_query("
         INSERT INTO search_history (user_id, keyword, filters, results_count)
         VALUES ($user_id_sql, '$keyword_escaped', '$filters_json', $results_count)
     ");
     
     // Update search_suggestions
-    mysqli_query($conn, "
+    db_query("
         INSERT INTO search_suggestions (keyword, search_count, results_count_avg)
         VALUES ('$keyword_escaped', 1, $results_count)
         ON DUPLICATE KEY UPDATE
@@ -182,9 +174,7 @@ function logSearchHistory($keyword, $filters, $results_count, $user_id = null) {
  * Get search suggestions (autocomplete)
  */
 function getSearchSuggestions($partial_keyword, $limit = 10) {
-    global $conn;
-    
-    $partial_keyword = mysqli_real_escape_string($conn, trim($partial_keyword));
+    $partial_keyword = db_escape(trim($partial_keyword));
     
     if (strlen($partial_keyword) < 2) {
         return [];
@@ -198,22 +188,13 @@ function getSearchSuggestions($partial_keyword, $limit = 10) {
         LIMIT $limit
     ";
     
-    $result = mysqli_query($conn, $query);
-    $suggestions = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $suggestions[] = $row;
-    }
-    
-    return $suggestions;
+    return db_get_results($query);
 }
 
 /**
  * Get popular searches
  */
 function getPopularSearches($limit = 10) {
-    global $conn;
-    
     $query = "
         SELECT keyword, search_count, results_count_avg
         FROM search_suggestions
@@ -222,22 +203,13 @@ function getPopularSearches($limit = 10) {
         LIMIT $limit
     ";
     
-    $result = mysqli_query($conn, $query);
-    $popular = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $popular[] = $row;
-    }
-    
-    return $popular;
+    return db_get_results($query);
 }
 
 /**
  * Get user's recent searches
  */
 function getUserRecentSearches($user_id, $limit = 10) {
-    global $conn;
-    
     $user_id = intval($user_id);
     
     $query = "
@@ -249,22 +221,13 @@ function getUserRecentSearches($user_id, $limit = 10) {
         LIMIT $limit
     ";
     
-    $result = mysqli_query($conn, $query);
-    $recent = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $recent[] = $row;
-    }
-    
-    return $recent;
+    return db_get_results($query);
 }
 
 /**
  * Get featured documents (when no search keyword)
  */
 function getFeaturedDocuments($limit = 20) {
-    global $conn;
-    
     $query = "
         SELECT 
             d.*,
@@ -281,14 +244,7 @@ function getFeaturedDocuments($limit = 20) {
         LIMIT $limit
     ";
     
-    $result = mysqli_query($conn, $query);
-    $documents = [];
-    
-    while($row = mysqli_fetch_assoc($result)) {
-        $documents[] = $row;
-    }
-    
-    return $documents;
+    return db_get_results($query);
 }
 
 /**

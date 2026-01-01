@@ -5,6 +5,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 require_once 'config/points.php';
@@ -17,10 +18,10 @@ $page_title = "Dashboard - DocShare";
 $current_page = 'dashboard';
 
 // Fetch user's documents
-$my_docs = mysqli_query($conn, "SELECT * FROM documents WHERE user_id=$user_id ORDER BY created_at DESC");
+$my_docs = $VSD->get_list("SELECT * FROM documents WHERE user_id=$user_id ORDER BY created_at DESC");
 
 // Fetch all public documents from others (only approved)
-$public_docs = mysqli_query($conn, "
+$public_docs = $VSD->get_list("
     SELECT d.*, u.username FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE d.is_public = TRUE AND d.user_id != $user_id AND d.status = 'approved'
@@ -30,14 +31,14 @@ $public_docs = mysqli_query($conn, "
 // Handle document deletion
 if(isset($_GET['delete'])) {
     $doc_id = intval($_GET['delete']);
-    $doc = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id"));
+    $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
     
     if($doc) {
         $file_path = "uploads/" . $doc['file_name'];
         if(file_exists($file_path)) {
             unlink($file_path);
         }
-        mysqli_query($conn, "DELETE FROM documents WHERE id=$doc_id");
+        $VSD->query("DELETE FROM documents WHERE id=$doc_id");
         header("Location: dashboard.php?msg=deleted");
     }
 }
@@ -45,7 +46,7 @@ if(isset($_GET['delete'])) {
 // Handle document download
 if(isset($_GET['download'])) {
     $doc_id = intval($_GET['download']);
-    $doc = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id"));
+    $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
     
     if($doc) {
         $file_path = "uploads/" . $doc['file_name'];
@@ -212,15 +213,15 @@ if(isset($_GET['download'])) {
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
             <?php
-            if(mysqli_num_rows($my_docs) > 0) {
-                while($doc = mysqli_fetch_assoc($my_docs)) {
+            if(count($my_docs) > 0) {
+                foreach($my_docs as $doc) {
                     $doc_id = $doc['id'];
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                     $file_path = "uploads/" . $doc['file_name'];
                     
                     // Get likes and dislikes
-                    $likes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'"));
-                    $dislikes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'"));
+                    $likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
+                    $dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
@@ -469,15 +470,15 @@ if(isset($_GET['download'])) {
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
             <?php
-            if(mysqli_num_rows($public_docs) > 0) {
-                while($doc = mysqli_fetch_assoc($public_docs)) {
+            if(count($public_docs) > 0) {
+                foreach($public_docs as $doc) {
                     $doc_id = $doc['id'];
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                     $file_path = "uploads/" . $doc['file_name'];
                     
                     // Get likes and dislikes
-                    $likes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'"));
-                    $dislikes = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'"));
+                    $likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
+                    $dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
@@ -710,5 +711,5 @@ if(isset($_GET['download'])) {
 </div>
 
 <?php 
-mysqli_close($conn);
+// db connection cleaned up by app flow
 ?>

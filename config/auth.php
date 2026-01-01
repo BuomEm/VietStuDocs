@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/function.php';
 
 function isUserLoggedIn() {
     return isset($_SESSION['user_id']);
@@ -21,29 +21,23 @@ function getCurrentUsername() {
 }
 
 function loginUser($email, $password) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    $email = mysqli_real_escape_string($conn, $email);
+    $email = db_escape($email);
     
     $query = "SELECT id, username, password FROM users WHERE email='$email'";
-    $result = mysqli_query($conn, $query);
+    $user = db_get_row($query);
     
-    if(mysqli_num_rows($result) == 1) {
-        $user = mysqli_fetch_assoc($result);
+    if($user) {
         if(password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            mysqli_close($conn);
             return true;
         }
     }
     
-    mysqli_close($conn);
     return false;
 }
 
 function registerUser($username, $email, $password) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    
     if(strlen($username) < 3) {
         return ['success' => false, 'message' => 'Username must be at least 3 characters'];
     }
@@ -52,83 +46,60 @@ function registerUser($username, $email, $password) {
         return ['success' => false, 'message' => 'Invalid email format'];
     }
     
-    $check = mysqli_query($conn, "SELECT id FROM users WHERE email='" . mysqli_real_escape_string($conn, $email) . "'");
-    if(mysqli_num_rows($check) > 0) {
-        mysqli_close($conn);
+    $email = db_escape($email);
+    $check = db_num_rows("SELECT id FROM users WHERE email='$email'");
+    if($check > 0) {
         return ['success' => false, 'message' => 'Email already registered'];
     }
     
     $hashed_pwd = password_hash($password, PASSWORD_BCRYPT);
-    $username = mysqli_real_escape_string($conn, $username);
-    $email = mysqli_real_escape_string($conn, $email);
+    $username = db_escape($username);
     
     $query = "INSERT INTO users (username, email, password) VALUES ('$username', '$email', '$hashed_pwd')";
     
-    if(mysqli_query($conn, $query)) {
-        mysqli_close($conn);
+    if(db_query($query)) {
         return ['success' => true, 'message' => 'Registration successful'];
     } else {
-        mysqli_close($conn);
         return ['success' => false, 'message' => 'Registration failed'];
     }
 }
 
 function getUserInfo($user_id) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     $user_id = intval($user_id);
-    
-    $result = mysqli_query($conn, "SELECT id, username, email, created_at, verified_documents_count FROM users WHERE id=$user_id");
-    $user = mysqli_fetch_assoc($result);
-    
-    mysqli_close($conn);
-    return $user;
+    return db_get_row("SELECT id, username, email, created_at, verified_documents_count FROM users WHERE id=$user_id");
 }
 
 function updateUserProfile($user_id, $username, $email) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     $user_id = intval($user_id);
-    $username = mysqli_real_escape_string($conn, $username);
-    $email = mysqli_real_escape_string($conn, $email);
+    $username = db_escape($username);
+    $email = db_escape($email);
     
-    $result = mysqli_query($conn, "UPDATE users SET username='$username', email='$email' WHERE id=$user_id");
+    $result = db_query("UPDATE users SET username='$username', email='$email' WHERE id=$user_id");
     
     if($result) {
         $_SESSION['username'] = $username;
     }
     
-    mysqli_close($conn);
     return $result;
 }
 
 function changePassword($user_id, $old_password, $new_password) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     $user_id = intval($user_id);
+    $user = db_get_row("SELECT password FROM users WHERE id=$user_id");
     
-    $result = mysqli_query($conn, "SELECT password FROM users WHERE id=$user_id");
-    $user = mysqli_fetch_assoc($result);
-    
-    if(!password_verify($old_password, $user['password'])) {
-        mysqli_close($conn);
+    if(!$user || !password_verify($old_password, $user['password'])) {
         return false;
     }
     
     $hashed_pwd = password_hash($new_password, PASSWORD_BCRYPT);
-    $update = mysqli_query($conn, "UPDATE users SET password='$hashed_pwd' WHERE id=$user_id");
-    
-    mysqli_close($conn);
-    return $update;
+    return db_query("UPDATE users SET password='$hashed_pwd' WHERE id=$user_id");
 }
 
 // ============ ADMIN FUNCTIONS ============
 
 function getUserRole($user_id) {
-    $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     $user_id = intval($user_id);
-    
-    $result = mysqli_query($conn, "SELECT role FROM users WHERE id=$user_id");
-    $user = mysqli_fetch_assoc($result);
-    
-    mysqli_close($conn);
+    $user = db_get_row("SELECT role FROM users WHERE id=$user_id");
     return $user['role'] ?? 'user';
 }
 

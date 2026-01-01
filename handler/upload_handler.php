@@ -3,6 +3,7 @@ session_start();
 
 // Fix relative path - go up one level from handler folder
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 require_once __DIR__ . '/../config/file.php';
@@ -24,21 +25,19 @@ if($_SERVER["REQUEST_METHOD"] != "POST" || !isset($_FILES['file'])) {
 $user_id = getCurrentUserId();
 $file = $_FILES['file'];
 $document_name = !empty($_POST['document_name']) ? trim($_POST['document_name']) : '';
-$description = !empty($_POST['description']) ? mysqli_real_escape_string($conn, trim($_POST['description'])) : '';
+$description = !empty($_POST['description']) ? db_escape(trim($_POST['description'])) : '';
 $is_public = !empty($_POST['is_public']) && $_POST['is_public'] == 1 ? 1 : 0;
 
 // Validate document name (required, minimum 40 characters)
 if(empty($document_name)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Tên tài liệu là bắt buộc']);
-    mysqli_close($conn);
     exit;
 }
 
 if(mb_strlen($document_name) < 40) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Tên tài liệu phải có ít nhất 40 ký tự (hiện tại: ' . mb_strlen($document_name) . ' ký tự)']);
-    mysqli_close($conn);
     exit;
 }
 
@@ -46,7 +45,6 @@ if(mb_strlen($document_name) < 40) {
 if(empty($description)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Mô tả tài liệu là bắt buộc']);
-    mysqli_close($conn);
     exit;
 }
 
@@ -60,7 +58,6 @@ if (!empty($_POST['category_data'])) {
 if (empty($category_data) || empty($category_data['education_level'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Vui lòng chọn cấp học']);
-    mysqli_close($conn);
     exit;
 }
 
@@ -98,7 +95,6 @@ if ($is_pho_thong) {
 if (empty($category_data['doc_type_code'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Vui lòng chọn loại tài liệu']);
-    mysqli_close($conn);
     exit;
 }
 
@@ -108,27 +104,25 @@ $upload_result = uploadFile($file);
 if(!$upload_result['success']) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $upload_result['message'] ?? 'Upload failed']);
-    mysqli_close($conn);
     exit;
 }
 
 // Insert into database with 'pending' status
 // Use the user-provided document name instead of original filename
-$original_name = mysqli_real_escape_string($conn, $document_name);
+$original_name = db_escape($document_name);
 $file_name = $upload_result['file_name'];
 
 // NEW: Insert with status='pending' - awaiting admin review
 $query = "INSERT INTO documents (user_id, original_name, file_name, description, is_public, status, created_at) 
          VALUES ('$user_id', '$original_name', '$file_name', '$description', '$is_public', 'pending', NOW())";
 
-if(!mysqli_query($conn, $query)) {
+if(!db_query($query)) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . mysqli_error($conn)]);
-    mysqli_close($conn);
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . db_error()]);
     exit;
 }
 
-$doc_id = mysqli_insert_id($conn);
+$doc_id = db_insert_id();
 
 // Handle DOCX conversion and prepare for client-side processing
 // NOTE: Page counting and thumbnail generation for PDF/DOCX now done client-side using PDF.js
@@ -169,7 +163,7 @@ if (file_exists($file_path)) {
         try {
             $thumbnail_result = generateThumbnail($file_path, $file_ext, $doc_id);
             if ($thumbnail_result) {
-                $thumbnail_path = mysqli_real_escape_string($conn, $thumbnail_result);
+                $thumbnail_path = db_escape($thumbnail_result);
                 error_log("Document $doc_id: Image thumbnail generated at $thumbnail_path");
             }
         } catch (Exception $e) {
@@ -181,7 +175,7 @@ if (file_exists($file_path)) {
         try {
             $thumbnail_result = generateThumbnail($file_path, $file_ext, $doc_id);
             if ($thumbnail_result) {
-                $thumbnail_path = mysqli_real_escape_string($conn, $thumbnail_result);
+                $thumbnail_path = db_escape($thumbnail_result);
                 error_log("Document $doc_id: Thumbnail generated at $thumbnail_path");
             }
         } catch (Exception $e) {
@@ -192,22 +186,22 @@ if (file_exists($file_path)) {
     // Update document with total_pages, thumbnail, and converted_pdf_path
     $update_fields = [];
     if (isset($thumbnail_path) && $thumbnail_path) {
-        $thumbnail_path_escaped = mysqli_real_escape_string($conn, $thumbnail_path);
+        $thumbnail_path_escaped = db_escape($thumbnail_path);
         $update_fields[] = "thumbnail = '$thumbnail_path_escaped'";
     }
     if ($total_pages > 0) {
         $update_fields[] = "total_pages = $total_pages";
     }
     if (isset($converted_pdf_path) && $converted_pdf_path) {
-        $converted_pdf_path_escaped = mysqli_real_escape_string($conn, $converted_pdf_path);
+        $converted_pdf_path_escaped = db_escape($converted_pdf_path);
         $update_fields[] = "converted_pdf_path = '$converted_pdf_path_escaped'";
     }
     
     if (!empty($update_fields)) {
         $update_query = "UPDATE documents SET " . implode(', ', $update_fields) . " WHERE id = $doc_id";
-        $update_result = mysqli_query($conn, $update_query);
+        $update_result = db_query($update_query);
         if (!$update_result) {
-            error_log("Error updating document $doc_id: " . mysqli_error($conn));
+            error_log("Error updating document $doc_id: " . db_error());
         } else {
             error_log("Document $doc_id: Updated with thumbnail, total_pages" . (isset($converted_pdf_path) ? ", and converted_pdf_path" : ""));
         }
@@ -233,12 +227,10 @@ $notification_message = "Tài liệu mới cần duyệt: " . $original_name;
 sendNotificationToAllAdmins('new_document', $notification_message, $doc_id);
 
 // Initialize user points if not exists (start with 0 points)
-$points_check = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM user_points WHERE user_id=$user_id"));
+$points_check = db_get_row("SELECT id FROM user_points WHERE user_id=$user_id");
 if(!$points_check) {
-    mysqli_query($conn, "INSERT INTO user_points (user_id, current_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0)");
+    db_query("INSERT INTO user_points (user_id, current_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0)");
 }
-
-mysqli_close($conn);
 
 http_response_code(200);
 $response = [

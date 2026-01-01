@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/points.php';
 require_once 'config/file.php';
@@ -19,8 +20,8 @@ $page_title = "Upload Document - DocShare";
 $current_page = 'upload';
 
 // Count pending and approved documents
-$pending_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents WHERE user_id=$user_id AND status='pending'"));
-$approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents WHERE user_id=$user_id AND status='approved'"));
+$pending_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='pending'");
+$approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='approved'");
 
 ?>
 <?php include 'includes/head.php'; ?>
@@ -120,7 +121,6 @@ $approved_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents 
     </main>
     
 <?php 
-    mysqli_close($conn);
     include 'includes/footer.php'; 
 ?>
 </div>

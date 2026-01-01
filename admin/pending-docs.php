@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 
@@ -16,7 +17,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if($action === 'approve') {
         $points = intval($_POST['points']);
-        $notes = mysqli_real_escape_string($conn, $_POST['notes'] ?? '');
+        $notes = $VSD->escape($_POST['notes'] ?? '');
         
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
@@ -24,7 +25,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
     } elseif($action === 'reject') {
-        $reason = mysqli_real_escape_string($conn, $_POST['rejection_reason'] ?? '');
+        $reason = $VSD->escape($_POST['rejection_reason'] ?? '');
         rejectDocument($document_id, $admin_id, $reason);
         header("Location: pending-docs.php?status=rejected");
         exit;
@@ -43,8 +44,7 @@ if($view_doc_id) {
 $pending_docs = getPendingDocuments();
 
 // Get unread notifications count
-$unread_notifications = mysqli_num_rows(mysqli_query($conn, 
-    "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
+$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
 // For shared admin sidebar
 $admin_active_page = 'pending';
@@ -52,7 +52,7 @@ $admin_active_page = 'pending';
 // Include header
 include __DIR__ . '/../includes/admin-header.php';
 
-$pending_count = mysqli_num_rows($pending_docs);
+$pending_count = count($pending_docs);
 ?>
 
 <!-- Page Header -->
@@ -89,7 +89,7 @@ $pending_count = mysqli_num_rows($pending_docs);
         <!-- Pending Documents -->
         <?php if($pending_count > 0): ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php while($doc = mysqli_fetch_assoc($pending_docs)): 
+            <?php foreach($pending_docs as $doc): 
                 $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                 
                 $color_map = [
@@ -184,7 +184,7 @@ $pending_count = mysqli_num_rows($pending_docs);
                         </div>
                     </div>
                 </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         </div>
         <?php else: ?>
             <div class="card bg-base-100 shadow">
@@ -326,5 +326,4 @@ function openRejectModal(docId) {
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
 ?>

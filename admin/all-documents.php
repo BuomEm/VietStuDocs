@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 
@@ -16,7 +17,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if($action === 'approve') {
         $points = intval($_POST['points']);
-        $notes = mysqli_real_escape_string($conn, $_POST['notes'] ?? '');
+        $notes = $VSD->escape($_POST['notes'] ?? '');
         
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
@@ -24,25 +25,25 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
     } elseif($action === 'reject') {
-        $reason = mysqli_real_escape_string($conn, $_POST['rejection_reason'] ?? '');
+        $reason = $VSD->escape($_POST['rejection_reason'] ?? '');
         rejectDocument($document_id, $admin_id, $reason);
         header("Location: all-documents.php?msg=rejected&id=$document_id");
         exit;
     } elseif($action === 'delete') {
-        $doc = mysqli_fetch_assoc(mysqli_query($conn, "SELECT file_name FROM documents WHERE id=$document_id"));
+        $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$document_id");
         if($doc) {
             $file_path = "../uploads/" . $doc['file_name'];
             if(file_exists($file_path)) {
                 unlink($file_path);
             }
-            mysqli_query($conn, "DELETE FROM documents WHERE id=$document_id");
+            $VSD->remove('documents', "id=$document_id");
             header("Location: all-documents.php?msg=deleted");
             exit;
         }
     } elseif($action === 'change_status') {
-        $new_status = mysqli_real_escape_string($conn, $_POST['new_status']);
+        $new_status = $VSD->escape($_POST['new_status']);
         if(in_array($new_status, ['pending', 'approved', 'rejected'])) {
-            mysqli_query($conn, "UPDATE documents SET status='$new_status' WHERE id=$document_id");
+            $VSD->update('documents', ['status' => $new_status], "id=$document_id");
             header("Location: all-documents.php?msg=status_changed&id=$document_id");
             exit;
         }
@@ -50,8 +51,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get filter parameters
-$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
-$status_filter = isset($_GET['status']) ? mysqli_real_escape_string($conn, $_GET['status']) : 'all';
+$search = isset($_GET['search']) ? $VSD->escape($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? $VSD->escape($_GET['status']) : 'all';
 $user_filter = isset($_GET['user']) ? intval($_GET['user']) : 0;
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $per_page = 20;
@@ -77,8 +78,8 @@ $total_query = "
     LEFT JOIN users u ON d.user_id = u.id
     $where_sql
 ";
-$total_result = mysqli_fetch_assoc(mysqli_query($conn, $total_query));
-$total_documents = $total_result['total'];
+$total_result = $VSD->get_row($total_query);
+$total_documents = $total_result['total'] ?? 0;
 $total_pages = ceil($total_documents / $per_page);
 
 // Get documents
@@ -97,10 +98,10 @@ $documents_query = "
     ORDER BY d.created_at DESC
     LIMIT $per_page OFFSET $offset
 ";
-$documents = mysqli_query($conn, $documents_query);
+$documents = $VSD->get_list($documents_query);
 
 // Get statistics
-$stats = mysqli_fetch_assoc(mysqli_query($conn, "
+$stats = $VSD->get_row("
     SELECT 
         COUNT(*) as total_documents,
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count,
@@ -112,18 +113,17 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, "
         (SELECT COUNT(*) FROM document_sales) as total_sales,
         (SELECT SUM(points_paid) FROM document_sales) as total_points_earned
     FROM documents
-"));
+");
 
 // Get users for filter
-$users_list = mysqli_query($conn, "
+$users_list = $VSD->get_list("
     SELECT DISTINCT u.id, u.username
     FROM users u
     JOIN documents d ON u.id = d.user_id
     ORDER BY u.username
 ");
 
-$unread_notifications = mysqli_num_rows(mysqli_query($conn, 
-    "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
+$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
 // For shared admin sidebar
 $admin_active_page = 'documents';
@@ -270,11 +270,11 @@ include __DIR__ . '/../includes/admin-header.php';
                     <div class="md:col-span-2">
                         <select name="user" class="select select-bordered w-full">
                             <option value="0">Tất cả người dùng</option>
-                        <?php while($user = mysqli_fetch_assoc($users_list)): ?>
+                        <?php foreach($users_list as $user): ?>
                             <option value="<?= $user['id'] ?>" <?= $user_filter == $user['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($user['username']) ?>
                             </option>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     </select>
                     </div>
                     <div class="md:col-span-2">
@@ -305,7 +305,7 @@ include __DIR__ . '/../includes/admin-header.php';
                 }
             }
             
-            if(mysqli_num_rows($documents) > 0): ?>
+            if(count($documents) > 0): ?>
                 <div class="overflow-x-auto">
                     <table class="table">
                         <thead>
@@ -320,7 +320,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while($doc = mysqli_fetch_assoc($documents)): 
+                            <?php foreach($documents as $doc): 
                                 $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                                 $icon_map = [
                                     'pdf' => 'fa-file-pdf',
@@ -536,7 +536,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -974,5 +974,5 @@ include __DIR__ . '/../includes/admin-header.php';
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
+// db connection cleaned up by app flow
 ?>

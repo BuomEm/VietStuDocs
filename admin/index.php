@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 
@@ -13,7 +14,7 @@ $page_title = "Dashboard - Admin Panel";
 // Get statistics
 $pending_docs = getPendingDocumentsCount();
 
-$stats = mysqli_fetch_assoc(mysqli_query($conn, "
+$stats = $VSD->get_row("
     SELECT 
         COUNT(DISTINCT d.id) as total_documents,
         COUNT(DISTINCT d.user_id) as total_users,
@@ -21,10 +22,10 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, "
         SUM(CASE WHEN d.status='rejected' THEN 1 ELSE 0 END) as rejected_documents,
         SUM(CASE WHEN d.status='pending' THEN 1 ELSE 0 END) as pending_documents
     FROM documents d
-"));
+");
 
 // Get recent activities
-$recent_activities = mysqli_query($conn, "
+$recent_activities = $VSD->get_list("
     SELECT 
         'document_approved' as activity_type,
         aa.reviewed_at as timestamp,
@@ -40,7 +41,7 @@ $recent_activities = mysqli_query($conn, "
 ");
 
 // Get top documents by sales
-$top_documents = mysqli_query($conn, "
+$top_documents = $VSD->get_list("
     SELECT 
         d.id,
         d.original_name,
@@ -58,15 +59,14 @@ $top_documents = mysqli_query($conn, "
 ");
 
 // Get user statistics
-$user_stats = mysqli_fetch_assoc(mysqli_query($conn, "
+$user_stats = $VSD->get_row("
     SELECT 
         COUNT(*) as total_users,
         SUM(CASE WHEN role='admin' THEN 1 ELSE 0 END) as admin_count
     FROM users
-"));
+");
 
-$unread_notifications = mysqli_num_rows(mysqli_query($conn, 
-    "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
+$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
 // For shared admin sidebar
 $admin_active_page = 'dashboard';
@@ -227,8 +227,8 @@ include __DIR__ . '/../includes/admin-header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if(mysqli_num_rows($recent_activities) > 0): ?>
-                                <?php while($activity = mysqli_fetch_assoc($recent_activities)): ?>
+                                <?php if(count($recent_activities) > 0): ?>
+                                <?php foreach($recent_activities as $activity): ?>
                                     <tr>
                                         <td>
                                             <div class="truncate max-w-[150px]" title="<?= htmlspecialchars($activity['original_name']) ?>">
@@ -245,7 +245,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                             <?= date('d/m H:i', strtotime($activity['timestamp'])) ?>
                                         </td>
                                     </tr>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
                                         <td colspan="4" class="text-center text-base-content/70 py-8">
@@ -280,8 +280,8 @@ include __DIR__ . '/../includes/admin-header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if(mysqli_num_rows($top_documents) > 0): ?>
-                                <?php while($doc = mysqli_fetch_assoc($top_documents)): ?>
+                                <?php if(count($top_documents) > 0): ?>
+                                <?php foreach($top_documents as $doc): ?>
                                     <tr>
                                         <td>
                                             <div class="truncate max-w-[150px]" title="<?= htmlspecialchars($doc['original_name']) ?>">
@@ -298,7 +298,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                             <span class="text-success font-bold"><?= number_format($doc['total_points_earned'] ?? 0) ?> điểm</span>
                                         </td>
                                     </tr>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
                                         <td colspan="4" class="text-center text-base-content/70 py-8">
@@ -350,5 +350,4 @@ include __DIR__ . '/../includes/admin-header.php';
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
 ?>

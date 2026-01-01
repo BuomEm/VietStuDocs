@@ -4,7 +4,7 @@
  * Cascade selection: Cấp học → Lớp/Nhóm ngành → Môn học/Ngành → Loại tài liệu
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/function.php';
 
 // =====================================================
 // CONSTANTS - Education Levels
@@ -344,18 +344,16 @@ function getDocTypeName($doc_type_code, $level_code = null) {
  * Save document category
  */
 function saveDocumentCategory($document_id, $education_level, $grade_id = null, $subject_code = null, $major_group_id = null, $major_code = null, $doc_type_code = null) {
-    global $conn;
-    
     $document_id = intval($document_id);
-    $education_level = mysqli_real_escape_string($conn, $education_level);
+    $education_level = db_escape($education_level);
     $grade_id = $grade_id ? intval($grade_id) : 'NULL';
-    $subject_code = $subject_code ? "'" . mysqli_real_escape_string($conn, $subject_code) . "'" : 'NULL';
+    $subject_code = $subject_code ? "'" . db_escape($subject_code) . "'" : 'NULL';
     $major_group_id = $major_group_id ? intval($major_group_id) : 'NULL';
-    $major_code = $major_code ? "'" . mysqli_real_escape_string($conn, $major_code) . "'" : 'NULL';
-    $doc_type_code = mysqli_real_escape_string($conn, $doc_type_code);
+    $major_code = $major_code ? "'" . db_escape($major_code) . "'" : 'NULL';
+    $doc_type_code = db_escape($doc_type_code);
     
     // Delete existing category for this document
-    mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
+    db_query("DELETE FROM document_categories WHERE document_id = $document_id");
     
     // Insert new category
     $query = "INSERT INTO document_categories 
@@ -363,20 +361,16 @@ function saveDocumentCategory($document_id, $education_level, $grade_id = null, 
               VALUES 
               ($document_id, '$education_level', $grade_id, $subject_code, $major_group_id, $major_code, '$doc_type_code')";
     
-    return mysqli_query($conn, $query);
+    return db_query($query);
 }
 
 /**
  * Get document category
  */
 function getDocumentCategory($document_id) {
-    global $conn;
     $document_id = intval($document_id);
-    
     $query = "SELECT * FROM document_categories WHERE document_id = $document_id";
-    $result = mysqli_query($conn, $query);
-    
-    return mysqli_fetch_assoc($result);
+    return db_get_row($query);
 }
 
 /**
@@ -418,10 +412,8 @@ function getDocumentCategoryWithNames($document_id) {
  * Delete document category
  */
 function deleteDocumentCategory($document_id) {
-    global $conn;
     $document_id = intval($document_id);
-    
-    return mysqli_query($conn, "DELETE FROM document_categories WHERE document_id = $document_id");
+    return db_query("DELETE FROM document_categories WHERE document_id = $document_id");
 }
 
 // =====================================================
@@ -432,12 +424,10 @@ function deleteDocumentCategory($document_id) {
  * Search documents by category filters
  */
 function searchDocumentsByCategory($filters = []) {
-    global $conn;
-    
     $where = ["d.status = 'approved'", "d.is_public = 1"];
     
     if (!empty($filters['education_level'])) {
-        $level = mysqli_real_escape_string($conn, $filters['education_level']);
+        $level = db_escape($filters['education_level']);
         $where[] = "dc.education_level = '$level'";
     }
     
@@ -447,7 +437,7 @@ function searchDocumentsByCategory($filters = []) {
     }
     
     if (!empty($filters['subject_code'])) {
-        $subject = mysqli_real_escape_string($conn, $filters['subject_code']);
+        $subject = db_escape($filters['subject_code']);
         $where[] = "dc.subject_code = '$subject'";
     }
     
@@ -457,60 +447,41 @@ function searchDocumentsByCategory($filters = []) {
     }
     
     if (!empty($filters['major_code'])) {
-        $major = mysqli_real_escape_string($conn, $filters['major_code']);
+        $major = db_escape($filters['major_code']);
         $where[] = "dc.major_code = '$major'";
     }
     
     if (!empty($filters['doc_type_code'])) {
-        $doc_type = mysqli_real_escape_string($conn, $filters['doc_type_code']);
+        $doc_type = db_escape($filters['doc_type_code']);
         $where[] = "dc.doc_type_code = '$doc_type'";
     }
     
     $where_str = implode(' AND ', $where);
     
-        $query = "
+    $query = "
         SELECT DISTINCT d.*, u.username, dc.*
-            FROM documents d
+        FROM documents d
         JOIN users u ON d.user_id = u.id
         LEFT JOIN document_categories dc ON d.id = dc.document_id
         WHERE $where_str
-            ORDER BY d.created_at DESC
-        ";
+        ORDER BY d.created_at DESC
+    ";
     
-    $result = mysqli_query($conn, $query);
-    $documents = [];
-    
-    while ($row = mysqli_fetch_assoc($result)) {
-        $documents[] = $row;
-    }
-    
-    return $documents;
+    return db_get_results($query);
 }
 
 // =====================================================
-// LEGACY COMPATIBILITY (For old code that might still use these)
+// LEGACY COMPATIBILITY (For old code)
 // =====================================================
 
-/**
- * @deprecated Use getEducationLevels() instead
- */
 function getCategoriesByType($type, $active_only = true) {
-    // Return empty for legacy calls
     return [];
 }
 
-/**
- * @deprecated Use getEducationLevels() instead
- */
 function getAllCategoriesGrouped($active_only = true) {
-    // Return empty for legacy calls
     return [];
 }
 
-/**
- * Get category type label in Vietnamese
- * @deprecated 
- */
 function getCategoryTypeLabel($type) {
     $labels = [
         'education_level' => 'Cấp học',
@@ -520,21 +491,14 @@ function getCategoryTypeLabel($type) {
         'major' => 'Ngành học',
         'doc_type' => 'Loại tài liệu'
     ];
-    
     return $labels[$type] ?? $type;
 }
 
-/**
- * @deprecated 
- */
 function getDocumentCategories($document_id) {
     $cat = getDocumentCategoryWithNames($document_id);
     return $cat ? [$cat] : [];
 }
 
-/**
- * @deprecated
- */
 function getDocumentCategoriesGrouped($document_id) {
     $cat = getDocumentCategoryWithNames($document_id);
     if (!$cat) return [];
@@ -555,24 +519,14 @@ function getDocumentCategoriesGrouped($document_id) {
     return $result;
 }
 
-/**
- * @deprecated Use saveDocumentCategory() instead
- */
 function addDocumentCategories($document_id, $category_ids) {
-    // Legacy compatibility - do nothing
     return true;
 }
 
-/**
- * @deprecated Use saveDocumentCategory() instead
- */
 function updateDocumentCategories($document_id, $category_ids) {
-    return addDocumentCategories($document_id, $category_ids);
+    return true;
 }
 
-/**
- * @deprecated Use deleteDocumentCategory() instead
- */
 function removeDocumentCategories($document_id) {
     return deleteDocumentCategory($document_id);
 }

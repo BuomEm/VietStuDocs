@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
+require_once 'config/function.php';
 require_once 'config/auth.php';
 require_once 'config/premium.php';
 
@@ -73,8 +74,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
 }
 
 // Count user's documents
-$my_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM documents WHERE user_id=$user_id"));
-$saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'"));
+$my_docs_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id");
+$saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'");
 
 ?>
 <?php include 'includes/head.php'; ?>
@@ -274,6 +275,4 @@ $saved_docs_count = mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT d.id FR
 </div>
 </div>
 
-<?php 
-mysqli_close($conn);
 ?>

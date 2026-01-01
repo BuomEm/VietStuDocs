@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/categories.php';
 
@@ -13,24 +14,21 @@ $page_title = "Quản lý phân loại - Admin Panel";
 $education_levels = getEducationLevels();
 
 // Get unread notifications count
-$unread_notifications = mysqli_num_rows(mysqli_query($conn, 
-    "SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0"));
+$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
 // For shared admin sidebar
 $admin_active_page = 'categories';
 
 // Count documents by category
 $category_stats = [];
-$stats_query = "SELECT 
+$stats_result = $VSD->get_list("SELECT 
     education_level,
     COUNT(*) as count 
     FROM document_categories 
-    GROUP BY education_level";
-$stats_result = mysqli_query($conn, $stats_query);
-if ($stats_result) {
-    while ($row = mysqli_fetch_assoc($stats_result)) {
-        $category_stats[$row['education_level']] = $row['count'];
-    }
+    GROUP BY education_level");
+
+foreach ($stats_result as $row) {
+    $category_stats[$row['education_level']] = $row['count'];
 }
 
 // Include header
@@ -299,5 +297,4 @@ include __DIR__ . '/../includes/admin-header.php';
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
-mysqli_close($conn); 
 ?>
