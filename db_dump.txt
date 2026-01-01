@@ -1,0 +1,39 @@
+--- Table: tutors ---
+id - int
+user_id - int
+subjects - text
+bio - text
+price_basic - int
+price_standard - int
+price_premium - int
+rating - decimal(3,2)
+total_answers - int
+status - enum('pending','active','rejected','banned')
+created_at - timestamp
+updated_at - timestamp
+
+--- Table: tutor_requests ---
+id - int
+student_id - int
+tutor_id - int
+title - varchar(255)
+content - text
+package_type - enum('basic','standard','premium')
+points_used - int
+status - enum('pending','answered','completed','cancelled','disputed')
+attachment - varchar(255)
+created_at - timestamp
+updated_at - timestamp
+rating - int
+review - text
+
+--- Table: tutor_answers ---
+id - int
+request_id - int
+sender_id - int
+tutor_id - int
+content - text
+attachment - varchar(255)
+created_at - timestamp
+is_read - tinyint
+

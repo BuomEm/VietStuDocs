@@ -275,6 +275,7 @@ $stats = $VSD->get_row($stats_query);
                                             case 'points_deducted': $icon = 'fa-circle-minus'; $icon_color = 'text-error'; break;
                                             case 'tutor_request_new': $icon = 'fa-graduation-cap'; $icon_color = 'text-info'; break;
                                             case 'tutor_answer': $icon = 'fa-comment-dots'; $icon_color = 'text-success'; break;
+                                            case 'tutor_chat': $icon = 'fa-comments'; $icon_color = 'text-accent'; break;
                                             case 'tutor_rated': $icon = 'fa-star'; $icon_color = 'text-warning'; break;
                                             case 'dispute_resolved': $icon = 'fa-handshake'; $icon_color = 'text-info'; break;
                                             case 'admin_reply': $icon = 'fa-user-shield'; $icon_color = 'text-secondary'; break;

@@ -62,18 +62,41 @@ $my_requests = $stmt->fetchAll();
             </div>
             <?php endif; ?>
 
-            <!-- TABS -->
-            <div role="tablist" class="tabs tabs-lifted mb-6">
+            <!-- MODERN TAB NAVIGATION -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div class="inline-flex p-1.5 bg-base-300/30 backdrop-blur-md rounded-2xl border border-base-300/50 shadow-inner">
+                    <?php if ($is_tutor): ?>
+                    <button onclick="switchTab(event, 'incoming')" 
+                            class="dashboard-tab active flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                            id="tab-btn-incoming">
+                        <i class="fa-solid fa-inbox"></i>
+                        <span>Câu hỏi từ học viên</span>
+                        <?php if(!empty($incoming_requests)): ?>
+                            <span class="badge badge-sm badge-primary ml-1"><?= count($incoming_requests) ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <?php endif; ?>
+                    
+                    <button onclick="switchTab(event, 'outgoing')" 
+                            class="dashboard-tab <?= !$is_tutor ? 'active' : '' ?> flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                            id="tab-btn-outgoing">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Câu hỏi của tôi</span>
+                    </button>
+                </div>
+
                 <?php if ($is_tutor): ?>
-                <a role="tab" class="tab <?= $is_tutor ? 'tab-active' : '' ?>" onclick="switchTab(event, 'incoming')" id="tab-incoming">Câu hỏi cần trả lời</a>
+                <div class="flex gap-2">
+                    <a href="/tutors/profile_edit" class="btn btn-ghost btn-sm rounded-xl border-base-300">
+                        <i class="fa-solid fa-user-gear"></i> Cấu hình hồ sơ
+                    </a>
+                </div>
                 <?php endif; ?>
-                <a role="tab" class="tab <?= !$is_tutor ? 'tab-active' : '' ?>" onclick="switchTab(event, 'outgoing')" id="tab-outgoing">Câu hỏi của tôi</a>
-                <a role="tab" class="tab flex-1 cursor-default"></a> <!-- Spacer for lifted tab look -->
             </div>
 
             <!-- INCOMING REQUESTS (Tutor Only) -->
             <?php if ($is_tutor): ?>
-            <div id="incoming" class="tab-content bg-base-100 border-base-300 rounded-b-box p-6 shadow-sm border <?= $is_tutor ? 'block' : 'hidden' ?>" style="border-top-left-radius: 0;">
+            <div id="incoming" class="tab-content animate-in fade-in slide-in-from-bottom-2 duration-500 <?= $is_tutor ? 'block' : 'hidden' ?>">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold flex items-center gap-2">
                         <i class="fa-solid fa-inbox text-primary"></i> 
@@ -145,7 +168,7 @@ $my_requests = $stmt->fetchAll();
             <?php endif; ?>
 
             <!-- OUTGOING REQUESTS (My Questions) -->
-            <div id="outgoing" class="tab-content bg-base-100 border-base-300 rounded-b-box p-6 shadow-sm border <?= $is_tutor ? 'hidden' : 'block' ?>" style="<?= !$is_tutor ? 'border-top-left-radius: 0;' : '' ?>">
+            <div id="outgoing" class="tab-content animate-in fade-in slide-in-from-bottom-2 duration-500 <?= $is_tutor ? 'hidden' : 'block' ?>">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold flex items-center gap-2">
                         <i class="fa-solid fa-paper-plane text-secondary"></i>
@@ -237,21 +260,52 @@ $my_requests = $stmt->fetchAll();
         </div>
     </main>
     <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-</div>
-</div>
+</div> <!-- end drawer-content -->
+</div> <!-- end drawer -->
+
+<style>
+.dashboard-tab {
+    @apply transition-all duration-200 cursor-pointer;
+    color: oklch(var(--bc) / 0.6);
+}
+.dashboard-tab:hover {
+    color: oklch(var(--p));
+    background-color: oklch(var(--p) / 0.05);
+}
+.dashboard-tab.active {
+    background-color: oklch(var(--b1));
+    color: oklch(var(--p));
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+/* Tailwind Animate utility simulation if not present */
+.animate-in {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+}
+.fade-in { animation-name: fadeIn; }
+.slide-in-from-bottom-2 { animation-name: slideInBottom; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideInBottom { from { transform: translateY(8px); } to { transform: translateY(0); } }
+</style>
 
 <script>
 function switchTab(evt, tabId) {
     // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('block'));
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('block');
+    });
     
     // Show selected
-    document.getElementById(tabId).classList.remove('hidden');
-    document.getElementById(tabId).classList.add('block');
+    const selectedContent = document.getElementById(tabId);
+    selectedContent.classList.remove('hidden');
+    selectedContent.classList.add('block');
     
-    // Update tab classes
-    document.querySelectorAll('.tab').forEach(el => el.classList.remove('tab-active'));
-    evt.currentTarget.classList.add('tab-active');
+    // Update tab button classes
+    document.querySelectorAll('.dashboard-tab').forEach(el => el.classList.remove('active'));
+    evt.currentTarget.classList.add('active');
 }
 </script>
+</body>
+</html>

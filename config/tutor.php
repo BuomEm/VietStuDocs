@@ -219,11 +219,14 @@ function getRequestDetails($request_id) {
     $request = $stmt->fetch();
     
     if ($request) {
-        // Get ALL answers
-        $stmt = $pdo->prepare("SELECT * FROM tutor_answers WHERE request_id = ? ORDER BY created_at ASC");
+        // Get ALL messages (formerly answers)
+        $stmt = $pdo->prepare("SELECT m.*, u.username as sender_name 
+                              FROM tutor_answers m
+                              JOIN users u ON m.sender_id = u.id
+                              WHERE m.request_id = ? ORDER BY m.created_at ASC");
         $stmt->execute([$request_id]);
-        $request['answers'] = $stmt->fetchAll(); // Changed key to 'answers' and fetchAll
-        $request['answer'] = end($request['answers']); // Keep legacy compatibility if needed, using latest answer
+        $request['answers'] = $stmt->fetchAll(); 
+        $request['answer'] = end($request['answers']); 
     }
     
     return $request;
@@ -244,17 +247,11 @@ function answerTutorRequest($tutor_id, $request_id, $content, $attachment = null
     try {
         $pdo->beginTransaction();
 
-        // 1. Insert Answer
-        $stmt = $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, content, attachment) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$request_id, $tutor_id, $content, $attachment]);
+        // 1. Insert Answer (now using sender_id)
+        $stmt = $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, sender_id, content, attachment) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$request_id, $tutor_id, $tutor_id, $content, $attachment]);
 
-        // 2. Update Request Status (Only if pending, otherwise keep as answered)
-        if ($request['status'] === 'pending') {
-            $stmt = $pdo->prepare("UPDATE tutor_requests SET status = 'answered' WHERE id = ?");
-            $stmt->execute([$request_id]);
-        }
-        
-        // 3. Update Tutor Stats (Total answers)
+        // 2. Update Tutor Stats (Total answers)
         // We probably count total answers given, regardless of points? Or only paid ones?
         // Let's count them for activity.
         $stmt = $pdo->prepare("UPDATE tutors SET total_answers = total_answers + 1 WHERE user_id = ?");
@@ -366,6 +363,202 @@ function rateTutor($student_id, $request_id, $rating, $review = '') {
         if($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Send a message in a tutor request (Chat)
+ */
+function sendTutorChatMessage($user_id, $request_id, $content, $attachment = null) {
+    $pdo = getTutorDBConnection();
+    $request = getRequestDetails($request_id);
+    
+    if (!$request) return ['success' => false, 'message' => 'Yêu cầu không tồn tại.'];
+    
+    $is_student = ($request['student_id'] == $user_id);
+    $is_tutor = ($request['tutor_id'] == $user_id);
+    
+    if (!$is_student && !$is_tutor) {
+        return ['success' => false, 'message' => 'Bạn không có quyền tham gia cuộc hội thoại này.'];
+    }
+    
+    if ($request['status'] === 'completed' || $request['status'] === 'cancelled' || !empty($request['rating'])) {
+        return ['success' => false, 'message' => 'Yêu cầu này đã hoàn tất hoặc đã được đánh giá, cuộc hội thoại kết thúc.'];
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, sender_id, content, attachment) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$request_id, $request['tutor_id'], $user_id, $content, $attachment]);
+
+
+        // Notify other party
+        $other_user_id = $is_student ? $request['tutor_id'] : $request['student_id'];
+        $sender_name = $is_student ? $request['student_name'] : $request['tutor_name'];
+        
+        global $VSD;
+        $VSD->insert('notifications', [
+            'user_id' => $other_user_id,
+            'title' => 'Tin nhắn mới từ ' . $sender_name,
+            'message' => "Bạn nhận được tin nhắn mới trong yêu cầu #$request_id",
+            'type' => 'tutor_chat',
+            'ref_id' => $request_id
+        ]);
+
+        return ['success' => true, 'message' => 'Đã gửi tin nhắn!'];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Get active conversations for a user
+ */
+function getActiveTutorChats($user_id) {
+    $pdo = getTutorDBConnection();
+    $stmt = $pdo->prepare("SELECT r.*, u.username as student_name, t.username as tutor_name,
+                          (SELECT content FROM tutor_answers WHERE request_id = r.id ORDER BY created_at DESC LIMIT 1) as last_message,
+                          (SELECT created_at FROM tutor_answers WHERE request_id = r.id ORDER BY created_at DESC LIMIT 1) as last_message_time
+                          FROM tutor_requests r
+                          JOIN users u ON r.student_id = u.id
+                          JOIN users t ON r.tutor_id = t.id
+                          WHERE (r.student_id = ? OR r.tutor_id = ?) 
+                          AND r.status IN ('pending', 'answered', 'disputed')
+    AND r.rating IS NULL
+    ORDER BY last_message_time DESC");
+    $stmt->execute([$user_id, $user_id]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Finish a request (Tutor)
+ * Transitions status to 'answered' to prompt user for rating
+ */
+function finishTutorRequest($tutor_id, $request_id) {
+    $pdo = getTutorDBConnection();
+    $request = getRequestDetails($request_id);
+    
+    if (!$request || $request['tutor_id'] != $tutor_id) {
+        return ['success' => false, 'message' => 'Unauthorized'];
+    }
+    
+    if ($request['status'] !== 'pending') {
+        return ['success' => true, 'message' => 'Yêu cầu đã ở trạng thái chờ đánh giá.'];
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE tutor_requests SET status = 'answered' WHERE id = ?");
+        $stmt->execute([$request_id]);
+        
+        // Notify student
+        global $VSD;
+        $VSD->insert('notifications', [
+            'user_id' => $request['student_id'],
+            'title' => 'Gia sư đã hoàn tất hỗ trợ',
+            'message' => "Gia sư đã hoàn tất việc hỗ trợ cho yêu cầu '{$request['title']}'. Vui lòng đánh giá để hoàn tất giao dịch.",
+            'type' => 'tutor_answer',
+            'ref_id' => $request_id
+        ]);
+
+        return ['success' => true, 'message' => 'Đã đánh dấu hoàn tất. Học viên sẽ được nhắc đánh giá.'];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Request Profile Update (Pending Approval)
+ */
+function requestTutorProfileUpdate($user_id, $data) {
+    $pdo = getTutorDBConnection();
+    
+    try {
+        // Cancel any previous pending updates for this user
+        $stmt = $pdo->prepare("UPDATE tutor_profile_updates SET status = 'rejected', admin_note = 'Canceled by new request' WHERE user_id = ? AND status = 'pending'");
+        $stmt->execute([$user_id]);
+
+        $sql = "INSERT INTO tutor_profile_updates (user_id, subjects, bio, price_basic, price_standard, price_premium, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $user_id,
+            $data['subjects'],
+            $data['bio'],
+            $data['price_basic'],
+            $data['price_standard'],
+            $data['price_premium']
+        ]);
+        
+        return ['success' => true, 'message' => 'Yêu cầu thay đổi hồ sơ đã được gửi. Vui lòng chờ Admin phê duyệt.'];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Get Pending Profile Updates for Admin
+ */
+function getPendingProfileUpdates() {
+    $pdo = getTutorDBConnection();
+    $stmt = $pdo->prepare("SELECT pu.*, u.username, t.subjects as old_subjects, t.bio as old_bio 
+                          FROM tutor_profile_updates pu
+                          JOIN users u ON pu.user_id = u.id
+                          JOIN tutors t ON pu.user_id = t.user_id
+                          WHERE pu.status = 'pending'
+                          ORDER BY pu.created_at ASC");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+/**
+ * Admin Approve/Reject Profile Update
+ */
+function processProfileUpdate($update_id, $status, $note = '') {
+    $pdo = getTutorDBConnection();
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Get the update data
+        $stmt = $pdo->prepare("SELECT * FROM tutor_profile_updates WHERE id = ?");
+        $stmt->execute([$update_id]);
+        $update = $stmt->fetch();
+        
+        if (!$update) throw new Exception("Update not found");
+
+        // Update the tutor_profile_updates record
+        $stmt = $pdo->prepare("UPDATE tutor_profile_updates SET status = ?, admin_note = ? WHERE id = ?");
+        $stmt->execute([$status, $note, $update_id]);
+
+        if ($status === 'approved') {
+            // APPLY TO MAIN TUTORS TABLE
+            $stmt = $pdo->prepare("UPDATE tutors SET subjects = ?, bio = ?, price_basic = ?, price_standard = ?, price_premium = ?, updated_at = NOW() WHERE user_id = ?");
+            $stmt->execute([
+                $update['subjects'],
+                $update['bio'],
+                $update['price_basic'],
+                $update['price_standard'],
+                $update['price_premium'],
+                $update['user_id']
+            ]);
+        }
+
+        $pdo->commit();
+        
+        // Notify user
+        global $VSD;
+        $title = ($status === 'approved') ? 'Hồ sơ đã được duyệt' : 'Hồ sơ bị từ chối';
+        $msg = ($status === 'approved') ? 'Cấu hình hồ sơ mới của bạn đã được áp dụng.' : 'Yêu cầu thay đổi hồ sơ của bạn đã bị từ chối. Ghi chú: ' . $note;
+        $VSD->insert('notifications', [
+            'user_id' => $update['user_id'],
+            'title' => $title,
+            'message' => $msg,
+            'type' => 'role_updated'
+        ]);
+
+        return ['success' => true, 'message' => 'Đã xử lý thành công.'];
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
         return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
     }
 }

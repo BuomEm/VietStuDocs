@@ -96,41 +96,38 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                         </div>
                     </div>
 
-                    <!-- Answer Section (Loop through all answers) -->
+                    <!-- Conversation Section -->
                     <?php if (!empty($request['answers'])): ?>
-                        <?php foreach($request['answers'] as $index => $answer): ?>
-                            <div class="card bg-success/10 border border-success/30 shadow-xl mb-4">
-                                <div class="card-body">
-                                    <h3 class="card-title text-success"><i class="fa-solid fa-check-circle"></i> Câu trả lời #<?= $index + 1 ?></h3>
-                                    <div class="divider my-1"></div>
-                                    <div class="prose max-w-none mt-2 whitespace-pre-wrap"><?= trim(htmlspecialchars($answer['content'])) ?></div>
+                        <?php foreach($request['answers'] as $index => $msg): ?>
+                            <?php 
+                                $is_me = ($msg['sender_id'] == $user_id);
+                                $is_sender_tutor = ($msg['sender_id'] == $request['tutor_id']);
+                            ?>
+                            <div class="chat <?= $is_me ? 'chat-end' : 'chat-start' ?> mb-4">
+                                <div class="chat-image avatar">
+                                    <div class="w-10 rounded-full border border-base-300">
+                                        <div class="bg-neutral-focus text-neutral-content rounded-full w-10 flex items-center justify-center font-bold">
+                                            <?= substr($msg['sender_name'], 0, 1) ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chat-header opacity-50 text-xs mb-1">
+                                    <?= htmlspecialchars($msg['sender_name']) ?>
+                                    <time class="text-[10px]"><?= date('H:i', strtotime($msg['created_at'])) ?></time>
+                                </div>
+                                <div class="chat-bubble shadow-sm <?= $is_sender_tutor ? 'chat-bubble-success bg-success/20 text-success-content' : 'chat-bubble-primary' ?> text-sm">
+                                    <div class="whitespace-pre-wrap"><?= trim(htmlspecialchars($msg['content'])) ?></div>
                                     
-                                    <?php if(!empty($answer['attachment'])): ?>
-                                        <div class="mt-2 bg-base-100 p-3 rounded-lg border border-base-200">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <i class="fa-solid fa-paperclip"></i> 
-                                                <span class="font-bold text-sm">File đính kèm</span>
-                                            </div>
-                                            
-                                            <?php 
-                                            $ext = strtolower(pathinfo($answer['attachment'], PATHINFO_EXTENSION));
-                                            if(in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): 
-                                            ?>
-                                                <img src="/uploads/tutors/<?= htmlspecialchars($answer['attachment']) ?>" class="max-w-full rounded-lg shadow-sm" alt="Answer Attachment">
-                                            <?php else: ?>
-                                                <div class="flex items-center justify-between bg-base-200 p-2 rounded">
-                                                    <span class="text-sm truncate mr-2"><?= htmlspecialchars($answer['attachment']) ?></span>
-                                                    <a href="/uploads/tutors/<?= htmlspecialchars($answer['attachment']) ?>" download class="btn btn-sm btn-primary">
-                                                        <i class="fa-solid fa-download"></i> Tải về
-                                                    </a>
-                                                </div>
-                                            <?php endif; ?>
+                                    <?php if(!empty($msg['attachment'])): ?>
+                                        <div class="mt-2 pt-2 border-t border-base-content/10">
+                                            <a href="/uploads/tutors/<?= htmlspecialchars($msg['attachment']) ?>" download class="btn btn-xs btn-ghost gap-1">
+                                                <i class="fa-solid fa-paperclip"></i> File đính kèm
+                                            </a>
                                         </div>
                                     <?php endif; ?>
-
-                                    <div class="text-right mt-4 text-xs text-base-content/60">
-                                        Trả lời lúc: <?= date('d/m/Y H:i', strtotime($answer['created_at'])) ?>
-                                    </div>
+                                </div>
+                                <div class="chat-footer opacity-50 text-[10px]">
+                                    <?= $is_sender_tutor ? 'Gia sư' : 'Học viên' ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -202,8 +199,8 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                         </div>
                     <?php endif; ?>
 
-                    <!-- Tutor Answer Input (Allow answering if pending OR answered) -->
-                    <?php if ($is_tutor && ($request['status'] === 'pending' || $request['status'] === 'answered')): ?>
+                    <!-- Tutor Answer Input (Allow answering only if pending) -->
+                    <?php if ($is_tutor && $request['status'] === 'pending'): ?>
                         <div class="card bg-base-100 shadow-xl border border-primary mt-6">
                             <div class="card-body">
                                 <h3 class="card-title text-primary"><i class="fa-solid fa-pen-nib"></i> <?= $request['status'] === 'answered' ? 'Gửi thêm câu trả lời' : 'Trả lời câu hỏi' ?></h3>
@@ -221,17 +218,45 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                         <input type="file" name="attachment" class="file-input file-input-bordered w-full max-w-xs" />
                                     </div>
                                     
-                                    <div class="card-actions justify-end mt-4">
+                                    <div class="card-actions justify-end mt-4 gap-2">
+                                        <button type="button" onclick="finishRequestManual()" class="btn btn-outline btn-success">
+                                            <i class="fa-solid fa-check-double"></i> Kết thúc hỗ trợ
+                                        </button>
                                         <button type="submit" class="btn btn-primary">Gửi câu trả lời</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     <?php elseif ($is_student && $request['status'] === 'pending'): ?>
-                        <div class="alert alert-warning">
-                            <i class="fa-solid fa-hourglass-half"></i>
-                            <span>Đang chờ Gia sư phản hồi. Bạn sẽ nhận được thông báo khi có câu trả lời.</span>
+                        <!-- Student Message Input -->
+                        <div class="card bg-base-100 shadow-xl border border-secondary mt-6">
+                            <div class="card-body">
+                                <h3 class="card-title text-secondary"><i class="fa-solid fa-reply"></i> Đổi thoại với Gia sư</h3>
+                                <p class="text-sm mb-4">Bạn có thể hỏi thêm chi tiết hoặc làm rõ câu trả lời tại đây.</p>
+                                
+                                <form id="chatForm" enctype="multipart/form-data">
+                                    <input type="hidden" name="action" value="student_chat">
+                                    <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
+                                    <div class="form-control">
+                                        <textarea name="content" required class="textarea textarea-bordered focus:textarea-secondary" placeholder="Nhập câu hỏi hoặc phản hồi của bạn..."></textarea>
+                                    </div>
+                                    <div class="form-control mt-2">
+                                        <input type="file" name="attachment" class="file-input file-input-bordered file-input-sm w-full max-w-xs" />
+                                    </div>
+                                    
+                                    <div class="card-actions justify-end mt-4">
+                                        <button type="submit" class="btn btn-secondary">Gửi tin nhắn</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
+
+                        <?php if($request['status'] === 'pending'): ?>
+                            <div class="alert alert-info mt-4">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                                <span>Đang chờ Gia sư phản hồi lần đầu.</span>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
 
@@ -256,34 +281,45 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
 </div>
 
 <script>
-document.getElementById('answerForm')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    
-    try {
-        const res = await fetch('/handler/tutor_handler.php', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        
-        if(data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    } catch(err) {
-        alert('Có lỗi xảy ra');
-    }
-});
+// Generic handler for tutor request actions
+async function handleTutorAction(formId, action) {
+    const form = document.getElementById(formId);
+    if (!form) return;
 
-document.getElementById('ratingForm')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('action', action);
+        
+        try {
+            const res = await fetch('/handler/tutor_handler.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+}
+
+// Manual Finish Request for Tutor
+async function finishRequestManual() {
+    if(!confirm('Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi hoàn tất, bạn không thể gửi thêm tin nhắn và học viên sẽ thực hiện đánh giá.')) return;
     
     try {
-        const res = await fetch('/handler/tutor_handler.php', {
+        const formData = new FormData();
+        formData.append('action', 'finish_request');
+        formData.append('request_id', <?= $request['id'] ?>);
+        
+        const res = await fetch('/api/tutor_chat.php', {
             method: 'POST',
             body: formData
         });
@@ -295,8 +331,13 @@ document.getElementById('ratingForm')?.addEventListener('submit', async function
         } else {
             alert(data.message);
         }
-    } catch(err) {
-        alert('Có lỗi xảy ra');
+    } catch (err) {
+        console.error(err);
     }
-});
+}
+
+// Initialize all forms
+handleTutorAction('answerForm', 'send_chat_message');
+handleTutorAction('chatForm', 'send_chat_message');
+handleTutorAction('ratingForm', 'rate_tutor');
 </script>
