@@ -1,16 +1,10 @@
 // Notification system logic
-console.log('🔔 Notifications.js loaded v6');
+console.log('🔔 Notifications.js loaded v9');
 
 // Initial states
 let lastNotifCount = 0;
-const favicon = typeof Favico !== 'undefined' ? new Favico({
-    animation: 'popFade',
-    bgColor: '#dc2626',
-    textColor: '#fff'
-}) : null;
-
-// Notification sound
-const notifSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+let favicon = null;
+const notifSound = new Audio('/assets/sound/noti.mp3');
 
 function playNotificationSound() {
     notifSound.play().catch(e => console.warn('Sound play blocked:', e));
@@ -21,6 +15,7 @@ function getVapidKey() {
 }
 
 function urlBase64ToUint8Array(base64String) {
+    if (!base64String) return new Uint8Array(0);
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
         .replace(/-/g, '+')
@@ -44,24 +39,22 @@ async function registerServiceWorker() {
 
 async function subscribePush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('Push messaging is not supported');
         return false;
     }
-
     try {
         const reg = await registerServiceWorker();
         if (!reg) return false;
-
         await navigator.serviceWorker.ready;
 
         const oldSub = await reg.pushManager.getSubscription();
-        if (oldSub) {
-            await oldSub.unsubscribe();
-        }
+        if (oldSub) await oldSub.unsubscribe();
+
+        const vapidKey = getVapidKey();
+        if (!vapidKey) return false;
 
         const subscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(getVapidKey())
+            applicationServerKey: urlBase64ToUint8Array(vapidKey)
         });
 
         await fetch('/API/save_subscription.php', {
@@ -71,14 +64,11 @@ async function subscribePush() {
         });
 
         console.log('✅ Push Subscribed Successfully');
-        updateNotificationUI();
+        await updateNotificationUI();
         return true;
     } catch (e) {
-        if (e.name === 'AbortError') {
-            console.error('❌ Brave/Chrome Push Service Error.');
-        } else {
-            console.error('❌ Subscription error:', e);
-        }
+        console.error('❌ Subscription error:', e);
+        await updateNotificationUI();
         return false;
     }
 }
@@ -96,9 +86,10 @@ async function unsubscribePush() {
             await subscription.unsubscribe();
         }
         console.log('Push Unsubscribed');
-        updateNotificationUI();
+        await updateNotificationUI();
         return true;
     } catch (e) {
+        await updateNotificationUI();
         return false;
     }
 }
@@ -122,11 +113,19 @@ async function updateNotificationUI() {
             if (statusEl) statusEl.innerText = 'Trạng thái: Đã bật';
         } else {
             toggle.checked = false;
-            if (statusEl) statusEl.innerText = 'Đã cấp quyền nhưng chưa kích hoạt';
+            if (statusEl) statusEl.innerText = 'Chưa kích hoạt đẩy';
         }
     } else {
         toggle.checked = false;
-        if (statusEl) statusEl.innerText = status === 'denied' ? 'Đã chặn' : 'Trạng thái: Chưa bật';
+        if (statusEl) {
+            if (status === 'denied') {
+                statusEl.innerText = 'Trạng thái: Đã chặn';
+            } else if (status === 'unsupported') {
+                statusEl.innerText = 'Không hỗ trợ';
+            } else {
+                statusEl.innerText = 'Trạng thái: Chưa bật';
+            }
+        }
     }
 }
 
@@ -137,49 +136,34 @@ function checkUnread() {
             const badge = document.getElementById('notif-badge');
             const countEl = document.getElementById('notif-count');
             const list = document.getElementById('notif-list');
-
             const count = parseInt(data.count) || 0;
 
-            // Update badge on button
             if (badge) {
                 if (count > 0) {
                     badge.classList.remove('hidden');
                     badge.innerText = count > 9 ? '9+' : count;
-                    // Smaller badge style for count
-                    badge.className = "badge badge-error badge-xs absolute -top-1 -right-1 flex items-center justify-center text-[8px] font-bold p-0 w-4 h-4";
                 } else {
                     badge.classList.add('hidden');
                 }
             }
-
-            // Update counter in dropdown title
             if (countEl) countEl.innerText = count;
-
-            // Favicon badge
-            if (favicon) {
-                favicon.badge(count);
-            }
-
-            // Sound check
-            if (count > lastNotifCount) {
-                playNotificationSound();
-            }
+            if (favicon) favicon.badge(count);
+            if (count > lastNotifCount) playNotificationSound();
             lastNotifCount = count;
 
-            // Render list
             if (list && data.notifications) {
                 list.innerHTML = data.notifications.length > 0
                     ? data.notifications.map(n => `
-                            <li class="${n.is_read == 0 ? 'bg-primary/5' : ''} border-b border-base-200 last:border-0">
-                                <a href="javascript:void(0)" onclick="markRead(${n.id})" class="flex flex-col items-start p-3 hover:bg-base-200 transition-colors">
-                                    <span class="font-bold text-xs text-primary mb-0.5 line-clamp-1">${n.title}</span>
+                            <li>
+                                <a href="javascript:void(0)" onclick="markRead(${n.id})" class="flex flex-col items-start p-3 hover:bg-base-200 transition-colors ${n.is_read == 0 ? 'bg-primary/5' : ''}">
+                                    <span class="font-bold text-xs text-primary line-clamp-1">${n.title}</span>
                                     <span class="text-sm opacity-90 line-clamp-2">${n.message}</span>
                                     <span class="text-[9px] opacity-40 mt-1">${n.time}</span>
                                 </a>
                             </li>`).join('')
                     : '<li class="p-4 text-center text-xs opacity-50">Không có thông báo mới</li>';
             }
-        });
+        }).catch(err => console.warn('Fetch unread failed'));
 }
 
 function markRead(id = null) {
@@ -187,14 +171,22 @@ function markRead(id = null) {
     fetch(url).then(r => r.json()).then(() => checkUnread());
 }
 
-if (document.body.dataset.loggedin === 'true') {
-    registerServiceWorker().then(() => {
-        if (Notification.permission === 'granted') subscribePush();
-        updateNotificationUI();
-    });
-    // First run
-    checkUnread();
-    // Poll every 15 seconds for more responsive feel
-    setInterval(checkUnread, 15000);
-    setInterval(() => fetch('/API/ping.php'), 60000);
-}
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Favico !== 'undefined') {
+        favicon = new Favico({ animation: 'popFade', bgColor: '#dc2626', textColor: '#fff' });
+    }
+
+    if (document.body.dataset.loggedin === 'true') {
+        registerServiceWorker().then(async () => {
+            if (Notification.permission === 'granted') {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (!sub) await subscribePush();
+            }
+            await updateNotificationUI();
+        });
+        checkUnread();
+        setInterval(checkUnread, 15000);
+        setInterval(() => fetch('/API/ping.php'), 60000);
+    }
+});
