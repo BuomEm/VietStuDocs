@@ -1,4 +1,7 @@
 <?php
+// Set timezone to Vietnam (UTC+7)
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 

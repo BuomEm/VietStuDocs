@@ -1,3 +1,6 @@
+# Set PHP Timezone to Vietnam (UTC+7)
+php_value date.timezone "Asia/Ho_Chi_Minh"
+
 RewriteEngine On
 
 # 1. Redirect .php to extensionless (Redirect public URL)
