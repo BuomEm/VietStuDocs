@@ -1,4 +1,9 @@
 <?php
+require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(__DIR__ . '/.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
 // Generate VAPID keys using OpenSSL extension
 $config = array(
     "curve_name" => "prime256v1",
@@ -7,8 +12,9 @@ $config = array(
 
 // Point to openssl.cnf if on Windows
 if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-    $openssl_cnf = 'D:\laragon\bin\php\php-8.3.28-Win32-vs16-x64\extras\ssl\openssl.cnf';
+    $openssl_cnf = $_ENV['OPENSSL_CONF'] ?? 'D:\laragon\bin\php\php-8.3.28-Win32-vs16-x64\extras\ssl\openssl.cnf';
     if (file_exists($openssl_cnf)) {
+        putenv("OPENSSL_CONF=$openssl_cnf");
         $config['config'] = $openssl_cnf;
     }
 }

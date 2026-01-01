@@ -1,5 +1,19 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load .env if exists
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+    $dotenv->load();
+}
+
+// Windows-specific OpenSSL configuration
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    if (isset($_ENV['OPENSSL_CONF']) && file_exists($_ENV['OPENSSL_CONF'])) {
+        putenv("OPENSSL_CONF=" . $_ENV['OPENSSL_CONF']);
+    }
+}
 
 class DB
 {

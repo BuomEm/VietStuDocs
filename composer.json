@@ -3,6 +3,7 @@
         "phpoffice/phpword": "^1.4",
         "ncjoes/office-converter": "^1.0",
         "guzzlehttp/guzzle": "^7.10",
-        "minishlink/web-push": "^10.0"
+        "minishlink/web-push": "^10.0",
+        "vlucas/phpdotenv": "^5.6"
     }
 }

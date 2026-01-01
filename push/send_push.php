@@ -30,13 +30,12 @@ function sendPushToUser($user_id, $payload = []) {
 
     $subs_res = $VSD->query("SELECT * FROM push_subscriptions WHERE user_id = " . intval($user_id));
     
-    // VAPID Auth (Should be in settings or db)
-    // For demo/setup purposes, using placeholder. Admin should generate real keys.
+    // VAPID Auth
     $auth = [
         'VAPID' => [
-            'subject' => 'mailto:admin@docshare.com',
-            'publicKey' => 'BBsE_KxcQN94F9I4WGHeH9SFTYJSCGpFcmmG3eGE1Zz8o0sP8xvnt6bnPdWCAcLyw90PeuwbW_4JslPIrEbletw',
-            'privateKey' => 'rdTI_ipIk47i2zlGruYCtfPymKAmDhDWX8JI7fvKh_0',
+            'subject' => $_ENV['VAPID_SUBJECT'] ?? 'mailto:admin@docshare.com',
+            'publicKey' => $_ENV['VAPID_PUBLIC_KEY'] ?? '',
+            'privateKey' => $_ENV['VAPID_PRIVATE_KEY'] ?? '',
         ],
     ];
 
