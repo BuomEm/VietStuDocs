@@ -329,5 +329,3 @@ $saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN d
     <?php include 'includes/footer.php'; ?>
 </div>
 </div>
-
-?>

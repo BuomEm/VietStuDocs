@@ -48,7 +48,7 @@ async function subscribePush() {
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
 
-        await fetch('/api/save_subscription.php', {
+        await fetch('/API/save_subscription.php', {
             method: 'POST',
             body: JSON.stringify(subscription),
             headers: { 'Content-Type': 'application/json' }
@@ -72,7 +72,7 @@ async function unsubscribePush() {
         const reg = await navigator.serviceWorker.ready;
         const subscription = await reg.pushManager.getSubscription();
         if (subscription) {
-            await fetch('/api/unsubscribe.php', {
+            await fetch('/API/unsubscribe.php', {
                 method: 'POST',
                 body: JSON.stringify({ endpoint: subscription.endpoint }),
                 headers: { 'Content-Type': 'application/json' }
@@ -115,7 +115,7 @@ async function updateNotificationUI() {
 }
 
 function checkUnread() {
-    fetch('/api/unread.php')
+    fetch('/API/unread.php')
         .then(r => r.json())
         .then(data => {
             const badge = document.getElementById('notif-badge');
@@ -138,7 +138,7 @@ function checkUnread() {
 }
 
 function markRead(id = null) {
-    const url = id ? `/api/mark_read.php?id=${id}` : '/api/mark_read.php';
+    const url = id ? `/API/mark_read.php?id=${id}` : '/API/mark_read.php';
     fetch(url).then(r => r.json()).then(() => checkUnread());
 }
 
@@ -149,5 +149,5 @@ if (document.body.dataset.loggedin === 'true') {
     });
     checkUnread();
     setInterval(checkUnread, 30000);
-    setInterval(() => fetch('/api/ping.php'), 60000);
+    setInterval(() => fetch('/API/ping.php'), 60000);
 }
