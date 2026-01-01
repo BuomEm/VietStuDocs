@@ -77,6 +77,14 @@ if(isset($_SESSION['user_id'])) {
                         </a>
                     </li>
                     
+                    <!-- History -->
+                    <li>
+                        <a href="/history.php" class="<?= $current_page === 'history' ? 'active' : '' ?>">
+                            <i class="fa-solid fa-clock-rotate-left w-5 h-5"></i>
+                            Lịch Sử
+                        </a>
+                    </li>
+                    
                     <!-- Premium -->
                     <li>
                         <a href="/premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>">
