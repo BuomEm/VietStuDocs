@@ -30,7 +30,8 @@ class DB
             $name = defined('DB_NAME') ? DB_NAME : ($_ENV['DB_DATABASE'] ?? '');
 
             $this->ketnoi = mysqli_connect($host, $user, $pass, $name) or die('Error => DATABASE');
-            mysqli_query($this->ketnoi, "set names 'utf8mb4' ");
+            mysqli_query($this->ketnoi, "SET NAMES 'utf8mb4'");
+            mysqli_query($this->ketnoi, "SET time_zone = '+07:00'");
         }
     }
     public function dis_connect()
