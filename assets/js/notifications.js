@@ -1,4 +1,5 @@
 // Notification system logic
+console.log('🔔 Notifications.js loaded v2');
 const VAPID_PUBLIC_KEY = document.body.dataset.vapidKey;
 
 function urlBase64ToUint8Array(base64String) {

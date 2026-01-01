@@ -16,6 +16,6 @@
         <p class="text-xs opacity-70">&copy; 2025 DocShare. All rights reserved. | Powered by PHP & MySQL</p>
     </aside>
 </footer>
-<script src="/assets/js/notifications.js"></script>
+
 </body>
 </html>

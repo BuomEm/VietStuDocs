@@ -11,6 +11,17 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(dashboard|edit-document|error|index|login|logout|premium|profile|saved|search|testapi|upload|view)$ $1.php [L]
 
+# 2.1 API Folder Handling (Case-Insensitive & Extensionless)
+# Handle /api/ or /API/ calls
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(api|API)/(.*)$ API/$2 [NC,PT]
+
+# Handle extensionless files in API folder
+RewriteCond %{REQUEST_URI} ^/(api|API)/ [NC]
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(api|API)/(.*)$ API/$2.php [NC,L]
+
 # For Admin directory
 RewriteCond %{REQUEST_URI} ^/admin/
 RewriteCond %{REQUEST_FILENAME} !-d
