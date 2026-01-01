@@ -104,6 +104,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "Lỗi gửi phản hồi: " . $e->getMessage();
             }
         }
+    } elseif ($action === 'update_points') {
+        $req_id = intval($_POST['request_id']);
+        $new_points = intval($_POST['points_used']);
+        
+        try {
+            $check_req = getRequestDetails($req_id);
+            if ($check_req && $check_req['rating'] !== null) {
+                $error = "Không thể sửa điểm cho yêu cầu đã được người dùng đánh giá.";
+            } else {
+                $stmt = $pdo->prepare("UPDATE tutor_requests SET points_used = ? WHERE id = ?");
+                $stmt->execute([$new_points, $req_id]);
+                $success = "Đã cập nhật số điểm cho yêu cầu #$req_id thành $new_points pts.";
+            }
+        } catch (Exception $e) {
+            $error = "Lỗi cập nhật điểm: " . $e->getMessage();
+        }
     }
 }
 
@@ -347,7 +363,21 @@ async function fetchAndShowModal(reqId) {
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span>Points:</span>
-                                    <span class="text-primary font-bold"><?= $req['points_used'] ?></span>
+                                    <?php if ($req['rating'] === null): ?>
+                                        <form method="POST" class="flex items-center gap-2">
+                                            <input type="hidden" name="action" value="update_points">
+                                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                                            <div class="join border border-primary/20 rounded-lg overflow-hidden">
+                                                <input type="number" name="points_used" value="<?= $req['points_used'] ?>" 
+                                                       class="input input-bordered input-xs w-16 h-7 font-bold text-primary join-item bg-primary/5 border-none focus:outline-none" min="0">
+                                                <button type="submit" class="btn btn-xs btn-primary h-7 min-h-0 join-item px-2" title="Lưu giá mới">
+                                                    <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    <?php else: ?>
+                                        <span class="text-primary font-bold"><?= $req['points_used'] ?></span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

@@ -36,6 +36,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $_SESSION['flash_error'] = "Lỗi hệ thống: " . $conn->error;
             }
+        } elseif ($action === 'edit_prices') {
+            $basic = intval($_POST['price_basic']);
+            $standard = intval($_POST['price_standard']);
+            $premium = intval($_POST['price_premium']);
+            $stmt = $conn->prepare("UPDATE tutors SET price_basic=?, price_standard=?, price_premium=?, updated_at=NOW() WHERE user_id=?");
+            if ($stmt) {
+                $stmt->bind_param("iiii", $basic, $standard, $premium, $tutor_id);
+                if ($stmt->execute()) {
+                    $_SESSION['flash_message'] = "Đã cập nhật bảng giá gia sư!";
+                }
+            } else {
+                $_SESSION['flash_error'] = "Lỗi hệ thống: " . $conn->error;
+            }
         }
     }
     header("Location: tutors.php");
@@ -204,28 +217,35 @@ include __DIR__ . '/../includes/admin-header.php';
     </div>
 </div>
 
-<!-- View Modal -->
+<!-- View/Edit Modal -->
 <dialog id="view_tutor_modal" class="modal">
   <div class="modal-box w-11/12 max-w-3xl">
-    <h3 class="font-bold text-lg mb-4">Thông tin Gia sư</h3>
-    <div id="modal_content" class="space-y-4">
-        <!-- Content injected by JS -->
-    </div>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn">Đóng</button>
-      </form>
-    </div>
+    <form method="POST">
+        <input type="hidden" name="action" value="edit_prices">
+        <input type="hidden" name="tutor_id" id="modal_tutor_id">
+        
+        <h3 class="font-bold text-lg mb-4">Thông tin & Chỉnh sửa Gia sư</h3>
+        
+        <div id="modal_content" class="space-y-4">
+            <!-- Content injected by JS -->
+        </div>
+        
+        <div class="modal-action">
+          <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+          <button type="button" onclick="document.getElementById('view_tutor_modal').close()" class="btn">Đóng</button>
+        </div>
+    </form>
   </div>
 </dialog>
 
 <script>
 function viewTutorModal(data) {
+    document.getElementById('modal_tutor_id').value = data.user_id;
     const content = `
         <div class="flex gap-4 items-center mb-6">
             <div class="avatar placeholder">
-                <div class="bg-neutral text-neutral-content rounded-full w-20">
-                    <span class="text-3xl">${data.username.charAt(0).toUpperCase()}</span>
+                <div class="bg-neutral text-neutral-content rounded-full w-24">
+                    <span class="text-4xl">${data.username.charAt(0).toUpperCase()}</span>
                 </div>
             </div>
             <div>
@@ -248,22 +268,28 @@ function viewTutorModal(data) {
         
         <div class="form-control mt-2">
             <label class="label font-bold">Giới thiệu</label>
-            <div class="p-4 bg-base-200 rounded-lg whitespace-pre-wrap">${data.bio}</div>
+            <div class="p-4 bg-base-200 rounded-lg max-h-32 overflow-y-auto whitespace-pre-wrap">${data.bio}</div>
         </div>
         
-        <div class="divider">Bảng giá (Points)</div>
-        <div class="grid grid-cols-3 gap-4 text-center">
-            <div class="p-3 bg-base-200 rounded-lg">
-                <div class="text-xs font-bold text-success">BASIC</div>
-                <div class="text-xl font-bold">${data.price_basic}</div>
+        <div class="divider font-bold">Chỉnh sửa Bảng giá (Points)</div>
+        <div class="grid grid-cols-3 gap-6">
+            <div class="form-control">
+                <label class="label justify-center bg-success/10 rounded-t-lg border-b border-success/20">
+                    <span class="label-text-alt font-bold text-success">BASIC</span>
+                </label>
+                <input type="number" name="price_basic" value="${data.price_basic}" class="input input-bordered text-center font-bold" required>
             </div>
-            <div class="p-3 bg-base-200 rounded-lg">
-                <div class="text-xs font-bold text-info">STANDARD</div>
-                <div class="text-xl font-bold">${data.price_standard}</div>
+            <div class="form-control">
+                <label class="label justify-center bg-info/10 rounded-t-lg border-b border-info/20">
+                    <span class="label-text-alt font-bold text-info">STANDARD</span>
+                </label>
+                <input type="number" name="price_standard" value="${data.price_standard}" class="input input-bordered text-center font-bold" required>
             </div>
-            <div class="p-3 bg-base-200 rounded-lg">
-                <div class="text-xs font-bold text-warning">PREMIUM</div>
-                <div class="text-xl font-bold">${data.price_premium}</div>
+            <div class="form-control">
+                <label class="label justify-center bg-warning/10 rounded-t-lg border-b border-warning/20">
+                    <span class="label-text-alt font-bold text-warning">PREMIUM</span>
+                </label>
+                <input type="number" name="price_premium" value="${data.price_premium}" class="input input-bordered text-center font-bold" required>
             </div>
         </div>
     `;
