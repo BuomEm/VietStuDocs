@@ -1,23 +1,32 @@
-self.addEventListener('push', e => {
-    const data = e.data ? e.data.json() : {};
-    const title = data.title || 'Bạn có thông báo mới';
+self.addEventListener('push', function (event) {
+    console.log('[Service Worker] Push Received.');
+    let data = { title: 'Thông báo mới', body: 'Bạn có tin nhắn mới từ DocShare' };
+
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+
     const options = {
-        body: data.body || 'Nhấn để xem chi tiết',
-        icon: '/assets/img/logo.png', // Fallback icon path
+        body: data.body,
+        icon: '/assets/img/logo.png',
         badge: '/assets/img/badge.png',
         data: {
             url: data.url || '/dashboard.php'
         }
     };
 
-    e.waitUntil(
-        self.registration.showNotification(title, options)
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
     );
 });
 
-self.addEventListener('notificationclick', e => {
-    e.notification.close();
-    e.waitUntil(
-        clients.openWindow(e.notification.data.url)
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
     );
 });

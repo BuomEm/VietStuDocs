@@ -8,7 +8,7 @@ if (file_exists(__DIR__ . '/../.env')) {
     $dotenv->load();
 }
 
-// Windows-specific OpenSSL configuration
+// Basic OpenSSL config for Windows
 if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
     if (isset($_ENV['OPENSSL_CONF']) && file_exists($_ENV['OPENSSL_CONF'])) {
         putenv("OPENSSL_CONF=" . $_ENV['OPENSSL_CONF']);
@@ -21,7 +21,6 @@ class DB
     public function connect()
     {
         if (!$this->ketnoi) {
-            // Use constants from db.php as primary, fallback to $_ENV if available
             $host = defined('DB_HOST') ? DB_HOST : ($_ENV['DB_HOST'] ?? 'localhost');
             $user = defined('DB_USER') ? DB_USER : ($_ENV['DB_USERNAME'] ?? 'root');
             $pass = defined('DB_PASS') ? DB_PASS : ($_ENV['DB_PASSWORD'] ?? '');
@@ -71,7 +70,6 @@ class DB
             $value_list .= ",'".mysqli_real_escape_string($this->ketnoi, $value)."'";
         }
         $sql = 'INSERT INTO '.$table. '('.trim($field_list, ',').') VALUES ('.trim($value_list, ',').')';
-
         return mysqli_query($this->ketnoi, $sql);
     }
     public function update($table, $data, $where)
@@ -142,7 +140,6 @@ class DB
         }
         return false;
     }
-    // Added for compatibility with other db_* functions
     public function get_conn() {
         $this->connect();
         return $this->ketnoi;
@@ -161,101 +158,36 @@ class DB
     }
 }
 
-// Global instance for the procedural wrappers
 $VSD = new DB();
-$conn = null; // Will be set by $VSD->get_conn() if needed
+$conn = null;
 
-/**
- * Procedural Wrappers to maintain compatibility with existing code
- */
-function db_query($sql) {
-    global $VSD;
-    return $VSD->query($sql);
-}
-
-function db_get_results($sql) {
-    global $VSD;
-    return $VSD->get_list($sql);
-}
-
-function db_get_row($sql) {
-    global $VSD;
-    return $VSD->get_row($sql);
-}
-
-function db_num_rows($sql) {
-    global $VSD;
-    return $VSD->num_rows($sql);
-}
-
-function db_escape($string) {
-    global $VSD;
-    return $VSD->escape($string);
-}
-
-function db_insert_id() {
-    global $VSD;
-    return $VSD->insert_id();
-}
-
-function db_site($data) {
-    global $VSD;
-    return $VSD->site($data);
-}
-
-function db_cong($table, $data, $sotien, $where) {
-    global $VSD;
-    return $VSD->cong($table, $data, $sotien, $where);
-}
-
-function db_tru($table, $data, $sotien, $where) {
-    global $VSD;
-    return $VSD->tru($table, $data, $sotien, $where);
-}
-
-function db_insert($table, $data) {
-    global $VSD;
-    return $VSD->insert($table, $data);
-}
-
-function db_update($table, $data, $where) {
-    global $VSD;
-    return $VSD->update($table, $data, $where);
-}
-
-function db_update_value($table, $data, $where, $value1) {
-    global $VSD;
-    return $VSD->update_value($table, $data, $where, $value1);
-}
-
-function db_delete($table, $where) {
-    global $VSD;
-    return $VSD->remove($table, $where);
-}
-
+function db_query($sql) { global $VSD; return $VSD->query($sql); }
+function db_get_results($sql) { global $VSD; return $VSD->get_list($sql); }
+function db_get_row($sql) { global $VSD; return $VSD->get_row($sql); }
+function db_num_rows($sql) { global $VSD; return $VSD->num_rows($sql); }
+function db_escape($string) { global $VSD; return $VSD->escape($string); }
+function db_insert_id() { global $VSD; return $VSD->insert_id(); }
+function db_site($data) { global $VSD; return $VSD->site($data); }
+function db_cong($table, $data, $sotien, $where) { global $VSD; return $VSD->cong($table, $data, $sotien, $where); }
+function db_tru($table, $data, $sotien, $where) { global $VSD; return $VSD->tru($table, $data, $sotien, $where); }
+function db_insert($table, $data) { global $VSD; return $VSD->insert($table, $data); }
+function db_update($table, $data, $where) { global $VSD; return $VSD->update($table, $data, $where); }
+function db_update_value($table, $data, $where, $value1) { global $VSD; return $VSD->update_value($table, $data, $where, $value1); }
+function db_delete($table, $where) { global $VSD; return $VSD->remove($table, $where); }
 function db_table_exists($table_name) {
     $table_name = db_escape($table_name);
     $sql = "SHOW TABLES LIKE '$table_name'";
     return db_num_rows($sql) > 0;
 }
+function db_error() { global $VSD; return $VSD->error(); }
 
-function db_error() {
-    global $VSD;
-    return $VSD->error();
-}
-
-// Legacy helpers
 function db_find($table, $where) {
     $where_str = '';
     if (is_array($where)) {
         $conditions = [];
-        foreach ($where as $col => $val) {
-            $conditions[] = "$col = '" . db_escape($val) . "'";
-        }
+        foreach ($where as $col => $val) { $conditions[] = "$col = '" . db_escape($val) . "'"; }
         $where_str = implode(' AND ', $conditions);
-    } else {
-        $where_str = $where;
-    }
+    } else { $where_str = $where; }
     return db_get_row("SELECT * FROM $table WHERE $where_str LIMIT 1");
 }
 
@@ -264,13 +196,9 @@ function db_get($table, $where = [], $order = '', $limit = '') {
     if (!empty($where)) {
         if (is_array($where)) {
             $conditions = [];
-            foreach ($where as $col => $val) {
-                $conditions[] = "$col = '" . db_escape($val) . "'";
-            }
+            foreach ($where as $col => $val) { $conditions[] = "$col = '" . db_escape($val) . "'"; }
             $where_str = ' WHERE ' . implode(' AND ', $conditions);
-        } else {
-            $where_str = ' WHERE ' . $where;
-        }
+        } else { $where_str = ' WHERE ' . $where; }
     }
     $order_sql = $order ? " ORDER BY $order" : '';
     $limit_sql = $limit ? " LIMIT $limit" : '';
@@ -282,18 +210,12 @@ function db_count($table, $where = []) {
     if (!empty($where)) {
         if (is_array($where)) {
             $conditions = [];
-            foreach ($where as $col => $val) {
-                $conditions[] = "$col = '" . db_escape($val) . "'";
-            }
+            foreach ($where as $col => $val) { $conditions[] = "$col = '" . db_escape($val) . "'"; }
             $where_str = ' WHERE ' . implode(' AND ', $conditions);
-        } else {
-            $where_str = ' WHERE ' . $where;
-        }
+        } else { $where_str = ' WHERE ' . $where; }
     }
     $row = db_get_row("SELECT COUNT(*) as count FROM $table$where_str");
     return $row ? intval($row['count']) : 0;
 }
 
-// Ensure $conn is available for parts of the app that still use it directly
 $conn = $VSD->get_conn();
-?>

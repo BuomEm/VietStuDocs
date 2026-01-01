@@ -233,6 +233,61 @@ $saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN d
             </div>
         </div>
 
+        <!-- Notification Settings Card -->
+        <div class="card bg-base-100 shadow-xl mb-6 border-l-4 border-primary">
+            <div class="card-body">
+                <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-bell w-5 h-5"></i>
+                    Cài đặt thông báo
+                </h3>
+                
+                <p class="text-sm opacity-70 mb-4">Bật thông báo đẩy để nhận tin nhắn và cập nhật tài liệu ngay lập tức trên thiết bị của bạn.</p>
+                
+                <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg">
+                    <div>
+                        <span class="font-bold block">Thông báo đẩy (Web Push)</span>
+                        <span class="text-[10px] opacity-50" id="push-status">Trạng thái: Đang kiểm tra...</span>
+                    </div>
+                    <input type="checkbox" id="btn-toggle-push" class="toggle toggle-primary" onchange="handlePushToggle(this)" />
+                </div>
+            </div>
+        </div>
+
+        <script>
+        async function handlePushToggle(el) {
+            const status = checkNotificationStatus();
+            
+            if (status === 'denied') {
+                el.checked = false;
+                alert('Bạn đã chặn thông báo. Vui lòng mở cài đặt trình duyệt để bật lại.');
+                return;
+            }
+
+            if (el.checked) {
+                // ON
+                if (status === 'default') {
+                    const result = await Notification.requestPermission();
+                    if (result === 'granted') {
+                        await subscribePush();
+                    } else {
+                        el.checked = false;
+                    }
+                } else {
+                    await subscribePush();
+                }
+            } else {
+                // OFF
+                await unsubscribePush();
+                alert('Đã tắt thông báo trên thiết bị này.');
+            }
+            
+            updateNotificationUI();
+        }
+        
+        // Initial sync handled by notifications.js
+        </script>
+
+
         <!-- Change Password Card -->
         <div class="card bg-base-100 shadow-xl mb-6">
             <div class="card-body">

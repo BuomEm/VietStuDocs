@@ -73,4 +73,6 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-base-200" data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>">
+<body class="min-h-screen bg-base-200" 
+      data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>"
+      data-vapid-key="<?= $_ENV['VAPID_PUBLIC_KEY'] ?? '' ?>">
