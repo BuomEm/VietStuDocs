@@ -1,9 +1,27 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="vietstudocs">
 <head>
+    <?php
+    require_once __DIR__ . '/../config/settings.php';
+    $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+    $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '/favicon.ico';
+    $site_logo = !empty($site_logo) ? $site_logo : '/favicon.ico';
+
+    // Format title: Site Name | Page Title
+    $display_title = $site_name;
+    if (isset($page_title) && !empty($page_title)) {
+        // Remove legacy suffixes if present to avoid duplication
+        $clean_title = str_replace([' - DocShare', ' | DocShare'], '', $page_title);
+        if ($clean_title !== $site_name) {
+            $display_title = "$site_name | $clean_title";
+        }
+    }
+    ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($page_title) ? htmlspecialchars($page_title) : 'DocShare' ?></title>
+    <title><?= htmlspecialchars($display_title) ?></title>
+    <link rel="icon" href="<?= htmlspecialchars($site_logo) ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars($site_logo) ?>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- DaisyUI -->
@@ -71,9 +89,139 @@
         .drawer-side aside {
             background-color: oklch(var(--b1));
         }
+
+        /* Collapsible Sidebar Styles */
+        .drawer-side aside {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
+            width: 16rem;
+        }
+
+        /* Icon Only Mode - Collapsed */
+        .is-drawer-close .drawer-side aside {
+            width: 5rem !important; /* w-20 */
+        }
+        
+        /* Text Hiding Logic */
+        .is-drawer-close .drawer-side .menu-text,
+        .is-drawer-close .drawer-side .logo-text,
+        .is-drawer-close .drawer-side .badge,
+        .is-drawer-close .drawer-side .stats,
+        .is-drawer-close .drawer-side hr {
+            display: none !important;
+            opacity: 0;
+        }
+
+        /* Profile Info Hiding Logic */
+        .is-drawer-close .drawer-side .profile-info {
+            display: none !important;
+        }
+
+        /* Adjust Menu for Collapsed State */
+        .is-drawer-close .drawer-side .menu li a {
+            justify-content: center;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            min-height: 3rem;
+        }
+        
+        .is-drawer-close .drawer-side .menu li a i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+
+        /* Tooltip behavior for collapsed state */
+        .is-drawer-close .drawer-side .menu li a:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: oklch(var(--n));
+            color: oklch(var(--nc));
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            z-index: 100;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+        }
+
+        /* Triangle for Tooltip */
+        .is-drawer-close .drawer-side .menu li a:hover::before {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent oklch(var(--n)) transparent transparent;
+            z-index: 100;
+            margin-left: 0;
+            pointer-events: none;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/favico.js@0.3.10/favico.min.js"></script>
     <script src="/assets/js/notifications.js?v=9"></script>
+    
+    <script>
+    /**
+     * Global Anti-Double-Submit Protection
+     * Automatically prevents multiple clicks on all forms across the site.
+     */
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        
+        // Skip for forms that should allow multiple submissions (if any)
+        if (form.classList.contains('allow-double-submit')) return;
+
+        // Check if form is already submitting
+        if (form.dataset.isSubmitting === 'true') {
+            e.preventDefault();
+            return false;
+        }
+
+        // Only disable if the form passes browser validation
+        if (form.checkValidity()) {
+            form.dataset.isSubmitting = 'true';
+            
+            // Find submit buttons
+            const submitBtns = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+            submitBtns.forEach(btn => {
+                // Add loading state for DaisyUI buttons
+                if (btn.tagName === 'BUTTON') {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> ' + (btn.innerText || 'Processing...');
+                    btn.dataset.originalContent = originalText;
+                }
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            });
+            
+            // Failsafe: Re-enable buttons after 15 seconds if page doesn't reload
+            setTimeout(() => {
+                form.dataset.isSubmitting = 'false';
+                submitBtns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    if (btn.dataset.originalContent) btn.innerHTML = btn.dataset.originalContent;
+                });
+            }, 15000);
+        }
+    });
+
+    // Also handle AJAX requests (Fetch API) if you use them globally
+    const _originalFetch = window.fetch;
+    window.fetch = function() {
+        return _originalFetch.apply(this, arguments).catch(err => {
+            // If fetch fails, we might want to re-enable some global state here
+            throw err;
+        });
+    };
+    </script>
 </head>
 <body class="min-h-screen bg-base-200" 
       data-loggedin="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>"

@@ -8,6 +8,11 @@ if(isset($_SESSION['user_id'])) {
 
 require_once 'config/db.php';
 require_once 'config/auth.php';
+require_once 'config/settings.php';
+
+$site_name = getSetting('site_name', 'DocShare');
+$site_logo = getSetting('site_logo', '');
+$site_desc = getSetting('site_description', 'Chia sẻ tri thức, kết nối cộng đồng');
 
 $error = '';
 $success = '';
@@ -44,7 +49,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - DocShare</title>
+    <title>Đăng nhập - <?= htmlspecialchars($site_name) ?></title>
+    <link rel="icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
     
     <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,12 +135,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         <!-- Logo Section -->
         <div class="text-center mb-8">
             <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="flex-shrink-0 flex items-center justify-center w-12 h-12 bg-white rounded-2xl shadow-xl rotate-3 border border-white">
-                    <i class="fa-solid fa-file-contract text-2xl" style="color: #800000;"></i>
-                </div>
-                <h1 class="text-4xl font-extrabold text-[#800000] tracking-tight">DocShare</h1>
+                <?php if(!empty($site_logo)): ?>
+                     <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="w-16 h-16 object-contain drop-shadow-lg">
+                <?php else: ?>
+                    <div class="flex-shrink-0 flex items-center justify-center w-12 h-12 bg-white rounded-2xl shadow-xl rotate-3 border border-white">
+                        <i class="fa-solid fa-file-contract text-2xl" style="color: #800000;"></i>
+                    </div>
+                <?php endif; ?>
+                <h1 class="text-4xl font-extrabold text-[#800000] tracking-tight"><?= htmlspecialchars($site_name) ?></h1>
             </div>
-            <p class="text-gray-500 font-medium">Chia sẻ tri thức, kết nối cộng đồng</p>
+            <p class="text-gray-500 font-medium"><?= htmlspecialchars($site_desc) ?></p>
         </div>
 
         <div class="glass-card rounded-[2.5rem] p-8 md:p-10">
@@ -255,7 +266,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         
         <!-- Footer Info -->
         <p class="text-center text-gray-400 text-xs mt-8">
-            &copy; <?= date('Y') ?> DocShare. Tất cả quyền được bảo lưu.
+            &copy; <?= date('Y') ?> <?= htmlspecialchars($site_name) ?>. Tất cả quyền được bảo lưu.
         </p>
     </div>
 

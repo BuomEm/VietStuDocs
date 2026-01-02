@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config/settings.php';
 $error_code = $_GET['code'] ?? 404;
 $valid_codes = [
     400 => ['code' => '400', 'title' => 'Yêu cầu không hợp lệ', 'desc' => 'Máy chủ không thể xử lý yêu cầu.'],
@@ -36,7 +37,9 @@ $random_quote = $quotes[array_rand($quotes)];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $info['title'] ?> - DocShare</title>
+    <title><?= $info['title'] ?> - <?= htmlspecialchars(getSetting('site_name', 'DocShare')) ?></title>
+    <link rel="icon" href="<?= htmlspecialchars(getSetting('site_logo', '/favicon.ico')) ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(getSetting('site_logo', '/favicon.ico')) ?>">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

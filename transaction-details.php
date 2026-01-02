@@ -110,7 +110,7 @@ if(!$transaction) {
                         <i class="fa-solid fa-receipt text-4xl"></i>
                     </div>
                     <h1 class="text-3xl font-bold mb-2">Hóa Đơn Giao Dịch</h1>
-                    <p class="text-white/80">DocShare Platform</p>
+                    <p class="text-white/80"><?= htmlspecialchars(getSetting('site_name', 'DocShare')) ?> Platform</p>
                 </div>
                 
                 <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm">

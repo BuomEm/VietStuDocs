@@ -9,7 +9,7 @@
                             </a>
                         </div>
                         <div>
-                            <p>&copy; <?= date('Y') ?> <a href="../dashboard.php" class="link link-hover">DocShare</a>. All rights reserved.</p>
+                            <p>&copy; <?= date('Y') ?> <a href="../dashboard.php" class="link link-hover"><?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_name', 'DocShare')) : 'DocShare' ?></a>. All rights reserved.</p>
                         </div>
                     </div>
                 </div>

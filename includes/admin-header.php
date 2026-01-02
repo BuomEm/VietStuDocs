@@ -15,10 +15,24 @@ if (!isset($admin_active_page)) $admin_active_page = '';
 <!doctype html>
 <html lang="vi" data-theme="dim">
 <head>
+    <?php
+    require_once __DIR__ . '/../config/settings.php';
+    $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+    $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '/favicon.ico';
+    $site_logo = !empty($site_logo) ? $site_logo : '/favicon.ico';
+    
+    // Clean up page title
+    $clean_title = isset($page_title) ? str_replace([' - DocShare Admin', ' - DocShare', 'Admin Panel - '], '', $page_title) : 'Admin Panel';
+    if ($clean_title == 'Admin Panel - DocShare') $clean_title = 'Admin Panel';
+    
+    $display_title = "$site_name | $clean_title";
+    ?>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
-    <title><?= htmlspecialchars($page_title) ?></title>
+    <title><?= htmlspecialchars($display_title) ?></title>
+    <link rel="icon" href="<?= htmlspecialchars($site_logo) ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars($site_logo) ?>">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -104,10 +118,118 @@ if (!isset($admin_active_page)) $admin_active_page = '';
         .pulse {
             animation: pulse 2s infinite;
         }
+
+        /* Collapsible Sidebar Styles */
+        .drawer-side aside {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
+            width: 16rem;
+        }
+
+        /* Icon Only Mode - Collapsed */
+        .is-drawer-close .drawer-side aside {
+            width: 5rem !important; /* w-20 */
+        }
+        
+        /* Text Hiding Logic */
+        .is-drawer-close .drawer-side .menu-text,
+        .is-drawer-close .drawer-side .logo-text,
+        .is-drawer-close .drawer-side .badge,
+        .is-drawer-close .drawer-side .stats,
+        .is-drawer-close .drawer-side hr {
+            display: none !important;
+            opacity: 0;
+        }
+
+        /* Profile Info Hiding Logic */
+        .is-drawer-close .drawer-side .profile-info {
+            display: none !important;
+        }
+
+        /* Adjust Menu for Collapsed State */
+        .is-drawer-close .drawer-side .menu li a {
+            justify-content: center;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            min-height: 3rem;
+        }
+        
+        .is-drawer-close .drawer-side .menu li a i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+
+        /* Tooltip behavior for collapsed state */
+        .is-drawer-close .drawer-side .menu li a:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: oklch(var(--n));
+            color: oklch(var(--nc));
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            z-index: 100;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+        }
+
+        /* Triangle for Tooltip */
+        .is-drawer-close .drawer-side .menu li a:hover::before {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent oklch(var(--n)) transparent transparent;
+            z-index: 100;
+            margin-left: 0;
+            pointer-events: none;
+        }
     </style>
+    <script>
+    /**
+     * Global Anti-Double-Submit Protection
+     */
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form.classList.contains('allow-double-submit')) return;
+        if (form.dataset.isSubmitting === 'true') {
+            e.preventDefault();
+            return false;
+        }
+        if (form.checkValidity()) {
+            form.dataset.isSubmitting = 'true';
+            const submitBtns = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+            submitBtns.forEach(btn => {
+                if (btn.tagName === 'BUTTON') {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Đang xử lý...';
+                    btn.dataset.originalContent = originalText;
+                }
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            });
+            setTimeout(() => {
+                form.dataset.isSubmitting = 'false';
+                submitBtns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    if (btn.dataset.originalContent) btn.innerHTML = btn.dataset.originalContent;
+                });
+            }, 10000);
+        }
+    });
+    </script>
 </head>
 <body class="min-h-screen bg-base-200">
-    <div class="drawer lg:drawer-open">
+    <div class="drawer lg:drawer-open" id="main-drawer">
         <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
         
         <!-- Sidebar -->

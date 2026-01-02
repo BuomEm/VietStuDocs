@@ -69,12 +69,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['buy_premium'])) {
 // Do NOT close connection, needed for navbar
 // mysqli_close($conn); 
 ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <?php include 'includes/head.php'; ?>
-    <title>Nâng cấp Premium - DocShare</title>
-</head>
+<?php 
+$page_title = 'Nâng cấp Premium';
+include 'includes/head.php'; 
+?>
 <body>
     <?php include 'includes/sidebar.php'; ?>
     
@@ -289,7 +287,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['buy_premium'])) {
                         </div>
                          <div class="flex justify-between border-b border-base-content/10 pb-2">
                             <span class="opacity-70">Chủ tài khoản:</span>
-                            <span class="font-bold">ADMIN DOCSHARE</span>
+                            <span class="font-bold">ADMIN <?= strtoupper(htmlspecialchars(getSetting('site_name', 'DOCSHARE'))) ?></span>
                         </div>
                         <div class="flex justify-between border-b border-base-content/10 pb-2">
                             <span class="opacity-70">Số tiền:</span>

@@ -11,9 +11,11 @@ require_once 'config/auth.php';
 require_once 'config/premium.php';
 require_once 'config/points.php';
 
+require_once 'config/settings.php';
+
 $user_id = getCurrentUserId();
 $is_premium = isPremium($user_id);
-$page_title = "Lịch Sử Hoạt Động - DocShare";
+$page_title = "Lịch Sử Hoạt Động";
 $current_page = 'history';
 
 // Get active tab

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/premium.php';
+require_once __DIR__ . '/../config/settings.php';
 
 $has_admin = isset($_SESSION['user_id']) && hasAdminAccess();
 
@@ -21,7 +22,7 @@ if(isset($_SESSION['user_id'])) {
 }
 ?>
 
-<div class="drawer lg:drawer-open">
+<div class="drawer lg:drawer-open" id="main-drawer">
     <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
     
     <!-- Sidebar -->
@@ -30,15 +31,23 @@ if(isset($_SESSION['user_id'])) {
         <aside class="w-64 min-h-full bg-base-100 border-r border-base-300">
             <!-- Sidebar Header -->
             <div class="p-4 border-b border-base-300">
-                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
-                    <i class="fa-solid fa-file-contract text-lg"></i>
-                    DocShare
-                </h2>
+                <?php 
+                $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+                $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
+                ?>
+                <a href="/dashboard.php" class="text-xl font-bold text-primary flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap h-12 w-full hover:bg-primary/5 transition-all">
+                    <?php if (!empty($site_logo)): ?>
+                        <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="h-8 w-8 object-contain flex-shrink-0">
+                    <?php else: ?>
+                        <i class="fa-solid fa-file-contract text-lg w-8 flex-shrink-0 text-center"></i>
+                    <?php endif; ?>
+                    <span class="logo-text transition-all duration-300"><?= htmlspecialchars($site_name) ?></span>
+                </a>
                 <?php if(isset($_SESSION['user_id'])): ?>
-                    <div class="mt-2 text-sm text-base-content/70">
+                    <!-- <div class="mt-2 text-sm text-base-content/70">
                         <div class="font-semibold"><?= htmlspecialchars($user_info['username'] ?? getCurrentUsername()) ?></div>
                         <div class="text-xs"><?= htmlspecialchars($user_info['email'] ?? '') ?></div>
-                    </div>
+                    </div> -->
                 <?php endif; ?>
             </div>
             
@@ -47,69 +56,71 @@ if(isset($_SESSION['user_id'])) {
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <!-- Dashboard -->
                     <li>
-                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>">
+                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Dashboard">
                             <i class="fa-solid fa-house w-5 h-5"></i>
-                            Dashboard
+                            <span class="menu-text">Dashboard</span>
                         </a>
                     </li>
                     
                     <!-- Upload -->
                     <li>
-                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>">
+                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>" data-tip="Upload">
                             <i class="fa-solid fa-cloud-arrow-up w-5 h-5"></i>
-                            Upload
+                            <span class="menu-text">Upload</span>
                         </a>
                     </li>
 
                     <!-- Tutor Dashboard -->
                     <li>
-                        <a href="/tutors/dashboard" class="<?= ($current_page === 'tutor_dashboard' || strpos($_SERVER['PHP_SELF'], '/tutors/dashboard.php') !== false) ? 'active' : '' ?>">
+                        <a href="/tutors/dashboard" class="<?= ($current_page === 'tutor_dashboard' || strpos($_SERVER['PHP_SELF'], '/tutors/dashboard.php') !== false) ? 'active' : '' ?>" data-tip="Thuê Gia Sư">
                             <i class="fa-solid fa-user-graduate w-5 h-5"></i>
-                            Thuê Gia Sư
+                            <span class="menu-text">Thuê Gia Sư</span>
                         </a>
                     </li>
                     
                     <!-- Saved -->
                     <li>
-                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>">
+                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>" data-tip="Saved">
                             <i class="fa-solid fa-bookmark w-5 h-5"></i>
-                            Saved
+                            <span class="menu-text">Saved</span>
                         </a>
                     </li>
                     
                     <!-- History -->
                     <li>
-                        <a href="/history.php" class="<?= $current_page === 'history' ? 'active' : '' ?>">
+                        <a href="/history.php" class="<?= $current_page === 'history' ? 'active' : '' ?>" data-tip="Lịch Sử">
                             <i class="fa-solid fa-clock-rotate-left w-5 h-5"></i>
-                            Lịch Sử
+                            <span class="menu-text">Lịch Sử</span>
                         </a>
                     </li>
                     
                     <!-- Premium -->
                     <li>
-                        <a href="/premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>">
+                        <a href="/premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>" data-tip="Premium">
                             <i class="fa-solid fa-crown w-5 h-5"></i>
-                            Premium
-                            <?php if($is_premium): ?>
-                                <span class="badge badge-sm badge-primary">Active</span>
-                            <?php endif; ?>
+                            <span class="menu-text">
+                                Premium
+                                <?php if($is_premium): ?>
+                                    <span class="badge badge-sm badge-primary ml-1">Active</span>
+                                <?php endif; ?>
+                            </span>
                         </a>
                     </li>
                     
                     <!-- Profile -->
                     <li>
-                        <a href="/profile.php" class="<?= $current_page === 'profile' ? 'active' : '' ?>">
+                        <a href="/profile.php" class="<?= $current_page === 'profile' ? 'active' : '' ?>" data-tip="Profile">
                             <i class="fa-solid fa-user w-5 h-5"></i>
-                            Profile
+                            <span class="menu-text">Profile</span>
                         </a>
                     </li>
                     
                     <!-- Admin -->
                     <?php if($has_admin): ?>
                         <li>
-                            <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>">
+                            <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>" data-tip="Admin">
                                 <i class="fa-solid fa-user-shield w-5 h-5"></i>
-                                Admin
+                                <span class="menu-text">Admin</span>
                             </a>
                         </li>
                     <?php endif; ?>
@@ -130,17 +141,17 @@ if(isset($_SESSION['user_id'])) {
                     <?php endif; ?>
                     
                     <!-- Logout -->
-                    <li class="mt-auto">
+                    <!-- <li class="mt-auto">
                         <a href="/logout.php" class="text-error">
                             <i class="fa-solid fa-right-from-bracket w-5 h-5"></i>
                             Logout
                         </a>
-                    </li>
+                    </li> -->
                 <?php else: ?>
                     <li>
-                        <a href="/index.php">
+                        <a href="/index.php" data-tip="Login">
                             <i class="fa-solid fa-right-to-bracket w-5 h-5"></i>
-                            Login
+                            <span class="menu-text">Login</span>
                         </a>
                     </li>
                 <?php endif; ?>
@@ -148,3 +159,29 @@ if(isset($_SESSION['user_id'])) {
         </aside>
     </div>
     <!-- Drawer will be closed by pages after drawer-content -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const drawerToggleBtns = document.querySelectorAll('label[for="drawer-toggle"]');
+    const mainDrawer = document.getElementById('main-drawer');
+    
+    // Load state from localStorage
+    if (localStorage.getItem('sidebar_collapsed') === 'true') {
+        mainDrawer?.classList.add('is-drawer-close');
+    }
+
+    if(mainDrawer) {
+        drawerToggleBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if(window.innerWidth >= 1024) {
+                    e.preventDefault(); 
+                    // Toggle collapsed mode (Icon only vs Full)
+                    mainDrawer.classList.toggle('is-drawer-close');
+                    // Save state
+                    localStorage.setItem('sidebar_collapsed', mainDrawer.classList.contains('is-drawer-close'));
+                }
+            });
+        });
+    }
+});
+</script>

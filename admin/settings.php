@@ -11,17 +11,47 @@ redirectIfNotAdmin();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $response = ['success' => false, 'message' => ''];
     
-    // Get JSON input
+    // Check if it's a JSON request or FormData request
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        $input = $_POST;
+    }
+
+    // Handle File Upload for Logo
+    if (isset($_FILES['site_logo_file']) && $_FILES['site_logo_file']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
+        $filename = $_FILES['site_logo_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        if (in_array($ext, $allowed)) {
+            $upload_dir = __DIR__ . '/../uploads/settings';
+            if (!file_exists($upload_dir)) {
+                if (!mkdir($upload_dir, 0777, true)) {
+                    $response['message'] .= " Error: Could not create upload directory. ";
+                }
+            }
+            
+            // Use a fixed name or timestamped name
+            $new_name = 'logo_' . time() . '.' . $ext;
+            $destination = $upload_dir . '/' . $new_name;
+            
+            if (move_uploaded_file($_FILES['site_logo_file']['tmp_name'], $destination)) {
+                $input['site_logo'] = '/uploads/settings/' . $new_name;
+            } else {
+                $response['message'] .= " Error: Failed to move uploaded file. ";
+            }
+        } else {
+            $response['message'] .= " Error: Invalid file type. ";
+        }
+    } elseif (isset($_FILES['site_logo_file']) && $_FILES['site_logo_file']['error'] != UPLOAD_ERR_NO_FILE) {
+        $response['message'] .= " Error: Upload failed with code " . $_FILES['site_logo_file']['error'];
+    }
     
     if ($input) {
         $success = true;
         $errors = [];
         
         foreach ($input as $name => $value) {
-            $category = 'general';
-            
-            // Determine category
             if (strpos($name, 'notify_') === 0 || strpos($name, 'telegram_') === 0) {
                 $category = 'notifications';
             } elseif (strpos($name, 'site_') === 0) {
@@ -112,10 +142,21 @@ require_once __DIR__ . '/../includes/admin-header.php';
                         </div>
 
                         <div class="form-control mb-4">
-                            <label class="label"><span class="label-text font-bold">Logo URL</span></label>
-                            <input type="text" id="site_logo" class="input input-bordered w-full" 
-                                   value="<?= htmlspecialchars(getSetting('site_logo', '')) ?>"
-                                   placeholder="/images/logo.png">
+                            <label class="label"><span class="label-text font-bold">Logo Website</span></label>
+                            <div class="flex flex-col gap-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-16 h-16 rounded-lg border border-base-300 bg-base-200 flex items-center justify-center overflow-hidden relative group">
+                                        <img id="logo_preview" src="<?= htmlspecialchars(getSetting('site_logo', '/assets/images/logo.png')) ?>" 
+                                             class="max-w-full max-h-full object-contain"
+                                             onerror="this.src='https://placehold.co/64x64?text=Logo'">
+                                    </div>
+                                    <div class="flex-1">
+                                        <input type="file" id="site_logo_file" name="site_logo_file" class="file-input file-input-bordered file-input-sm w-full max-w-xs" accept="image/*" onchange="previewLogo(this)">
+                                        <div class="text-xs text-base-content/60 mt-1">Recommended size: 64x64px or SVG. Max 2MB.</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="site_logo" value="<?= htmlspecialchars(getSetting('site_logo', '')) ?>">
+                            </div>
                         </div>
 
                         <div class="form-control mb-4">
@@ -346,30 +387,46 @@ function switchTab(tabName) {
     event.currentTarget.classList.add('active');
 }
 
+function previewLogo(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('logo_preview').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 function saveSettings() {
     const btn = event.currentTarget || document.querySelector('button[onclick="saveSettings()"]');
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang lưu...';
 
-    const settings = {};
+    const formData = new FormData();
     
     // Collect Input fields
-    const inputs = document.querySelectorAll('input[type="text"], input[type="number"], textarea');
+    const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"], textarea');
     inputs.forEach(input => {
-        if(input.id) settings[input.id] = input.value;
+        if(input.id) formData.append(input.id, input.value);
     });
 
     // Collect Checkboxes (Toggles)
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
     checkboxes.forEach(box => {
-        if(box.id) settings[box.id] = box.checked ? 'on' : 'off';
+        if(box.id) formData.append(box.id, box.checked ? 'on' : 'off');
     });
+
+    // Collect File Input
+    const fileInput = document.getElementById('site_logo_file');
+    if(fileInput && fileInput.files.length > 0) {
+        formData.append('site_logo_file', fileInput.files[0]);
+    }
 
     fetch('settings.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        // No Content-Type header needed for FormData; browser sets it with boundary
+        body: formData
     })
     .then(res => res.json())
     .then(data => {

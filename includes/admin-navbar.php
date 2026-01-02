@@ -4,7 +4,7 @@
  */
 $admin_id = getCurrentUserId();
 $admin_username = getCurrentUsername();
-$unread_notifications_count = db_num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
+// $unread_notifications_count calculation moved down
 ?>
 
 <div class="navbar bg-base-100 border-b border-base-300 px-4 sticky top-0 z-30 shadow-sm backdrop-blur bg-base-100/80">
@@ -24,7 +24,7 @@ $unread_notifications_count = db_num_rows("SELECT id FROM admin_notifications WH
             </ul>
         </div>
         <div class="lg:hidden font-bold">
-            DocShare Admin
+            <?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_name', 'DocShare') . ' Admin') : 'DocShare Admin' ?>
         </div>
     </div>
     
@@ -38,6 +38,18 @@ $unread_notifications_count = db_num_rows("SELECT id FROM admin_notifications WH
                 </button>
             </div>
         </div>
+
+        <?php
+        // Notifications Logic
+        global $VSD;
+        $unread_notifications_count = 0;
+        $navbar_notifications = [];
+        
+        if (isset($VSD)) {
+            $unread_notifications_count = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
+            $navbar_notifications = $VSD->get_list("SELECT * FROM admin_notifications WHERE admin_id=$admin_id ORDER BY created_at DESC LIMIT 5");
+        }
+        ?>
 
         <!-- Notifications -->
         <div class="dropdown dropdown-end">
@@ -57,7 +69,28 @@ $unread_notifications_count = db_num_rows("SELECT id FROM admin_notifications WH
                     </div>
                     
                     <div class="max-h-64 overflow-y-auto">
-                        <p class="text-sm py-4 text-center opacity-50 italic">Chưa có thông báo quan trọng...</p>
+                        <?php if(count($navbar_notifications) > 0): ?>
+                            <ul class="menu menu-sm bg-base-100 rounded-box p-0">
+                                <?php foreach($navbar_notifications as $notif): ?>
+                                    <li class="border-b border-base-200 last:border-none">
+                                        <a href="<?= htmlspecialchars($notif['link'] ?? '#') ?>" class="block py-2 px-2 hover:bg-base-200 transition-colors <?= $notif['is_read'] == 0 ? 'bg-base-200/50' : '' ?>">
+                                            <div class="flex justify-between items-start">
+                                                <span class="text-xs text-base-content/60"><?= date('H:i d/m', strtotime($notif['created_at'])) ?></span>
+                                                <?php if($notif['is_read'] == 0): ?>
+                                                    <span class="w-2 h-2 rounded-full bg-error"></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="text-sm font-medium mt-1 text-base-content/80 line-clamp-2"><?= htmlspecialchars($notif['message']) ?></div>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <div class="flex flex-col items-center justify-center py-6 text-base-content/50">
+                                <i class="fa-regular fa-bell-slash text-2xl mb-2"></i>
+                                <span class="text-sm italic">Chưa có thông báo quan trọng...</span>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="card-actions mt-2 pt-2 border-t border-base-300">

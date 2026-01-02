@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 require_once __DIR__ . '/../config/premium.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/settings.php';
 
 $has_admin = isset($_SESSION['user_id']) && hasAdminAccess();
 
@@ -23,16 +24,9 @@ if(isset($_SESSION['user_id'])) {
 
 <div class="navbar bg-base-100/80 backdrop-blur border-b border-base-300 shadow-sm transition-all duration-300">
     <div class="flex-none">
-        <label for="drawer-toggle" class="btn btn-square btn-ghost lg:hidden text-base-content">
-            <i class="fa-regular fa-bars"></i>
+        <label for="drawer-toggle" class="btn btn-square btn-ghost text-base-content">
+            <i class="fa-regular fa-bars text-xl"></i>
         </label>
-    </div>
-    
-    <div class="flex-none">
-        <a href="/dashboard.php" class="btn btn-ghost text-xl flex items-center gap-1 group">
-            <i class="fa-solid fa-book-open-reader text-primary text-2xl transition-transform group-hover:scale-110"></i>
-            <span class="font-bold text-primary tracking-tight italic">DocShare</span>
-        </a>
     </div>
     
     <!-- Search Box -->

@@ -300,7 +300,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 <i class="fa-solid fa-shield-halved mr-1"></i>Admin
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge badge-info badge-outline">
+                                            <span class="badge badge-info">
                                                 <i class="fa-solid fa-user mr-1"></i>User
                                             </span>
                                         <?php endif; ?>
