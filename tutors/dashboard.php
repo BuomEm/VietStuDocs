@@ -7,8 +7,8 @@ redirectIfNotLoggedIn();
 $user_id = getCurrentUserId();
 $is_tutor = isTutor($user_id);
 $tutor_profile = $is_tutor ? getTutorProfile($user_id) : null;
-$page_title = "Tutor Dashboard - VietStuDocs";
-$current_page = 'dashboard'; // Or 'tutors' to keep that active? Let's use 'tutors' context.
+$page_title = "Tutor Dashboard";
+$current_page = 'tutor_dashboard'; 
 // Actually sidebar handles /tutor/ matching.
 
 // Get incoming requests if tutor
