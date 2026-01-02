@@ -571,9 +571,20 @@ $current_page = 'search';
                                     </div>
                                 <?php endif; ?>
                                 
-                                <div class="document-meta">
-                                    <span><i class="fa-solid fa-user mr-1 text-xs"></i> <?= htmlspecialchars($doc['username']) ?></span>
-                                    <span><i class="fa-solid fa-calendar-days mr-1 text-xs"></i> <?= date('d/m/Y', strtotime($doc['created_at'])) ?></span>
+                                <div class="document-meta" style="flex-wrap: wrap; gap: 10px;">
+                                    <span class="flex items-center gap-1.5 bg-base-100 px-2 py-0.5 rounded-full border border-base-200">
+                                        <div class="avatar">
+                                            <div class="w-4 h-4 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                                                <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
+                                                    <img src="uploads/avatars/<?= $doc['avatar'] ?>" alt="Avatar" />
+                                                <?php else: ?>
+                                                    <i class="fa-solid fa-user text-[6px] text-primary"></i>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <span class="text-[11px] font-medium text-base-content/70"><?= htmlspecialchars($doc['username']) ?></span>
+                                    </span>
+                                    <span class="flex items-center gap-1 text-[11px] text-base-content/50"><i class="fa-solid fa-calendar-days text-[10px]"></i> <?= date('d/m/Y', strtotime($doc['created_at'])) ?></span>
                                     <?php 
                                     $points = $doc['points'] ?? 0;
                                     if ($points > 0): ?>

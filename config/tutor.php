@@ -41,7 +41,7 @@ function getTutorProfile($user_id) {
     if (!$user_id) return null;
     $pdo = getTutorDBConnection();
     // Join with users implementation if needed, but for now just raw tutor data
-    $stmt = $pdo->prepare("SELECT t.*, u.username, u.email FROM tutors t JOIN users u ON t.user_id = u.id WHERE t.user_id = ?");
+    $stmt = $pdo->prepare("SELECT t.*, u.username, u.email, u.avatar FROM tutors t JOIN users u ON t.user_id = u.id WHERE t.user_id = ?");
     $stmt->execute([$user_id]);
     return $stmt->fetch();
 }
@@ -78,7 +78,7 @@ function registerTutor($user_id, $subjects, $bio, $prices) {
 
 function getActiveTutors($filters = []) {
     $pdo = getTutorDBConnection();
-    $sql = "SELECT t.*, u.username, u.email, 
+    $sql = "SELECT t.*, u.username, u.email, u.avatar, 
             (SELECT COUNT(*) FROM tutor_requests WHERE tutor_id = t.user_id AND status = 'completed') as completed_count
             FROM tutors t 
             JOIN users u ON t.user_id = u.id 
@@ -199,7 +199,7 @@ function createTutorRequest($student_id, $tutor_id, $data) {
 
 function getRequestsForTutor($tutor_id) {
     $pdo = getTutorDBConnection();
-    $stmt = $pdo->prepare("SELECT r.*, u.username as student_name 
+    $stmt = $pdo->prepare("SELECT r.*, u.username as student_name, u.avatar as student_avatar 
                           FROM tutor_requests r 
                           JOIN users u ON r.student_id = u.id 
                           WHERE r.tutor_id = ? 
@@ -210,7 +210,7 @@ function getRequestsForTutor($tutor_id) {
 
 function getRequestDetails($request_id) {
     $pdo = getTutorDBConnection();
-    $stmt = $pdo->prepare("SELECT r.*, u.username as student_name, t.username as tutor_name
+    $stmt = $pdo->prepare("SELECT r.*, u.username as student_name, u.avatar as student_avatar, t.username as tutor_name, t.avatar as tutor_avatar
                           FROM tutor_requests r 
                           JOIN users u ON r.student_id = u.id
                           JOIN users t ON r.tutor_id = t.id
@@ -220,7 +220,7 @@ function getRequestDetails($request_id) {
     
     if ($request) {
         // Get ALL messages (formerly answers)
-        $stmt = $pdo->prepare("SELECT m.*, u.username as sender_name 
+        $stmt = $pdo->prepare("SELECT m.*, u.username as sender_name, u.avatar as sender_avatar 
                               FROM tutor_answers m
                               JOIN users u ON m.sender_id = u.id
                               WHERE m.request_id = ? ORDER BY m.created_at ASC");

@@ -18,6 +18,8 @@ if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
     }
 }
 
+require_once __DIR__ . '/helper.php';
+
 class DB
 {
     private $ketnoi;

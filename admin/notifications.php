@@ -652,23 +652,28 @@ include __DIR__ . '/../includes/admin-header.php';
     }
 
     function deleteNotification(notificationId) {
-        if(confirm('Bạn có chắc muốn xóa thông báo này?')) {
-            const formData = new FormData();
-            formData.append('delete_notification', '1');
-            formData.append('notification_id', notificationId);
+        vsdConfirm({
+            title: 'Xác nhận xóa',
+            message: 'Bạn có chắc muốn xóa thông báo này?',
+            type: 'error',
+            onConfirm: () => {
+                const formData = new FormData();
+                formData.append('delete_notification', '1');
+                formData.append('notification_id', notificationId);
 
-            fetch('notifications.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success) {
-                    document.getElementById('notif-' + notificationId).remove();
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
+                fetch('notifications.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        document.getElementById('notif-' + notificationId).remove();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
     }
 
     function testNotification() {

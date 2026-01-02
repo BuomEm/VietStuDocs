@@ -89,44 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $content = trim($_POST['content']);
         
         if (!empty($content)) {
-            // Manual insert to bypass tutor checks, flagging as Admin reply via content or special logic
-            // Ideally we'd have an 'is_admin' or 'user_id' column that isn't strictly foreign keyed to tutors.
-            // But `tutor_answers.tutor_id` is likely FK to Users or Tutors?
-            // Let's assume it references Users for flexibility or Tutors table.
-            // If it references Tutors table, Admin might fail if not a Tutor.
-            
-            // Text prefix for now is safest if we can't change schema easily.
             $final_content = "[ADMIN SUPPORT]: " . $content;
             
             try {
-                // We use the current admin's ID. If constraint fails, we'll know.
-                // Assuming tutor_answers(request_id, tutor_id, content, ...)
-                // IF tutor_id is FK to Tutors, this might fail.
-                // Let's check schema.
-                
-                // Workaround: Use the REQUEST'S assigned tutor ID but mark content clearly? 
-                // No, that looks like the tutor said it.
-                
-                // Let's try inserting with Admin ID. If it fails, we catch.
-                $stmt = $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, content, created_at) VALUES (?, ?, ?, NOW())");
-                // We actually don't have a good way to insert "Admin" if table requires a Tutor ID.
-                // Let's use the Request's Tutor ID but prepend very clearly.
-                // OR: Update schema to allow null tutor_id + added user_id?
-                
-                // Decision: For this turn, reuse the Request's Tutor ID but use a special prefix so it appears in the chat.
-                // Ideally, we should fix the schema later.
-                // Wait, if we use Request's Tutor ID, the system thinks the Tutor replied.
-                // Is there a `student_id` column? No.
-                
-                // Let's just insert. Using the Request's Tutor ID is the safest 'hack' to ensure FK constraints, 
-                // but we MUST make it clear in the text.
-                // Actually, if we use the admin's ID and they are not a tutor, it might fail FK user_id.
-                // Let's try the request's tutor_id for safety.
+                // Get request details for notifications
                 $request = getRequestDetails($req_id);
-                $stmt->execute([$req_id, $request['tutor_id'], $final_content]);
                 
-                // Update status to answered if pending?
-                 if ($request['status'] === 'pending') {
+                // Use the correct table structure: (request_id, tutor_id, sender_id, content)
+                $stmt = $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, sender_id, content) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$req_id, $request['tutor_id'], $user_id, $final_content]);
+                
+                // Update status to answered if pending
+                if ($request['status'] === 'pending') {
                     $pdo->prepare("UPDATE tutor_requests SET status = 'answered' WHERE id = ?")->execute([$req_id]);
                 }
                 
@@ -318,19 +292,23 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                         <div tabindex="0" role="button" class="btn btn-sm btn-error btn-xs animate-pulse text-white">Xử lý</div>
                                         <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 border border-base-200">
                                              <li>
-                                                <form method="POST" onsubmit="return confirm('Xác nhận: Trả tiền cho Tutor?');">
+                                                <form id="pay_form_<?= $req['id'] ?>" method="POST">
                                                     <input type="hidden" name="action" value="resolve_dispute">
                                                     <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
                                                     <input type="hidden" name="resolution" value="pay_tutor">
-                                                    <button type="submit" class="text-success"><i class="fa-solid fa-check"></i> Trả tiền Tutor</button>
+                                                    <button type="button" onclick="vsdConfirm({title: 'Xác nhận thanh toán', message: 'Xác nhận: Trả tiền cho Tutor?', confirmText: 'Đồng ý', onConfirm: () => document.getElementById('pay_form_<?= $req['id'] ?>').submit()})" class="text-success py-2 w-full text-left">
+                                                        <i class="fa-solid fa-check"></i> Trả tiền Tutor
+                                                    </button>
                                                 </form>
                                              </li>
                                              <li>
-                                                <form method="POST" onsubmit="return confirm('Xác nhận: Hoàn tiền cho Học viên?');">
+                                                <form id="refund_form_<?= $req['id'] ?>" method="POST">
                                                     <input type="hidden" name="action" value="resolve_dispute">
                                                     <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
                                                     <input type="hidden" name="resolution" value="refund_student">
-                                                    <button type="submit" class="text-error"><i class="fa-solid fa-rotate-left"></i> Hoàn tiền HS</button>
+                                                    <button type="button" onclick="vsdConfirm({title: 'Xác nhận hoàn tiền', message: 'Xác nhận: Hoàn tiền cho Học viên?', confirmText: 'Hoàn tiền', type: 'error', onConfirm: () => document.getElementById('refund_form_<?= $req['id'] ?>').submit()})" class="text-error py-2 w-full text-left">
+                                                        <i class="fa-solid fa-rotate-left"></i> Hoàn tiền HS
+                                                    </button>
                                                 </form>
                                              </li>
                                         </ul>
@@ -488,18 +466,33 @@ async function fetchAndShowModal(reqId) {
                                 </div>
                             </div>
 
-                            <!-- Answers -->
+                            <!-- Answers (Chat History) -->
                             <?php if(!empty($full_req['answers'])): ?>
-                                <?php foreach($full_req['answers'] as $ans): ?>
-                                    <div class="chat chat-start">
+                                <?php foreach($full_req['answers'] as $ans): 
+                                    $is_student_val = ($ans['sender_id'] == $req['student_id']);
+                                    $is_tutor_val = ($ans['sender_id'] == $req['tutor_id']);
+                                    $is_admin_val = (!$is_student_val && !$is_tutor_val);
+                                ?>
+                                    <div class="chat <?= $is_student_val ? 'chat-end' : 'chat-start' ?>">
                                         <div class="chat-header">
-                                            <?= htmlspecialchars($req['tutor_name']) ?> <time class="text-xs opacity-50"><?= date('H:i d/m', strtotime($ans['created_at'])) ?></time>
+                                            <span class="font-bold"><?= htmlspecialchars($ans['sender_name']) ?></span>
+                                            <?php if($is_admin_val): ?>
+                                                <span class="badge badge-error badge-xs text-[8px] h-3">Admin</span>
+                                            <?php endif; ?>
+                                            <time class="text-xs opacity-50"><?= date('H:i d/m', strtotime($ans['created_at'])) ?></time>
                                         </div>
-                                        <div class="chat-bubble chat-bubble-secondary text-secondary-content">
-                                            <?= nl2br(trim(htmlspecialchars($ans['content']))) ?>
+                                        <div class="chat-bubble shadow-sm <?= $is_student_val ? 'chat-bubble-primary' : ($is_admin_val ? 'bg-error text-error-content' : 'chat-bubble-secondary') ?>">
+                                            <?php 
+                                                // Handle admin prefix display
+                                                $display_content = $ans['content'];
+                                                if ($is_admin_val && strpos($display_content, '[ADMIN SUPPORT]: ') === 0) {
+                                                    $display_content = substr($display_content, strlen('[ADMIN SUPPORT]: '));
+                                                }
+                                                echo nl2br(trim(htmlspecialchars($display_content)));
+                                            ?>
                                             <?php if($ans['attachment']): ?>
-                                                <div class="divider my-1 border-white/20"></div>
-                                                <a href="/uploads/tutors/<?= $ans['attachment'] ?>" target="_blank" class="flex items-center gap-1 underline text-xs"><i class="fa-solid fa-paperclip"></i> File đính kèm</a>
+                                                <div class="divider my-1 opacity-20 border-white/20"></div>
+                                                <a href="/uploads/tutors/<?= $ans['attachment'] ?>" target="_blank" class="flex items-center gap-1 underline text-xs font-bold"><i class="fa-solid fa-paperclip"></i> File đính kèm</a>
                                             <?php endif; ?>
                                         </div>
                                     </div>

@@ -12,14 +12,7 @@ config/db.php
 API/pdfservices-api-credentials.json
 
 # Test & Debug Files
-test_*.php
-check_*.php
-debug_*.php
-verify_*.php
 apply_patch.php
-WebPushFixed.php
-phpini_*.txt
-PHPINI_SETUP.md
 
 # Vendor patches (auto-generated)
 vendor/minishlink/web-push/src/Encryption.php.patched.backup

@@ -23,7 +23,7 @@ if(isset($_GET['unsave'])) {
 
 // Fetch saved documents (AFTER unsave logic) - only approved documents
 $all_saved_docs = $VSD->get_list("
-    SELECT d.*, u.username FROM documents d 
+    SELECT d.*, u.username, u.avatar FROM documents d 
     JOIN users u ON d.user_id = u.id 
     JOIN document_interactions di ON d.id = di.document_id
     WHERE di.user_id = $user_id AND di.type = 'save' AND (d.status = 'approved' OR d.user_id = $user_id)
@@ -94,15 +94,24 @@ $total_saved = count($all_saved_docs);
                         </figure>
                         <div class="card-body p-4">
                             <h3 class="card-title text-sm line-clamp-2" title="' . htmlspecialchars($doc['original_name']) . '">' . htmlspecialchars(substr($doc['original_name'], 0, 25)) . '</h3>
-                            <p class="text-xs text-base-content/70">by ' . htmlspecialchars($doc['username']) . '</p>
-                            <p class="text-xs text-base-content/50">' . date('M d, Y', strtotime($doc['created_at'])) . '</p>';
+                            <div class="flex items-center gap-2 mt-1">
+                                <div class="avatar">
+                                    <div class="w-5 h-5 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
+                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
+                                            : '<i class="fa-solid fa-user text-[8px] text-primary"></i>') . '
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-base-content/60 font-medium">' . htmlspecialchars($doc['username']) . '</span>
+                            </div>
+                            <p class="text-[10px] text-base-content/40 mt-1">' . date('M d, Y', strtotime($doc['created_at'])) . '</p>';
                     if ($total_pages) {
                         echo '<p class="text-xs text-base-content/50"><i class="fa-solid fa-file-lines mr-1"></i>' . $total_pages . ' trang</p>';
                     }
                     echo '
                             <div class="card-actions justify-end mt-2">
                                 <a href="view.php?id=' . $doc['id'] . '" class="btn btn-sm btn-primary">View</a>
-                                <button class="btn btn-sm btn-error" onclick="if(confirm(\'Remove from saved?\')) window.location.href=\'saved.php?unsave=' . $doc['id'] . '\'">Unsave</button>
+                                <button class="btn btn-sm btn-error" onclick="vsdConfirm({title: \'Xác nhận bỏ lưu\', message: \'Bạn có chắc chắn muốn bỏ lưu tài liệu này?\', type: \'warning\', onConfirm: () => window.location.href=\'saved.php?unsave=' . $doc['id'] . '\'})">Unsave</button>
                             </div>
                         </div>
                     </div>

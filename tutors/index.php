@@ -60,9 +60,13 @@ $tutors = getActiveTutors($_GET);
                                     <div class="card-body flex-row gap-6 p-6">
                                         <!-- Avatar -->
                                         <div class="flex-none hidden md:block">
-                                            <div class="avatar placeholder">
-                                                <div class="bg-neutral text-neutral-content rounded-full w-24">
-                                                    <span class="text-3xl"><?= strtoupper(substr($tutor['username'], 0, 1)) ?></span>
+                                            <div class="avatar <?= !empty($tutor['avatar']) ? '' : 'placeholder' ?>">
+                                                <div class="rounded-full w-24 border border-base-300 overflow-hidden ring ring-offset-base-100 ring-4 ring-primary/10 <?= empty($tutor['avatar']) ? 'bg-primary text-primary-content flex items-center justify-center font-bold text-4xl' : '' ?>">
+                                                    <?php if(!empty($tutor['avatar']) && file_exists('../uploads/avatars/' . $tutor['avatar'])): ?>
+                                                        <img src="../uploads/avatars/<?= $tutor['avatar'] ?>" alt="Avatar" />
+                                                    <?php else: ?>
+                                                        <span><?= strtoupper(substr($tutor['username'], 0, 1)) ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                             <div class="text-center mt-2">
@@ -80,9 +84,13 @@ $tutors = getActiveTutors($_GET);
                                                     <div class="badge badge-primary">Gia sư</div>
                                                 </h2>
                                                 <!-- Mobile Avatar (visible only on small screens) -->
-                                                <div class="avatar placeholder md:hidden">
-                                                    <div class="bg-neutral text-neutral-content rounded-full w-12">
-                                                        <span class="text-xl"><?= strtoupper(substr($tutor['username'], 0, 1)) ?></span>
+                                                <div class="avatar <?= !empty($tutor['avatar']) ? '' : 'placeholder' ?> md:hidden">
+                                                    <div class="bg-neutral text-neutral-content rounded-full w-12 overflow-hidden ring ring-offset-base-100 ring-2 ring-primary/10">
+                                                        <?php if(!empty($tutor['avatar']) && file_exists('../uploads/avatars/' . $tutor['avatar'])): ?>
+                                                            <img src="../uploads/avatars/<?= $tutor['avatar'] ?>" alt="Avatar" />
+                                                        <?php else: ?>
+                                                            <span class="text-xl font-bold"><?= strtoupper(substr($tutor['username'], 0, 1)) ?></span>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>

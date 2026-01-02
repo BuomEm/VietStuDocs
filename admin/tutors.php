@@ -56,6 +56,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_type'] = "error";
         }
     }
+
+    if ($action === 'update_prices') {
+        $tutor_id = $_POST['tutor_id'] ?? 0;
+        $price_basic = intval($_POST['price_basic'] ?? 0);
+        $price_standard = intval($_POST['price_standard'] ?? 0);
+        $price_premium = intval($_POST['price_premium'] ?? 0);
+        
+        try {
+            $stmt = $pdo->prepare("UPDATE tutors SET price_basic = ?, price_standard = ?, price_premium = ? WHERE id = ?");
+            $stmt->execute([$price_basic, $price_standard, $price_premium, $tutor_id]);
+            
+            // Get user_id for notification
+            $stmt = $pdo->prepare("SELECT user_id FROM tutors WHERE id = ?");
+            $stmt->execute([$tutor_id]);
+            $uid = $stmt->fetchColumn();
+            
+            global $VSD;
+            $msg = "Admin đã điều chỉnh mức giá dịch vụ của bạn thành: $price_basic / $price_standard / $price_premium pts.";
+            $VSD->insert('notifications', [
+                'user_id' => $uid,
+                'title' => 'Điều chỉnh mức giá gia sư',
+                'message' => $msg,
+                'type' => 'price_updated'
+            ]);
+            
+            require_once __DIR__ . '/../push/send_push.php';
+            sendPushToUser($uid, [
+                'title' => 'Cập nhật mức giá 💰',
+                'body' => "Admin đã điều chỉnh lại mức giá gia sư của bạn.",
+                'url' => '/history.php?tab=notifications'
+            ]);
+
+            $_SESSION['flash_message'] = "Đã cập nhật mức giá và gửi thông báo cho gia sư.";
+            $_SESSION['flash_type'] = "success";
+        } catch(Exception $e) {
+            $_SESSION['flash_message'] = "Lỗi: " . $e->getMessage();
+            $_SESSION['flash_type'] = "error";
+        }
+    }
 }
 
 // Get pending registrations
@@ -65,6 +104,19 @@ $pending_registrations = $stmt->fetchAll();
 
 // Get pending profile updates
 $pending_updates = getPendingProfileUpdates();
+
+// Get all tutors for the full list
+$stmt = $pdo->prepare("SELECT t.*, u.username, u.email 
+                      FROM tutors t 
+                      JOIN users u ON t.user_id = u.id 
+                      ORDER BY CASE t.status 
+                        WHEN 'pending' THEN 1 
+                        WHEN 'active' THEN 2 
+                        WHEN 'rejected' THEN 3 
+                        WHEN 'banned' THEN 4 
+                      END ASC, t.created_at DESC");
+$stmt->execute();
+$all_tutors = $stmt->fetchAll();
 
 include __DIR__ . '/../includes/admin-header.php';
 ?>
@@ -158,6 +210,114 @@ include __DIR__ . '/../includes/admin-header.php';
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+
+        <!-- ALL TUTORS Section -->
+        <div class="divider my-10 uppercase tracking-widest opacity-30 text-[10px] font-bold">Danh sách tất cả Gia sư</div>
+        
+        <div class="card bg-base-100 shadow-xl border border-base-300">
+            <div class="overflow-x-auto min-h-[400px] pb-24">
+                <table class="table table-zebra w-full text-xs">
+                    <thead>
+                        <tr>
+                            <th>Gia sư</th>
+                            <th>Môn học</th>
+                            <th>Giá (B/S/P)</th>
+                            <th>Đánh giá</th>
+                            <th>Trạng thái</th>
+                            <th class="text-right">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($all_tutors as $tutor): ?>
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                                <span><?= substr($tutor['username'], 0, 1) ?></span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold whitespace-nowrap"><?= htmlspecialchars($tutor['username']) ?></div>
+                                            <div class="text-[10px] opacity-50"><?= htmlspecialchars($tutor['email']) ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="max-w-[150px] truncate"><?= htmlspecialchars($tutor['subjects']) ?></td>
+                                <td class="font-mono">
+                                    <form method="POST" class="flex flex-col gap-1 py-1">
+                                        <input type="hidden" name="action" value="update_prices">
+                                        <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" name="price_basic" value="<?= $tutor['price_basic'] ?>" class="input input-bordered input-xs w-14 h-5 px-1 text-[10px]" title="Basic">
+                                            <input type="number" name="price_standard" value="<?= $tutor['price_standard'] ?>" class="input input-bordered input-xs w-14 h-5 px-1 text-[10px]" title="Standard">
+                                            <input type="number" name="price_premium" value="<?= $tutor['price_premium'] ?>" class="input input-bordered input-xs w-14 h-5 px-1 text-[10px]" title="Premium">
+                                            <button type="submit" class="btn btn-ghost btn-xs btn-square h-5 min-h-0 w-5 opacity-40 hover:opacity-100 hover:text-primary transition-all">
+                                                <i class="fa-solid fa-floppy-disk text-[9px]"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                                <td>
+                                    <?php if($tutor['rating'] > 0): ?>
+                                        <div class="badge badge-warning badge-sm gap-1 font-bold h-auto py-0.5">
+                                            <i class="fa-solid fa-star text-[8px]"></i> <?= (float)$tutor['rating'] ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="opacity-30">--</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if($tutor['status'] === 'active'): ?>
+                                        <span class="badge badge-success badge-xs py-2 px-2">Hoạt động</span>
+                                    <?php elseif($tutor['status'] === 'pending'): ?>
+                                        <span class="badge badge-warning badge-xs py-2 px-2">Chờ duyệt</span>
+                                    <?php elseif($tutor['status'] === 'rejected'): ?>
+                                        <span class="badge badge-error badge-xs badge-outline py-2 px-2">Từ chối</span>
+                                    <?php elseif($tutor['status'] === 'banned'): ?>
+                                        <span class="badge badge-ghost badge-xs py-2 px-2">Bị khóa</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-right">
+                                    <div class="dropdown dropdown-bottom dropdown-end dropdown-hover">
+                                        <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square"><i class="fa-solid fa-ellipsis-vertical"></i></div>
+                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40 border border-base-200">
+                                            <?php if($tutor['status'] !== 'active'): ?>
+                                                <li>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="action" value="process_registration">
+                                                        <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
+                                                        <button name="status" value="active" class="text-success py-2"><i class="fa-solid fa-check"></i> Kích hoạt</button>
+                                                    </form>
+                                                </li>
+                                            <?php endif; ?>
+                                            <?php if($tutor['status'] !== 'banned'): ?>
+                                                <li>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="action" value="process_registration">
+                                                        <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
+                                                        <button name="status" value="banned" class="text-error py-2"><i class="fa-solid fa-ban"></i> Khóa hồ sơ</button>
+                                                    </form>
+                                                </li>
+                                            <?php endif; ?>
+                                            <?php if($tutor['status'] === 'active'): ?>
+                                                <li>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="action" value="process_registration">
+                                                        <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
+                                                        <button name="status" value="rejected" class="text-warning py-2"><i class="fa-solid fa-xmark"></i> Hủy duyệt</button>
+                                                    </form>
+                                                </li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 

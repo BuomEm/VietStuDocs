@@ -76,13 +76,35 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                             <div class="divider my-2">Thông tin chi tiết</div>
                             
                             <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
+                                <div class="flex flex-col gap-1">
                                     <span class="text-base-content/60">Người hỏi:</span>
-                                    <span class="font-bold"><?= htmlspecialchars($request['student_name']) ?></span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="avatar <?= !empty($request['student_avatar']) ? '' : 'placeholder' ?>">
+                                            <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-primary/10 <?= empty($request['student_avatar']) ? 'bg-primary text-primary-content flex items-center justify-center font-bold text-xs' : '' ?>">
+                                                <?php if(!empty($request['student_avatar']) && file_exists('../uploads/avatars/' . $request['student_avatar'])): ?>
+                                                    <img src="../uploads/avatars/<?= $request['student_avatar'] ?>" alt="Student Avatar" />
+                                                <?php else: ?>
+                                                    <span><?= strtoupper(substr($request['student_name'], 0, 1)) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <span class="font-bold"><?= htmlspecialchars($request['student_name']) ?></span>
+                                    </div>
                                 </div>
-                                <div>
+                                <div class="flex flex-col gap-1">
                                     <span class="text-base-content/60">Gia sư:</span>
-                                    <span class="font-bold"><?= htmlspecialchars($request['tutor_name']) ?></span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="avatar <?= !empty($request['tutor_avatar']) ? '' : 'placeholder' ?>">
+                                            <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-success/10 <?= empty($request['tutor_avatar']) ? 'bg-success text-success-content flex items-center justify-center font-bold text-xs' : '' ?>">
+                                                <?php if(!empty($request['tutor_avatar']) && file_exists('../uploads/avatars/' . $request['tutor_avatar'])): ?>
+                                                    <img src="../uploads/avatars/<?= $request['tutor_avatar'] ?>" alt="Tutor Avatar" />
+                                                <?php else: ?>
+                                                    <span><?= strtoupper(substr($request['tutor_name'], 0, 1)) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <span class="font-bold"><?= htmlspecialchars($request['tutor_name']) ?></span>
+                                    </div>
                                 </div>
                                 <div>
                                     <span class="text-base-content/60">Gói:</span>
@@ -97,18 +119,21 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                     </div>
 
                     <!-- Conversation Section -->
+                    <div id="conversationSection">
                     <?php if (!empty($request['answers'])): ?>
                         <?php foreach($request['answers'] as $index => $msg): ?>
                             <?php 
                                 $is_me = ($msg['sender_id'] == $user_id);
                                 $is_sender_tutor = ($msg['sender_id'] == $request['tutor_id']);
                             ?>
-                            <div class="chat <?= $is_me ? 'chat-end' : 'chat-start' ?> mb-4">
-                                <div class="chat-image avatar">
-                                    <div class="w-10 rounded-full border border-base-300">
-                                        <div class="bg-neutral-focus text-neutral-content rounded-full w-10 flex items-center justify-center font-bold">
-                                            <?= substr($msg['sender_name'], 0, 1) ?>
-                                        </div>
+                            <div class="chat <?= $is_me ? 'chat-end' : 'chat-start' ?> mb-4" data-msg-id="<?= $msg['id'] ?>">
+                                <div class="chat-image avatar <?= !empty($msg['sender_avatar']) ? '' : 'placeholder' ?>">
+                                    <div class="w-10 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-2 <?= $is_me ? 'ring-primary/20' : 'ring-secondary/20' ?> <?= empty($msg['sender_avatar']) ? ($is_sender_tutor ? 'bg-success text-success-content' : 'bg-primary text-primary-content') . ' flex items-center justify-center font-bold' : '' ?>">
+                                        <?php if(!empty($msg['sender_avatar']) && file_exists('../uploads/avatars/' . $msg['sender_avatar'])): ?>
+                                            <img src="../uploads/avatars/<?= $msg['sender_avatar'] ?>" alt="Avatar" />
+                                        <?php else: ?>
+                                            <span><?= strtoupper(substr($msg['sender_name'], 0, 1)) ?></span>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="chat-header opacity-50 text-xs mb-1">
@@ -132,6 +157,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                    </div>
 
                     <!-- Rating Section (For Student to Rate) - Show if status is answered (not completed/disputed) -->
                     <?php if ($request['status'] === 'answered' && $is_student): ?>
@@ -281,6 +307,18 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
 </div>
 
 <script>
+const CURRENT_USER_ID = <?= $user_id ?>;
+const REQUEST_ID = <?= $request_id ?>;
+const TUTOR_ID = <?= $request['tutor_id'] ?>;
+let lastMsgId = 0;
+let currentStatus = '<?= $request['status'] ?>';
+
+// Update lastMsgId from existing messages
+document.querySelectorAll('[data-msg-id]').forEach(msg => {
+    const id = parseInt(msg.dataset.msgId);
+    if(id > lastMsgId) lastMsgId = id;
+});
+
 // Generic handler for tutor request actions
 async function handleTutorAction(formId, action) {
     const form = document.getElementById(formId);
@@ -288,6 +326,9 @@ async function handleTutorAction(formId, action) {
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+
         const formData = new FormData(this);
         formData.append('action', action);
         
@@ -299,41 +340,148 @@ async function handleTutorAction(formId, action) {
             const data = await res.json();
             
             if(data.success) {
-                alert(data.message);
-                location.reload();
+                // For chat/answer messages, we don't need alert/reload anymore
+                if (action === 'send_chat_message' || action === 'answer_request' || action === 'student_chat') {
+                    form.reset();
+                    pollMessages(); // Poll immediately
+                } else {
+                    alert(data.message);
+                    location.reload();
+                }
             } else {
                 alert(data.message);
             }
         } catch (err) {
             console.error(err);
+        } finally {
+            btn.disabled = false;
         }
     });
 }
 
-// Manual Finish Request for Tutor
-async function finishRequestManual() {
-    if(!confirm('Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi hoàn tất, bạn không thể gửi thêm tin nhắn và học viên sẽ thực hiện đánh giá.')) return;
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+function renderMessage(msg) {
+    const isMe = msg.sender_id == CURRENT_USER_ID;
+    const isSenderTutor = msg.sender_id == TUTOR_ID;
+    const side = isMe ? 'chat-end' : 'chat-start';
+    const bubbleClass = isSenderTutor ? 'chat-bubble-success bg-success/20 text-success-content' : 'chat-bubble-primary';
+    const ringClass = isMe ? 'ring-primary/20' : 'ring-secondary/20';
+    const roleTxt = isSenderTutor ? 'Gia sư' : 'Học viên';
     
+    // Format time
+    const time = new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+    let avatarContent = '';
+    let placeholderClasses = '';
+    if(msg.sender_avatar) {
+        avatarContent = `<img src="../uploads/avatars/${msg.sender_avatar}" alt="Avatar" />`;
+    } else {
+        const bg = isSenderTutor ? 'bg-success text-success-content' : 'bg-primary text-primary-content';
+        placeholderClasses = `${bg} flex items-center justify-center font-bold`;
+        avatarContent = `<span>${msg.sender_name.charAt(0).toUpperCase()}</span>`;
+    }
+
+    let attachmentHtml = '';
+    if(msg.attachment) {
+        attachmentHtml = `
+            <div class="mt-2 pt-2 border-t border-base-content/10">
+                <a href="/uploads/tutors/${msg.attachment}" download class="btn btn-xs btn-ghost gap-1">
+                    <i class="fa-solid fa-paperclip"></i> File đính kèm
+                </a>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="chat ${side} mb-4" data-msg-id="${msg.id}">
+            <div class="chat-image avatar ${msg.sender_avatar ? '' : 'placeholder'}">
+                <div class="w-10 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-2 ${ringClass} ${placeholderClasses}">
+                    ${avatarContent}
+                </div>
+            </div>
+            <div class="chat-header opacity-50 text-xs mb-1">
+                ${msg.sender_name}
+                <time class="text-[10px]">${time}</time>
+            </div>
+            <div class="chat-bubble shadow-sm ${bubbleClass} text-sm">
+                <div class="whitespace-pre-wrap">${msg.content.trim()}</div>
+                ${attachmentHtml}
+            </div>
+            <div class="chat-footer opacity-50 text-[10px]">
+                ${roleTxt}
+            </div>
+        </div>
+    `;
+}
+
+async function pollMessages() {
     try {
-        const formData = new FormData();
-        formData.append('action', 'finish_request');
-        formData.append('request_id', <?= $request['id'] ?>);
-        
-        const res = await fetch('/api/tutor_chat.php', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch(`/api/tutor_chat.php?action=poll_messages&request_id=${REQUEST_ID}&last_id=${lastMsgId}`);
         const data = await res.json();
         
         if(data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert(data.message);
+            if(data.messages.length > 0) {
+                const container = document.getElementById('conversationSection');
+                data.messages.forEach(msg => {
+                    if(parseInt(msg.id) > lastMsgId) {
+                        container.innerHTML += renderMessage(msg);
+                        lastMsgId = parseInt(msg.id);
+                    }
+                });
+                scrollToBottom();
+            }
+
+            // If status changed, reload to update UI (forms, badges etc)
+            if(data.status && data.status !== currentStatus) {
+                setTimeout(() => location.reload(), 2000); // Small delay to let user see the final message
+            }
         }
+        
+        // If status changed to something that requires reload (e.g. completed)
+        // But status in detail is stable usually.
     } catch (err) {
-        console.error(err);
+        console.error('Polling error:', err);
     }
+}
+
+// Start polling every 3 seconds
+setInterval(pollMessages, 3000);
+
+async function finishRequestManual() {
+    vsdConfirm({
+        title: 'Xác nhận hoàn tất',
+        message: 'Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi hoàn tất, bạn không thể gửi thêm tin nhắn và học viên sẽ thực hiện đánh giá.',
+        type: 'success',
+        confirmText: 'Kết thúc ngay',
+        onConfirm: async function() {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'finish_request');
+                formData.append('request_id', <?= $request['id'] ?>);
+                
+                const res = await fetch('/api/tutor_chat.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    });
 }
 
 // Initialize all forms

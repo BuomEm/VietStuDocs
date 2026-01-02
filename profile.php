@@ -37,6 +37,40 @@ $current_page = 'profile';
 $error = '';
 $success = '';
 
+// Handle avatar upload
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
+    if (!file_exists('uploads/avatars')) {
+        mkdir('uploads/avatars', 0777, true);
+    }
+
+    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+    $filename = $_FILES['avatar']['name'];
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+    if (in_array($ext, $allowed)) {
+        $new_name = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
+        $destination = 'uploads/avatars/' . $new_name;
+
+        if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
+            // Delete old avatar
+            if (!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])) {
+                @unlink('uploads/avatars/' . $user['avatar']);
+            }
+
+            if ($VSD->query("UPDATE users SET avatar = '$new_name' WHERE id = $user_id")) {
+                $success = "Avatar updated successfully";
+                $user = getUserInfo($user_id);
+            } else {
+                $error = "Database update failed";
+            }
+        } else {
+            $error = "Failed to upload file";
+        }
+    } else {
+        $error = "Invalid file type. Only JPG, PNG, and GIF allowed.";
+    }
+}
+
 // Handle profile update
 if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     $username = $_POST['username'];
@@ -106,13 +140,27 @@ $saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN d
         <!-- Profile Info Card -->
         <div class="card bg-base-100 shadow-xl mb-6">
             <div class="card-body">
-                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-base-300">
-                    <div class="avatar placeholder">
-                        <div class="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
-                            <i class="fa-solid fa-user text-3xl text-primary-content"></i>
+                <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-base-200">
+                    <div class="relative group">
+                        <div class="avatar">
+                            <div class="w-24 h-24 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden bg-base-200">
+                                <?php if(!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])): ?>
+                                    <img src="uploads/avatars/<?= $user['avatar'] ?>" alt="Avatar" class="object-cover w-full h-full" />
+                                <?php else: ?>
+                                    <div class="flex items-center justify-center w-full h-full text-primary">
+                                        <i class="fa-solid fa-user text-4xl"></i>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
+                        <button onclick="document.getElementById('avatar-input').click()" class="absolute bottom-0 right-0 btn btn-circle btn-sm btn-primary shadow-lg border-2 border-base-100 hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-camera text-xs"></i>
+                        </button>
+                        <form id="avatar-form" method="POST" enctype="multipart/form-data" class="hidden">
+                            <input type="file" id="avatar-input" name="avatar" accept="image/*" onchange="document.getElementById('avatar-form').submit()">
+                        </form>
                     </div>
-                    <div>
+                    <div class="text-center sm:text-left">
                         <h2 class="text-2xl font-bold"><?= htmlspecialchars($user['username']) ?></h2>
                         <p class="text-base-content/70 flex items-center gap-1">
                             <i class="fa-solid fa-envelope w-4 h-4"></i>

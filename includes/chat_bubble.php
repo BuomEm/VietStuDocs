@@ -393,17 +393,24 @@ function stopPolling() {
 }
 
 async function finishChatRequest() {
-    if(!confirm('Xác nhận hoàn tất hỗ trợ? Cả hai bên sẽ không thể nhắn tin nữa và học viên sẽ nhận được yêu cầu đánh giá.')) return;
-    try {
-        const formData = new FormData();
-        formData.append('action', 'finish_request');
-        formData.append('request_id', activeRequestId);
-        const res = await fetch('/api/tutor_chat.php', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) {
-            openConversation(activeRequestId);
+    vsdConfirm({
+        title: 'Hoàn tất hỗ trợ',
+        message: 'Xác nhận hoàn tất hỗ trợ? Cả hai bên sẽ không thể nhắn tin nữa và học viên sẽ nhận được yêu cầu đánh giá.',
+        confirmText: 'Hoàn tất',
+        type: 'success',
+        onConfirm: async () => {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'finish_request');
+                formData.append('request_id', activeRequestId);
+                const res = await fetch('/api/tutor_chat.php', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    openConversation(activeRequestId);
+                }
+            } catch (err) { console.error(err); }
         }
-    } catch (err) { console.error(err); }
+    });
 }
 
 function handleFileSelect(input) {

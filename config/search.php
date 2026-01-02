@@ -114,6 +114,7 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
         SELECT DISTINCT
             d.*,
             u.username,
+            u.avatar,
             (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points,
             " . ($relevance_score ? "$relevance_score as relevance_score," : "") . "
             (d.views + d.downloads * 2) as popularity_score
@@ -232,6 +233,7 @@ function getFeaturedDocuments($limit = 20) {
         SELECT 
             d.*,
             u.username,
+            u.avatar,
             (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points,
             (d.views + d.downloads * 2) as popularity_score
         FROM documents d

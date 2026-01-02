@@ -111,7 +111,7 @@ $total_pages = ceil($total_users / $per_page);
 
 // Get users with points
 $users_query = "
-    SELECT u.id, u.username, u.email, u.role, u.created_at,
+    SELECT u.id, u.username, u.email, u.role, u.avatar, u.created_at,
            COALESCE(up.current_points, 0) as points,
            COALESCE(up.total_earned, 0) as total_earned,
            COALESCE(up.total_spent, 0) as total_spent,
@@ -279,9 +279,13 @@ include __DIR__ . '/../includes/admin-header.php';
                                     <td class="text-base-content/70"><?= $user['id'] ?></td>
                                     <td>
                                         <div class="flex items-center gap-3">
-                                            <div class="avatar placeholder">
-                                                <div class="<?= $user['role'] === 'admin' ? 'bg-secondary' : 'bg-info' ?> text-white rounded-full w-10">
-                                                    <span class="text-sm"><?= strtoupper(substr($user['username'], 0, 2)) ?></span>
+                                            <div class="avatar <?= !empty($user['avatar']) ? '' : 'placeholder' ?>">
+                                                <div class="<?= $user['role'] === 'admin' ? 'bg-secondary' : 'bg-info' ?> text-white rounded-full w-10 overflow-hidden ring ring-offset-base-100 ring-offset-2 <?= !empty($user['avatar']) ? 'ring-primary/20' : '' ?>">
+                                                    <?php if(!empty($user['avatar']) && file_exists('../uploads/avatars/' . $user['avatar'])): ?>
+                                                        <img src="../uploads/avatars/<?= $user['avatar'] ?>" alt="Avatar" />
+                                                    <?php else: ?>
+                                                        <span class="text-sm font-bold"><?= strtoupper(substr($user['username'], 0, 2)) ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                             <div>
@@ -474,16 +478,21 @@ include __DIR__ . '/../includes/admin-header.php';
             ? 'Bạn có chắc muốn gỡ quyền Admin của người dùng này?' 
             : 'Bạn có chắc muốn cấp quyền Admin cho người dùng này?';
         
-        if(confirm(message)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = `
-                <input type="hidden" name="user_id" value="${userId}">
-                <input type="hidden" name="action" value="toggle_role">
-            `;
-            document.body.appendChild(form);
-            form.submit();
-        }
+        vsdConfirm({
+            title: 'Thay đổi quyền hạn',
+            message: message,
+            type: 'warning',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="user_id" value="${userId}">
+                    <input type="hidden" name="action" value="toggle_role">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
     }
 </script>
 

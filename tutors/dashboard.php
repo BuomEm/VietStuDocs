@@ -17,7 +17,7 @@ $incoming_requests = $is_tutor ? getRequestsForTutor($user_id) : [];
 // Get my requests (as student)
 // We need a helper for this, adding ad-hoc query here for speed
 $pdo = getTutorDBConnection();
-$stmt = $pdo->prepare("SELECT r.*, t.username as tutor_name 
+$stmt = $pdo->prepare("SELECT r.*, t.username as tutor_name, t.avatar as tutor_avatar 
                       FROM tutor_requests r 
                       JOIN users t ON r.tutor_id = t.id 
                       WHERE r.student_id = ? 
@@ -128,11 +128,17 @@ $my_requests = $stmt->fetchAll();
                                                     <span class="badge badge-warning badge-sm animate-pulse">Mới</span>
                                                 <?php endif; ?>
                                             </h4>
-                                            <div class="flex items-center gap-2 mt-2 text-sm">
-                                                <div class="avatar placeholder w-6 h-6 rounded-full bg-neutral text-neutral-content text-[10px] flex items-center justify-center">
-                                                    <span><?= strtoupper(substr($req['student_name'], 0, 1)) ?></span>
+                                            <div class="flex items-center gap-2 mt-2 text-sm bg-base-100 px-2 py-1 rounded-full border border-base-200">
+                                                <div class="avatar <?= !empty($req['student_avatar']) ? '' : 'placeholder' ?>">
+                                                    <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-primary/10 <?= empty($req['student_avatar']) ? 'bg-primary text-primary-content flex items-center justify-center font-bold text-[10px]' : '' ?>">
+                                                        <?php if(!empty($req['student_avatar']) && file_exists('../uploads/avatars/' . $req['student_avatar'])): ?>
+                                                            <img src="../uploads/avatars/<?= $req['student_avatar'] ?>" alt="Student Avatar" />
+                                                        <?php else: ?>
+                                                            <span><?= strtoupper(substr($req['student_name'], 0, 1)) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </div>
-                                                <span class="font-medium"><?= htmlspecialchars($req['student_name']) ?></span>
+                                                <span class="font-medium text-xs"><?= htmlspecialchars($req['student_name']) ?></span>
                                             </div>
                                             <p class="mt-3 text-base-content/80 line-clamp-2 text-sm bg-base-200/50 p-3 rounded-lg border border-base-200">
                                                 <?= htmlspecialchars($req['content']) ?>
@@ -216,8 +222,14 @@ $my_requests = $stmt->fetchAll();
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <div class="avatar placeholder w-6 h-6 rounded-full bg-neutral text-neutral-content text-[10px] flex items-center justify-center">
-                                                <span><?= strtoupper(substr($req['tutor_name'], 0, 1)) ?></span>
+                                            <div class="avatar <?= !empty($req['tutor_avatar']) ? '' : 'placeholder' ?>">
+                                                <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-success/10 <?= empty($req['tutor_avatar']) ? 'bg-success text-success-content flex items-center justify-center font-bold text-[10px]' : '' ?>">
+                                                    <?php if(!empty($req['tutor_avatar']) && file_exists('../uploads/avatars/' . $req['tutor_avatar'])): ?>
+                                                        <img src="../uploads/avatars/<?= $req['tutor_avatar'] ?>" alt="Tutor Avatar" />
+                                                    <?php else: ?>
+                                                        <span><?= strtoupper(substr($req['tutor_name'], 0, 1)) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
                                             <span class="font-medium text-sm"><?= htmlspecialchars($req['tutor_name']) ?></span>
                                         </div>

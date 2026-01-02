@@ -66,7 +66,7 @@ function registerUser($username, $email, $password) {
 
 function getUserInfo($user_id) {
     $user_id = intval($user_id);
-    return db_get_row("SELECT id, username, email, created_at, verified_documents_count FROM users WHERE id=$user_id");
+    return db_get_row("SELECT id, username, email, avatar, created_at, verified_documents_count FROM users WHERE id=$user_id");
 }
 
 function updateUserProfile($user_id, $username, $email) {

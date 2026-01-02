@@ -39,6 +39,31 @@ $education_levels = getEducationLevels();
 
 // Handle form submission
 if($_SERVER["REQUEST_METHOD"] == "POST") {
+    if(isset($_POST['action']) && $_POST['action'] === 'delete') {
+        // Double check ownership (already checked in $doc fetch)
+        $file_path = "uploads/" . $doc['file_name'];
+        if(file_exists($file_path)) {
+            unlink($file_path);
+        }
+        
+        // Delete thumbnail if it exists
+        if (!empty($doc['thumbnail_path']) && file_exists($doc['thumbnail_path'])) {
+            unlink($doc['thumbnail_path']);
+        }
+        
+        // Delete converted PDF if it exists
+        if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
+            unlink($doc['converted_pdf_path']);
+        }
+
+        if(db_query("DELETE FROM documents WHERE id=$doc_id AND user_id=$user_id")) {
+            header("Location: dashboard.php?msg=deleted");
+            exit;
+        } else {
+            $error = "Lỗi khi xóa tài liệu: " . db_error();
+        }
+    }
+    
     $description = !empty($_POST['description']) ? db_escape(trim($_POST['description'])) : '';
     $is_public = isset($_POST['is_public']) && $_POST['is_public'] == '1' ? 1 : 0;
     
@@ -299,13 +324,24 @@ $current_page = 'dashboard';
                             </div>
                         </div>
                         
-                        <div class="card-actions justify-end mt-6">
-                            <a href="dashboard.php" class="btn btn-ghost">← Hủy</a>
-                            <button type="submit" class="btn btn-primary flex items-center gap-2">
-                                <i class="fa-solid fa-circle-check"></i>
-                                Lưu Thay Đổi
+                        <div class="card-actions justify-between mt-6">
+                            <button type="button" onclick="confirmDelete()" class="btn btn-error btn-outline flex items-center gap-2">
+                                <i class="fa-solid fa-trash-can"></i>
+                                Xóa Tài Liệu
                             </button>
+                            <div class="flex gap-2">
+                                <a href="dashboard.php" class="btn btn-ghost">Hủy</a>
+                                <button type="submit" class="btn btn-primary flex items-center gap-2">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    Lưu Thay Đổi
+                                </button>
+                            </div>
                         </div>
+                    </form>
+                    
+                    <!-- Delete Confirmation Form -->
+                    <form id="deleteForm" method="POST" class="hidden">
+                        <input type="hidden" name="action" value="delete">
                     </form>
                 </div>
             </div>
@@ -612,6 +648,16 @@ function updateSummary() {
     } else {
         categorySummary.classList.add('hidden');
     }
+}
+
+function confirmDelete() {
+    vsdConfirm({
+        title: 'Xác nhận xóa tài liệu',
+        message: 'Bạn có chắc chắn muốn xóa tài liệu này không? Hành động này không thể hoàn tác và tất cả tệp tin liên quan sẽ bị xóa vĩnh viễn.',
+        confirmText: 'Xóa vĩnh viễn',
+        type: 'error',
+        onConfirm: () => document.getElementById('deleteForm').submit()
+    });
 }
 </script>
 

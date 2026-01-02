@@ -19,7 +19,7 @@ $current_page = 'view';
 $doc_id = intval($_GET['id'] ?? 0);
 
 // First check if document exists at all (any status)
-$check_query = "SELECT d.*, u.username FROM documents d 
+$check_query = "SELECT d.*, u.username, u.avatar FROM documents d 
                 JOIN users u ON d.user_id = u.id 
                 WHERE d.id=$doc_id";
 $doc_check = $VSD->get_row($check_query);
@@ -955,8 +955,19 @@ include 'includes/sidebar.php';
                                 <span class="badge badge-success">✓ Đã Mua</span>
                             <?php endif; ?>
                         </h1>
-                        <div class="flex gap-4 text-sm text-base-content/70 mt-2 flex-wrap">
-                            <span>by <strong><?= htmlspecialchars($doc['username']) ?></strong></span>
+                        <div class="flex gap-4 items-center text-sm text-base-content/70 mt-3 flex-wrap">
+                            <div class="flex items-center gap-2 bg-base-200 px-3 py-1.5 rounded-full border border-base-300">
+                                <div class="avatar">
+                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
+                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" alt="Avatar" />
+                                        <?php else: ?>
+                                            <span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <span class="flex items-center gap-1">by <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="font-bold text-base-content hover:text-primary hover:underline transition-colors"><?= htmlspecialchars($doc['username']) ?></a></span>
+                            </div>
                             <span class="flex items-center gap-1">
                                 <i class="fa-regular fa-calendar"></i>
                                 <?= date('M d, Y', strtotime($doc['created_at'])) ?>

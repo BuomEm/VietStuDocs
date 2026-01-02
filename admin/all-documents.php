@@ -150,7 +150,7 @@ $total_pages = ceil($total_documents / $per_page);
 // Get documents
 $documents_query = "
     SELECT d.*, 
-           u.username, u.email,
+           u.username, u.email, u.avatar,
            dp.admin_points as assigned_points,
            aa.reviewed_by, aa.reviewed_at, aa.rejection_reason,
            (SELECT COUNT(*) FROM document_sales WHERE document_id=d.id) as sales_count,
@@ -449,9 +449,13 @@ include __DIR__ . '/../includes/admin-header.php';
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <div class="avatar placeholder">
-                                                <div class="bg-neutral text-neutral-content rounded-full w-8">
-                                                    <span class="text-xs"><?= strtoupper(substr($doc['username'] ?? 'U', 0, 2)) ?></span>
+                                            <div class="avatar <?= !empty($doc['avatar']) ? '' : 'placeholder' ?>">
+                                                <div class="bg-neutral text-neutral-content rounded-full w-8 overflow-hidden ring ring-offset-base-100 ring-2 ring-primary/10">
+                                                    <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
+                                                        <img src="../uploads/avatars/<?= $doc['avatar'] ?>" alt="Avatar" />
+                                                    <?php else: ?>
+                                                        <span class="text-xs font-bold"><?= strtoupper(substr($doc['username'] ?? 'U', 0, 2)) ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                             <div>
@@ -832,16 +836,22 @@ include __DIR__ . '/../includes/admin-header.php';
         }
 
         function deleteDocument(docId, docTitle) {
-        if(confirm(`Bạn có chắc chắn muốn xóa "${docTitle}"?\n\nHành động này không thể hoàn tác!`)) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="document_id" value="${docId}">
-                    <input type="hidden" name="action" value="delete">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
+            vsdConfirm({
+                title: 'Xác nhận xóa vĩnh viễn',
+                message: `Bạn có chắc chắn muốn xóa "${docTitle}"?\n\nHành động này không thể hoàn tác!`,
+                confirmText: 'Xóa vĩnh viễn',
+                type: 'error',
+                onConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = `
+                        <input type="hidden" name="document_id" value="${docId}">
+                        <input type="hidden" name="action" value="delete">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
         }
 
         function openBatchThumbnailModal() {

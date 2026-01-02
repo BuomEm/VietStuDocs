@@ -18,11 +18,11 @@ $page_title = "Dashboard - DocShare";
 $current_page = 'dashboard';
 
 // Fetch user's documents
-$my_docs = $VSD->get_list("SELECT * FROM documents WHERE user_id=$user_id ORDER BY created_at DESC");
+$my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar FROM documents d JOIN users u ON d.user_id = u.id WHERE d.user_id=$user_id ORDER BY d.created_at DESC");
 
 // Fetch all public documents from others (only approved)
 $public_docs = $VSD->get_list("
-    SELECT d.*, u.username FROM documents d 
+    SELECT d.*, u.username, u.avatar FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE d.is_public = TRUE AND d.user_id != $user_id AND d.status = 'approved'
     ORDER BY d.created_at DESC
@@ -300,7 +300,17 @@ if(isset($_GET['download'])) {
                         </figure>
                         <div class="card-body p-4">
                             <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
-                            <p class="text-xs text-base-content/70">' . htmlspecialchars($doc_type) . '</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <div class="avatar ' . (empty($doc['avatar']) ? 'placeholder' : '') . '">
+                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
+                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
+                                            : '<span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>') . '
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-base-content/60 font-medium">Tôi</span>
+                                <span class="text-[10px] text-base-content/40">• ' . htmlspecialchars($doc_type) . '</span>
+                            </div>
                             <div class="card-actions justify-center mt-2">
                                 <div class="flex items-center gap-2 w-full">
                                     <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
@@ -543,7 +553,17 @@ if(isset($_GET['download'])) {
                         </figure>
                         <div class="card-body p-4">
                             <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
-                            <p class="text-xs text-base-content/70">' . htmlspecialchars($doc_type) . '</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <div class="avatar ' . (empty($doc['avatar']) ? 'placeholder' : '') . '">
+                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
+                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
+                                            : '<span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>') . '
+                                    </div>
+                                </div>
+                                <a href="user_profile.php?id=' . $doc['user_id'] . '" class="text-[10px] text-base-content/60 font-medium hover:text-primary hover:underline transition-colors">' . htmlspecialchars($doc['username']) . '</a>
+                                <span class="text-[10px] text-base-content/40">• ' . htmlspecialchars($doc_type) . '</span>
+                            </div>
                             <div class="card-actions justify-center mt-2">
                                 <div class="flex items-center gap-2 w-full">
                                     <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
