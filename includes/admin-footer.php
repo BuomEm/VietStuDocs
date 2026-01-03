@@ -16,5 +16,6 @@
             </footer>
         </div>
     </div>
+    <?php if(function_exists('renderGlobalModal')) renderGlobalModal(); ?>
 </body>
 </html>

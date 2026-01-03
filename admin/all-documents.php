@@ -97,7 +97,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $VSD->remove('point_transactions', "related_document_id=$id"); // Clean up points history related to this doc
                     
                     // 5. Delete associated notifications
-                    $VSD->remove('admin_notifications', "ref_id=$id AND type IN ('document_uploaded', 'document_approved', 'document_rejected', 'document_sold')");
+                    $VSD->remove('admin_notifications', "document_id=$id AND notification_type IN ('new_document', 'document_sold', 'system_alert', 'report')");
                     $VSD->remove('notifications', "ref_id=$id AND type IN ('document_approved', 'document_rejected', 'document_status_updated')");
 
                     // 6. Finally remove the document record
@@ -878,6 +878,14 @@ include __DIR__ . '/../includes/admin-header.php';
     <label class="modal-backdrop" for="batchThumbnailModal">Close</label>
     </div>
 
+    <!-- Hidden form for deletion -->
+    <form id="deleteForm" method="POST" style="display: none;">
+        <input type="hidden" name="action" id="deleteAction" value="delete">
+        <input type="hidden" name="document_id" id="deleteDocId" value="">
+        <div id="bulkDeleteIds"></div>
+    </form>
+
+
     <!-- PDF.js for thumbnail generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="../js/pdf-functions.js"></script>
@@ -900,74 +908,78 @@ include __DIR__ . '/../includes/admin-header.php';
         document.getElementById('changeStatusModal').checked = true;
         }
 
-        // Bulk Selection Logic
-        const selectAll = document.getElementById('selectAll');
-        const docCheckboxes = document.querySelectorAll('.doc-checkbox');
-        const bulkActionsBar = document.getElementById('bulkActionsBar');
-        const selectedCountSpan = document.getElementById('selectedCount');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Bulk Selection Logic
+            const selectAll = document.getElementById('selectAll');
+            const docCheckboxes = document.querySelectorAll('.doc-checkbox');
+            const bulkActionsBar = document.getElementById('bulkActionsBar');
+            const selectedCountSpan = document.getElementById('selectedCount');
 
-        if (selectAll) {
-            selectAll.addEventListener('change', function() {
-                docCheckboxes.forEach(cb => cb.checked = this.checked);
-                updateBulkActionsVisibility();
-            });
-        }
-
-        docCheckboxes.forEach(cb => {
-            cb.addEventListener('change', updateBulkActionsVisibility);
-        });
-
-        function updateBulkActionsVisibility() {
-            const checkedCount = document.querySelectorAll('.doc-checkbox:checked').length;
-            if (checkedCount > 0) {
-                bulkActionsBar.classList.remove('hidden');
-                selectedCountSpan.textContent = checkedCount;
-            } else {
-                bulkActionsBar.classList.add('hidden');
-                if (selectAll) selectAll.checked = false;
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    docCheckboxes.forEach(cb => cb.checked = this.checked);
+                    updateBulkActionsVisibility();
+                });
             }
-        }
 
-        function deleteSelected() {
-            const selectedIds = Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.value);
-            if (selectedIds.length === 0) return;
+            docCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateBulkActionsVisibility);
+            });
 
-            vsdConfirm({
-                title: 'Xóa hàng loạt',
-                message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} tài liệu đã chọn?\n\nHành động này không thể hoàn tác!`,
-                confirmText: 'Xóa vĩnh viễn',
-                type: 'error',
-                onConfirm: () => {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    let html = `<input type="hidden" name="action" value="delete_bulk">`;
-                    selectedIds.forEach(id => {
-                        html += `<input type="hidden" name="ids[]" value="${id}">`;
-                    });
-                    form.innerHTML = html;
-                    document.body.appendChild(form);
-                    form.submit();
+            function updateBulkActionsVisibility() {
+                const checkedCount = document.querySelectorAll('.doc-checkbox:checked').length;
+                if (checkedCount > 0) {
+                    bulkActionsBar.classList.remove('hidden');
+                    selectedCountSpan.textContent = checkedCount;
+                } else {
+                    bulkActionsBar.classList.add('hidden');
+                    if (selectAll) selectAll.checked = false;
                 }
-            });
-        }
-        function deleteDocument(docId, docTitle) {
-            vsdConfirm({
-                title: 'Xác nhận xóa vĩnh viễn',
-                message: `Bạn có chắc chắn muốn xóa "${docTitle}"?\n\nHành động này không thể hoàn tác!`,
-                confirmText: 'Xóa vĩnh viễn',
-                type: 'error',
-                onConfirm: () => {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.innerHTML = `
-                        <input type="hidden" name="document_id" value="${docId}">
-                        <input type="hidden" name="action" value="delete">
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        }
+            }
+
+            // Make sure these are globally available
+            window.deleteSelected = function() {
+                const selectedIds = Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0) return;
+
+                vsdConfirm({
+                    title: 'Xóa hàng loạt',
+                    message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} tài liệu đã chọn?\n\nHành động này không thể hoàn tác!`,
+                    confirmText: 'Xóa vĩnh viễn',
+                    type: 'error',
+                    onConfirm: () => {
+                        const form = document.getElementById('deleteForm');
+                        document.getElementById('deleteAction').value = 'delete_bulk';
+                        const container = document.getElementById('bulkDeleteIds');
+                        container.innerHTML = '';
+                        selectedIds.forEach(id => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'ids[]';
+                            input.value = id;
+                            container.appendChild(input);
+                        });
+                        form.submit();
+                    }
+                });
+            };
+
+            window.deleteDocument = function(docId, docTitle) {
+                vsdConfirm({
+                    title: 'Xác nhận xóa vĩnh viễn',
+                    message: `Bạn có chắc chắn muốn xóa "${docTitle}"?\n\nHành động này không thể hoàn tác!`,
+                    confirmText: 'Xóa vĩnh viễn',
+                    type: 'error',
+                    onConfirm: () => {
+                        const form = document.getElementById('deleteForm');
+                        document.getElementById('deleteAction').value = 'delete';
+                        document.getElementById('deleteDocId').value = docId;
+                        document.getElementById('bulkDeleteIds').innerHTML = '';
+                        form.submit();
+                    }
+                });
+            };
+        });
 
         function openBatchThumbnailModal() {
         document.getElementById('batchThumbnailModal').checked = true;
