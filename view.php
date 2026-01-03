@@ -362,26 +362,74 @@ include 'includes/sidebar.php';
     <style>
         /* PDF Viewer */
         
+        /* Modern PDF Viewer - Google Drive Style */
         .pdf-viewer {
             width: 100%;
-            height: 600px;
-            background: #f0f0f0;
+            height: 200vh; /* Larger view area to see full page */
+            background: oklch(var(--b2));
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .pdf-page {
-            margin: 10px 0;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .pdf-page canvas {
-            max-width: 100%;
+            position: relative;
+            scrollbar-gutter: stable;
             display: block;
+            padding: 40px 20px;
+            overscroll-behavior: contain;
+            border-radius: 16px; /* Bo card preview */
+        }
+
+
+        
+        .pdf-page-container {
+            margin: 0 auto 32px auto;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+
+        }
+
+        .pdf-page-container canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            transform: translateZ(0); /* Hardware acceleration */
+        }
+        
+        /* Floating Page Counter */
+        .pdf-page-counter {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .pdf-page-counter.active {
+            opacity: 1;
+        }
+
+        /* Page Border Highlight on Scroll? (Optional) */
+        
+        .page-loader {
+            transition: opacity 0.3s ease;
         }
         
         .image-viewer {
@@ -1156,7 +1204,7 @@ include 'includes/sidebar.php';
                     <i class="fa-solid fa-triangle-exclamation shrink-0 text-xl"></i>
                     <div>
                         <h3 class="font-bold">Bản Xem Trước</h3>
-                        <div class="text-sm">Bạn đang xem bản xem trước (3 trang đầu) của tài liệu này.</div>
+                        <div class="text-sm">Bạn đang xem bản xem trước (5 trang đầu) của tài liệu này.</div>
                         <div class="text-sm mt-1">Để xem toàn bộ tài liệu, vui lòng mua với giá <strong><?= number_format($price) ?> điểm</strong>.</div>
                         <div class="mt-3">
                             <?php if($is_logged_in): ?>
@@ -1175,7 +1223,12 @@ include 'includes/sidebar.php';
             
             switch($file_ext) {
                 case 'pdf':
-                    echo '<div class="pdf-viewer" id="pdfViewer"></div>';
+                    echo '<div class="pdf-viewer-wrapper relative">
+                            <div class="pdf-viewer" id="pdfViewer"></div>
+                            <div class="pdf-page-counter" id="pdfPageCounter">
+                                <span id="currentPageNum">1</span> / <span id="totalPagesNum">--</span>
+                            </div>
+                          </div>';
                     $pdf_path_for_preview = 'uploads/' . $doc['file_name'];
                     break;
                 case 'docx':
@@ -1183,7 +1236,12 @@ include 'includes/sidebar.php';
                     // Check if converted PDF exists - use it for preview instead of DOCX
                     if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
                         // Use PDF preview from converted PDF
-                        echo '<div class="pdf-viewer" id="pdfViewer"></div>';
+                        echo '<div class="pdf-viewer-wrapper relative">
+                                <div class="pdf-viewer" id="pdfViewer"></div>
+                                <div class="pdf-page-counter" id="pdfPageCounter">
+                                    <span id="currentPageNum">1</span> / <span id="totalPagesNum">--</span>
+                                </div>
+                              </div>';
                         // Store converted PDF path for JavaScript
                         $pdf_path_for_preview = $doc['converted_pdf_path'];
                     } else {
@@ -1495,11 +1553,221 @@ include 'includes/sidebar.php';
         </form>
     </dialog>
 
+
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-        
-        let pdfDoc = null;
-        let currentPage = 1;
+        // Global PDF.js configurations
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+
+        /**
+         * VSD Advanced PDF Viewer (Drive Style)
+         * High performance lazy loading with IntersectionObserver
+         */
+        class VsdPdfViewer {
+            constructor(viewerId, pdfPath, options = {}) {
+                this.viewer = document.getElementById(viewerId);
+                this.pdfPath = pdfPath;
+                this.options = {
+                    maxPreviewPages: options.maxPreviewPages || 5, // Default to 5 pages
+                    hasPurchased: options.hasPurchased || false,
+                    dprLimit: 3, // Increased for sharper rendering at larger sizes
+                    rootMargin: '2000px 0px', // Pre-load ~5 pages ahead
+
+                    ...options
+                };
+                
+                this.pdfDoc = null;
+                this.numPages = 0;
+                this.renderObserver = null;
+                this.trackObserver = null;
+                this.activePages = new Map(); // pageNum -> { renderTask, canvas }
+                this.pageCounter = document.getElementById('pdfPageCounter');
+                this.currentPageNumDisplay = document.getElementById('currentPageNum');
+                this.totalPagesNumDisplay = document.getElementById('totalPagesNum');
+                
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Set worker properly
+                    const loadingTask = pdfjsLib.getDocument({
+                        url: this.pdfPath,
+                        enableWebGL: true, // Use WebGL for better performance
+                        disableAutoFetch: true, // Lazy loading
+                        disableStream: false
+                    });
+                    
+                    this.pdfDoc = await loadingTask.promise;
+                    this.numPages = this.pdfDoc.numPages;
+                    
+                    if (this.totalPagesNumDisplay) {
+                        this.totalPagesNumDisplay.textContent = this.numPages;
+                    }
+
+                    await this.setupPlaceholders();
+                    this.setupObservers();
+                    
+                    // Show counter
+                    if (this.pageCounter) this.pageCounter.classList.add('active');
+                } catch (err) {
+                    console.error('PDF Init Error:', err);
+                    if (this.viewer) {
+                        this.viewer.innerHTML = `<div class="p-10 text-center text-error">
+                            <i class="fa-solid fa-triangle-exclamation text-4xl mb-2"></i>
+                            <p>Không thể hiển thị tài liệu: ${err.message}</p>
+                        </div>`;
+                    }
+                }
+            }
+
+            async setupPlaceholders() {
+                this.viewer.innerHTML = '';
+                // Get page 1 info for aspect ratio
+                const firstPage = await this.pdfDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                const aspectRatio = viewport.height / viewport.width;
+
+                for (let i = 1; i <= this.numPages; i++) {
+                    const container = document.createElement('div');
+                    container.className = 'pdf-page-container';
+                    container.id = `vsd-page-${i}`;
+                    container.dataset.page = i;
+                    
+                    // Maintain aspect ratio exactly
+                    container.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
+                    container.style.width = '100%';
+                    container.style.maxWidth = (viewport.width * 1.4) + 'px'; // Increased size by 40%
+
+                    // Loader element
+                    const loader = document.createElement('div');
+                    loader.className = 'page-loader absolute inset-0 flex flex-col items-center justify-center bg-base-100 z-10 transition-opacity duration-300';
+                    loader.innerHTML = `
+                        <span class="loading loading-spinner loading-md text-primary opacity-50"></span>
+                        <div class="mt-2 text-[10px] font-bold opacity-20 uppercase tracking-widest text-center">Trang ${i} / ${this.numPages}</div>
+                    `;
+                    container.appendChild(loader);
+
+                    // Blur logic for non-purchased
+                    if (!this.options.hasPurchased && i > this.options.maxPreviewPages) {
+                        container.classList.add('page-limit-blur');
+                        const blurLabel = document.createElement('div');
+                        blurLabel.className = 'absolute inset-0 flex items-center justify-center z-20 pointer-events-none';
+                        blurLabel.innerHTML = `<div class="bg-base-100/90 px-5 py-3 rounded-xl shadow-2xl font-bold text-sm border border-primary/20 backdrop-blur-sm">Mua tài liệu để xem đầy đủ</div>`;
+                        container.appendChild(blurLabel);
+                    }
+
+                    this.viewer.appendChild(container);
+                }
+            }
+
+            setupObservers() {
+                // 1. Rendering Observer (Load on approach, destroy on leave)
+                this.renderObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const pageNum = parseInt(entry.target.dataset.page);
+                        if (entry.isIntersecting) {
+                            this.renderPage(pageNum, entry.target);
+                        } else {
+                            this.destroyPage(pageNum);
+                        }
+                    });
+                }, {
+                    root: this.viewer,
+                    rootMargin: this.options.rootMargin, // Load ahead
+                    threshold: 0.01
+                });
+
+                // 2. Tracking Observer (Update page number indicator)
+                this.trackObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            if (this.currentPageNumDisplay) {
+                                this.currentPageNumDisplay.textContent = entry.target.dataset.page;
+                            }
+                        }
+                    });
+                }, {
+                    root: this.viewer,
+                    threshold: 0.51 // Trigger when more than half is visible
+                });
+
+                const pages = this.viewer.querySelectorAll('.pdf-page-container');
+                pages.forEach(el => {
+                    this.renderObserver.observe(el);
+                    this.trackObserver.observe(el);
+                });
+            }
+
+            async renderPage(pageNum, container) {
+                if (this.activePages.has(pageNum)) return; 
+                if (!this.options.hasPurchased && pageNum > this.options.maxPreviewPages) return;
+
+                try {
+                    const page = await this.pdfDoc.getPage(pageNum);
+                    const dpr = Math.min(window.devicePixelRatio || 1, this.options.dprLimit);
+                    const viewport = page.getViewport({ scale: 1 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d', { alpha: false });
+                    
+                    canvas.width = viewport.width * dpr;
+                    canvas.height = viewport.height * dpr;
+                    canvas.style.width = '100%';
+                    canvas.style.height = 'auto';
+                    canvas.style.opacity = '0';
+                    canvas.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: page.getViewport({ scale: dpr })
+                    };
+
+                    const renderTask = page.render(renderContext);
+                    this.activePages.set(pageNum, { renderTask, canvas });
+
+                    await renderTask.promise;
+                    
+                    // Show canvas
+                    container.appendChild(canvas);
+                    requestAnimationFrame(() => {
+                        canvas.style.opacity = '1';
+                        // Fade out loader
+                        const loader = container.querySelector('.page-loader');
+                        if (loader) {
+                            loader.style.opacity = '0';
+                            setTimeout(() => loader.remove(), 600);
+                        }
+                    });
+
+                } catch (err) {
+                    if (err.name === 'RenderingCancelledException') return;
+                    console.warn(`Render error page ${pageNum}:`, err);
+                }
+            }
+
+            destroyPage(pageNum) {
+                const item = this.activePages.get(pageNum);
+                if (!item) return;
+
+                if (item.renderTask) item.renderTask.cancel();
+                if (item.canvas) item.canvas.remove();
+                
+                // Reset placeholder state (add loader back if needed)
+                const container = document.getElementById(`vsd-page-${pageNum}`);
+                if (container && !container.querySelector('.page-loader')) {
+                    const loader = document.createElement('div');
+                    loader.className = 'page-loader absolute inset-0 flex flex-col items-center justify-center bg-base-100 z-10';
+                    loader.innerHTML = `<span class="loading loading-spinner loading-md text-primary opacity-30"></span>`;
+                    container.appendChild(loader);
+                }
+
+                this.activePages.delete(pageNum);
+            }
+        }
+
+
         <?php 
         // Set pdfPath based on file type
         if ($file_ext === 'pdf') {
@@ -1512,7 +1780,7 @@ include 'includes/sidebar.php';
         ?>
         const pdfPath = <?= $pdf_path_js ? '"' . htmlspecialchars($pdf_path_js, ENT_QUOTES, 'UTF-8') . '"' : 'null' ?>;
         const hasPurchased = <?= $has_purchased ? 'true' : 'false' ?>;
-        const maxPreviewPages = <?= (int)getSetting('limit_preview_pages', 3) ?>;
+        const maxPreviewPages = <?= (int)getSetting('limit_preview_pages', 5) ?>;
         
         // Protection against copy and screenshot
         <?php if(!$has_purchased): ?>
@@ -1588,13 +1856,17 @@ include 'includes/sidebar.php';
         console.log('%cSao chép hoặc chỉnh sửa mã này là bất hợp pháp!', 'color: red; font-size: 20px;');
         <?php endif; ?>
         
+        
+
         // Load PDF if applicable (for PDF files or DOCX files with converted PDF)
         <?php if($file_ext === 'pdf' || (($file_ext === 'docx' || $file_ext === 'doc') && isset($pdf_path_for_preview) && $pdf_path_for_preview)): ?>
         (async () => {
             try {
                 if (pdfPath) {
-                    pdfDoc = await pdfjsLib.getDocument(pdfPath).promise;
-                    await renderAllPages();
+                    new VsdPdfViewer('pdfViewer', pdfPath, {
+                        maxPreviewPages: maxPreviewPages,
+                        hasPurchased: hasPurchased
+                    });
                     
                     // Lazy generation: If document is missing page count or thumbnail, generate them now
                     const docId = <?= $doc_id ?>;
@@ -1622,37 +1894,6 @@ include 'includes/sidebar.php';
             }
         })();
         
-        async function renderAllPages() {
-            const viewer = document.getElementById("pdfViewer");
-            viewer.innerHTML = '';
-            
-            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                const page = await pdfDoc.getPage(pageNum);
-                const scale = 2;
-                const viewport = page.getViewport({ scale });
-                
-                const canvas = document.createElement("canvas");
-                const context = canvas.getContext("2d");
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-                
-                const pageDiv = document.createElement("div");
-                pageDiv.className = "pdf-page";
-                
-                // Blur pages after limit
-                if(!hasPurchased && pageNum > maxPreviewPages) {
-                    pageDiv.classList.add("page-limit-blur");
-                }
-                
-                pageDiv.appendChild(canvas);
-                viewer.appendChild(pageDiv);
-            }
-        }
         <?php endif; ?>
         
         // Load DOCX or converted PDF if applicable
@@ -1662,8 +1903,10 @@ include 'includes/sidebar.php';
                 <?php if(isset($pdf_path_for_preview) && $pdf_path_for_preview): ?>
                 // Use converted PDF for preview
                 const pdfPath = "<?= htmlspecialchars($pdf_path_for_preview, ENT_QUOTES, 'UTF-8') ?>";
-                pdfDoc = await pdfjsLib.getDocument(pdfPath).promise;
-                await renderAllPages();
+                new VsdPdfViewer('pdfViewer', pdfPath, {
+                    maxPreviewPages: maxPreviewPages,
+                    hasPurchased: hasPurchased
+                });
                 
                 // Lazy generation: If document is missing page count or thumbnail, generate them now
                 const docId = <?= $doc_id ?>;
