@@ -25,467 +25,758 @@ if (!$is_student && !$is_tutor && !isAdmin($user_id)) {
 $page_title = "Chi tiết câu hỏi - VietStuDocs";
 ?>
 <?php require_once __DIR__ . '/../includes/head.php'; ?>
-<?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
 
-<div class="drawer-content flex flex-col">
-    <?php require_once __DIR__ . '/../includes/navbar.php'; ?>
-    <main class="flex-1 p-6">
-        <div class="container mx-auto">
-            <div class="mb-4">
-                <a href="/tutors/dashboard" class="btn btn-ghost gap-2"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
-            </div>
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --vsd-red: #991b1b;
+        --vsd-red-light: #b91c1c;
+        --red-gradient: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+    }
+    
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Main Content -->
-                <div class="col-span-2">
-                    <!-- Question Card -->
-                    <div class="card bg-base-100 shadow-xl mb-6 border border-base-200">
-                        <div class="card-body">
-                            <div class="flex justify-between items-start mb-4">
-                                <h2 class="card-title text-2xl text-primary break-all"><?= htmlspecialchars($request['title']) ?></h2>
-                                <span class="badge badge-lg <?= $request['status'] == 'pending' ? 'badge-warning' : 'badge-success' ?>">
-                                    <?= ucfirst($request['status']) ?>
-                                </span>
+    .request-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
+
+    /* Glass Card Style */
+    .glass-card-vsd {
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2.5rem;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Main Question Card */
+    .question-header-vsd {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+        gap: 24px;
+    }
+
+    .question-title-vsd {
+        font-size: 2.5rem;
+        font-weight: 1000;
+        letter-spacing: -0.05em;
+        line-height: 1.1;
+        color: oklch(var(--bc));
+    }
+
+    .status-badge-vsd {
+        padding: 10px 24px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-pending { background: #fde68a; color: #92400e; }
+    .status-answered { background: #bbf7d0; color: #166534; }
+    .status-completed { background: oklch(var(--b3)); color: oklch(var(--bc) / 0.5); }
+
+    .question-content-vsd {
+        background: oklch(var(--b2) / 0.5);
+        padding: 32px;
+        border-radius: 2rem;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: oklch(var(--bc));
+        border: 1px solid oklch(var(--bc) / 0.05);
+        margin-bottom: 32px;
+        white-space: pre-wrap;
+    }
+
+    /* Attachment Box */
+    .attachment-box-vsd {
+        background: oklch(var(--b2) / 0.3);
+        border: 1px dashed oklch(var(--bc) / 0.1);
+        border-radius: 2rem;
+        padding: 24px;
+        margin-top: 24px;
+    }
+
+    .attachment-preview-vsd {
+        max-width: 100%;
+        border-radius: 1.5rem;
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
+        border: 1px solid oklch(var(--bc) / 0.05);
+        margin-bottom: 20px;
+    }
+
+    /* Info Grid */
+    .meta-grid-vsd {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        padding-top: 24px;
+        border-top: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .meta-item-vsd {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .meta-label-vsd {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.4;
+    }
+
+    .meta-user-vsd {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+        font-size: 0.95rem;
+    }
+
+    /* Chat Section */
+    .chat-container-vsd {
+        margin-top: 60px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+    }
+
+    .chat-bubble-vsd {
+        max-width: 80%;
+        padding: 24px;
+        border-radius: 2rem;
+        position: relative;
+        font-size: 1rem;
+        line-height: 1.6;
+        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+    }
+
+    .chat-start-vsd {
+        align-self: flex-start;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-bottom-left-radius: 4px;
+    }
+
+    .chat-end-vsd {
+        align-self: flex-end;
+        background: var(--red-gradient);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .chat-header-vsd {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .chat-end-vsd .chat-header-vsd {
+        justify-content: flex-end;
+        color: rgba(255,255,255,0.7);
+    }
+
+    .chat-meta-vsd {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 0.7rem;
+        opacity: 0.5;
+    }
+
+    /* Input Area */
+    .input-glass-vsd {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 3rem;
+        padding: 40px;
+        margin-top: 48px;
+        box-shadow: 0 -20px 40px -10px rgba(0,0,0,0.05);
+    }
+
+    .vsd-textarea {
+        background: oklch(var(--b2) / 0.5) !important;
+        border: 1px solid oklch(var(--bc) / 0.05) !important;
+        border-radius: 1.5rem !important;
+        padding: 24px !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        width: 100%;
+        resize: none;
+        transition: all 0.3s ease;
+    }
+
+    .vsd-textarea:focus {
+        border-color: var(--vsd-red) !important;
+        box-shadow: 0 0 0 4px rgba(153, 27, 27, 0.1) !important;
+    }
+
+    .vsd-btn-send {
+        background: var(--vsd-red);
+        color: white;
+        height: 64px;
+        padding: 0 40px;
+        border-radius: 1.5rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 15px 30px -8px rgba(153, 27, 27, 0.4);
+    }
+
+    .vsd-btn-send:hover {
+        transform: scale(1.02);
+        filter: brightness(1.1);
+    }
+
+    /* Success / Rating Card */
+    .rating-card-vsd {
+        background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+        border: 2px solid #fbbf24;
+        color: #92400e;
+    }
+
+    [data-theme="dark"] .rating-card-vsd {
+        background: linear-gradient(135deg, #451a03 0%, #171717 100%);
+        border-color: #92400e;
+        color: #fef3c7;
+    }
+
+    /* Progress Sidebar */
+    .progress-sidebar-vsd {
+        position: sticky;
+        top: 100px;
+    }
+
+    .step-item-vsd {
+        display: flex;
+        gap: 20px;
+        padding-bottom: 32px;
+        position: relative;
+    }
+
+    .step-item-vsd:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 40px;
+        bottom: 0px;
+        width: 2px;
+        background: oklch(var(--bc) / 0.1);
+    }
+
+    .step-icon-vsd {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: oklch(var(--b2));
+        color: oklch(var(--bc) / 0.3);
+        font-size: 0.9rem;
+        z-index: 1;
+        transition: all 0.3s ease;
+    }
+
+    .step-item-vsd.active .step-icon-vsd {
+        background: var(--vsd-red);
+        color: white;
+        box-shadow: 0 8px 20px -5px rgba(153, 27, 27, 0.4);
+    }
+
+    .step-content-vsd {
+        padding-top: 8px;
+    }
+
+    .step-title-vsd {
+        font-size: 0.85rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 4px;
+    }
+
+    .step-item-vsd.active .step-title-vsd {
+        color: var(--vsd-red);
+    }
+
+</style>
+
+<body class="bg-base-100">
+    <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+
+    <div class="drawer-content flex flex-col min-h-screen">
+        <?php include __DIR__ . '/../includes/navbar.php'; ?>
+        
+        <main class="flex-1">
+            <div class="request-container">
+                
+                <div class="mb-10 animate-in fade-in slide-in-from-left duration-500">
+                    <a href="/tutors/dashboard" class="btn btn-ghost rounded-2xl gap-3 font-black text-[10px] tracking-widest uppercase opacity-40 hover:opacity-100">
+                        <i class="fa-solid fa-arrow-left"></i> Quay lại bảng điều khiển
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    
+                    <!-- Main Content -->
+                    <div class="lg:col-span-8">
+                        
+                        <!-- Question Card -->
+                        <div class="glass-card-vsd animate-in fade-in slide-in-from-bottom duration-700">
+                            <div class="question-header-vsd">
+                                <h1 class="question-title-vsd"><?= htmlspecialchars($request['title']) ?></h1>
+                                <div class="status-badge-vsd <?= $request['status'] == 'pending' ? 'status-pending' : ($request['status'] == 'answered' ? 'status-answered' : 'status-completed') ?>">
+                                    <i class="fa-solid <?= $request['status'] == 'pending' ? 'fa-hourglass-half' : 'fa-check' ?>"></i>
+                                    <?= $request['status'] == 'pending' ? 'Chờ trả lời' : ($request['status'] == 'answered' ? 'Đã trả lời' : 'Hoàn tất') ?>
+                                </div>
                             </div>
-                            
-                            <div class="bg-base-200 p-4 rounded-lg mb-4 font-mono text-sm leading-relaxed whitespace-pre-wrap"><?= trim(htmlspecialchars($request['content'])) ?></div>
-                            
+
+                            <div class="question-content-vsd"><?= trim(htmlspecialchars($request['content'])) ?></div>
+
                             <?php if($request['attachment']): ?>
-                                <div class="mt-4 p-4 bg-base-200 rounded-lg border border-base-300">
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <i class="fa-solid fa-paperclip text-primary font-bold"></i>
-                                        <span class="font-bold">File đính kèm từ bạn</span>
-                                    </div>
-                                    
+                                <div class="attachment-box-vsd">
+                                    <h4 class="font-black text-[10px] uppercase tracking-widest mb-6 opacity-40">Tài liệu đính kèm</h4>
                                     <?php 
                                     $q_ext = strtolower(pathinfo($request['attachment'], PATHINFO_EXTENSION));
                                     if(in_array($q_ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): 
                                     ?>
-                                        <img src="/uploads/tutors/<?= htmlspecialchars($request['attachment']) ?>" class="max-w-full rounded-lg shadow-md border border-base-300" alt="Question Attachment">
+                                        <img src="/uploads/tutors/<?= htmlspecialchars($request['attachment']) ?>" class="attachment-preview-vsd" alt="Attachment">
                                     <?php endif; ?>
                                     
-                                    <div class="mt-3 flex items-center justify-between bg-base-100 p-3 rounded-md border border-base-300">
-                                        <span class="text-sm truncate opacity-70"><?= htmlspecialchars($request['attachment']) ?></span>
-                                        <a href="/uploads/tutors/<?= htmlspecialchars($request['attachment']) ?>" download class="btn btn-sm btn-primary">
-                                            <i class="fa-solid fa-download"></i> Tải về
-                                        </a>
+                                    <div class="flex items-center justify-between bg-base-100/50 p-4 rounded-2xl border border-base-content/5">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xl">
+                                                <i class="fa-solid fa-file-export"></i>
+                                            </div>
+                                            <span class="text-xs font-black opacity-60 truncate max-w-[200px]"><?= htmlspecialchars($request['attachment']) ?></span>
+                                        </div>
+                                        <a href="/uploads/tutors/<?= htmlspecialchars($request['attachment']) ?>" download class="btn btn-primary rounded-xl px-6 h-12 font-black text-xs uppercase tracking-wider">Tải về</a>
                                     </div>
                                 </div>
                             <?php endif; ?>
-                            
-                            <div class="divider my-2">Thông tin chi tiết</div>
-                            
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-base-content/60">Người hỏi:</span>
-                                    <div class="flex items-center gap-2">
-                                        <div class="avatar <?= !empty($request['student_avatar']) ? '' : 'placeholder' ?>">
-                                            <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-primary/10 <?= empty($request['student_avatar']) ? 'bg-primary text-primary-content flex items-center justify-center font-bold text-xs' : '' ?>">
+
+                            <div class="meta-grid-vsd">
+                                <div class="meta-item-vsd">
+                                    <span class="meta-label-vsd">Học viên</span>
+                                    <div class="meta-user-vsd">
+                                        <div class="avatar placeholder">
+                                            <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
                                                 <?php if(!empty($request['student_avatar']) && file_exists('../uploads/avatars/' . $request['student_avatar'])): ?>
-                                                    <img src="../uploads/avatars/<?= $request['student_avatar'] ?>" alt="Student Avatar" />
+                                                    <img src="../uploads/avatars/<?= $request['student_avatar'] ?>" class="rounded-xl" />
                                                 <?php else: ?>
-                                                    <span><?= strtoupper(substr($request['student_name'], 0, 1)) ?></span>
+                                                    <?= strtoupper(substr($request['student_name'], 0, 1)) ?>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <span class="font-bold"><?= htmlspecialchars($request['student_name']) ?></span>
+                                        <?= htmlspecialchars($request['student_name']) ?>
                                     </div>
                                 </div>
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-base-content/60">Gia sư:</span>
-                                    <div class="flex items-center gap-2">
-                                        <div class="avatar <?= !empty($request['tutor_avatar']) ? '' : 'placeholder' ?>">
-                                            <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-success/10 <?= empty($request['tutor_avatar']) ? 'bg-success text-success-content flex items-center justify-center font-bold text-xs' : '' ?>">
+                                <div class="meta-item-vsd">
+                                    <span class="meta-label-vsd">Gia sư đảm nhận</span>
+                                    <div class="meta-user-vsd">
+                                        <div class="avatar placeholder">
+                                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black">
                                                 <?php if(!empty($request['tutor_avatar']) && file_exists('../uploads/avatars/' . $request['tutor_avatar'])): ?>
-                                                    <img src="../uploads/avatars/<?= $request['tutor_avatar'] ?>" alt="Tutor Avatar" />
+                                                    <img src="../uploads/avatars/<?= $request['tutor_avatar'] ?>" class="rounded-xl" />
                                                 <?php else: ?>
-                                                    <span><?= strtoupper(substr($request['tutor_name'], 0, 1)) ?></span>
+                                                    <?= strtoupper(substr($request['tutor_name'], 0, 1)) ?>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <span class="font-bold"><?= htmlspecialchars($request['tutor_name']) ?></span>
+                                        <?= htmlspecialchars($request['tutor_name']) ?>
                                     </div>
                                 </div>
-                                <div>
-                                    <span class="text-base-content/60">Gói:</span>
-                                    <span class="badge badge-outline uppercase"><?= $request['package_type'] ?></span>
+                                <div class="meta-item-vsd pt-4">
+                                    <span class="meta-label-vsd">Gói dịch vụ</span>
+                                    <div class="font-black text-xs uppercase tracking-widest text-primary"><?= $request['package_type'] ?></div>
                                 </div>
-                                <div>
-                                    <span class="text-base-content/60">Points:</span>
-                                    <span class="text-error font-bold"><?= $request['points_used'] ?> pts</span>
+                                <div class="meta-item-vsd pt-4">
+                                    <span class="meta-label-vsd">Phí dịch vụ</span>
+                                    <div class="font-black text-xs uppercase tracking-widest text-error"><?= $request['points_used'] ?> pts</div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Conversation Section -->
-                    <div id="conversationSection">
-                    <?php if (!empty($request['answers'])): ?>
-                        <?php foreach($request['answers'] as $index => $msg): ?>
-                            <?php 
-                                $is_me = ($msg['sender_id'] == $user_id);
-                                $is_sender_tutor = ($msg['sender_id'] == $request['tutor_id']);
-                            ?>
-                            <div class="chat <?= $is_me ? 'chat-end' : 'chat-start' ?> mb-4" data-msg-id="<?= $msg['id'] ?>">
-                                <div class="chat-image avatar <?= !empty($msg['sender_avatar']) ? '' : 'placeholder' ?>">
-                                    <div class="w-10 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-2 <?= $is_me ? 'ring-primary/20' : 'ring-secondary/20' ?> <?= empty($msg['sender_avatar']) ? ($is_sender_tutor ? 'bg-success text-success-content' : 'bg-primary text-primary-content') . ' flex items-center justify-center font-bold' : '' ?>">
-                                        <?php if(!empty($msg['sender_avatar']) && file_exists('../uploads/avatars/' . $msg['sender_avatar'])): ?>
-                                            <img src="../uploads/avatars/<?= $msg['sender_avatar'] ?>" alt="Avatar" />
-                                        <?php else: ?>
-                                            <span><?= strtoupper(substr($msg['sender_name'], 0, 1)) ?></span>
+                        <!-- Conversation Section -->
+                        <div id="conversationSection" class="chat-container-vsd">
+                            <?php if (!empty($request['answers'])): ?>
+                                <?php foreach($request['answers'] as $index => $msg): ?>
+                                    <?php 
+                                        $is_me = ($msg['sender_id'] == $user_id);
+                                        $is_sender_tutor = ($msg['sender_id'] == $request['tutor_id']);
+                                    ?>
+                                    <div class="chat-bubble-vsd <?= $is_me ? 'chat-end-vsd' : 'chat-start-vsd' ?> animate-in slide-in-from-<?= $is_me ? 'right' : 'left' ?> duration-500" data-msg-id="<?= $msg['id'] ?>">
+                                        <div class="chat-header-vsd">
+                                            <?php if(!$is_me): ?>
+                                                <div class="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center text-xs font-black overflow-hidden">
+                                                    <?php if(!empty($msg['sender_avatar']) && file_exists('../uploads/avatars/' . $msg['sender_avatar'])): ?>
+                                                        <img src="../uploads/avatars/<?= $msg['sender_avatar'] ?>" />
+                                                    <?php else: ?>
+                                                        <?= strtoupper(substr($msg['sender_name'], 0, 1)) ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            <?= htmlspecialchars($msg['sender_name']) ?>
+                                            <time class="opacity-40 text-[9px]"><?= date('H:i', strtotime($msg['created_at'])) ?></time>
+                                        </div>
+                                        
+                                        <div class="whitespace-pre-wrap font-medium"><?= trim(htmlspecialchars($msg['content'])) ?></div>
+                                        
+                                        <?php if(!empty($msg['attachment'])): ?>
+                                            <div class="mt-4 pt-4 border-t border-base-content/10">
+                                                <a href="/uploads/tutors/<?= htmlspecialchars($msg['attachment']) ?>" download class="flex items-center gap-3 text-xs font-black hover:opacity-70 transition-opacity">
+                                                    <i class="fa-solid fa-paperclip"></i> File đính kèm
+                                                </a>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
-                                </div>
-                                <div class="chat-header opacity-50 text-xs mb-1">
-                                    <?= htmlspecialchars($msg['sender_name']) ?>
-                                    <time class="text-[10px]"><?= date('H:i', strtotime($msg['created_at'])) ?></time>
-                                </div>
-                                <div class="chat-bubble shadow-sm <?= $is_sender_tutor ? 'chat-bubble-success bg-success/20 text-success-content' : 'chat-bubble-primary' ?> text-sm">
-                                    <div class="whitespace-pre-wrap"><?= trim(htmlspecialchars($msg['content'])) ?></div>
-                                    
-                                    <?php if(!empty($msg['attachment'])): ?>
-                                        <div class="mt-2 pt-2 border-t border-base-content/10">
-                                            <a href="/uploads/tutors/<?= htmlspecialchars($msg['attachment']) ?>" download class="btn btn-xs btn-ghost gap-1">
-                                                <i class="fa-solid fa-paperclip"></i> File đính kèm
-                                            </a>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="chat-footer opacity-50 text-[10px]">
-                                    <?= $is_sender_tutor ? 'Gia sư' : 'Học viên' ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
 
-                    <!-- Rating Section (For Student to Rate) - Show if status is answered (not completed/disputed) -->
-                    <?php if ($request['status'] === 'answered' && $is_student): ?>
-                        <div class="card bg-base-100 shadow-xl border border-warning mt-6">
-                            <div class="card-body">
-                                <h3 class="card-title text-warning"><i class="fa-solid fa-star"></i> Đánh giá & Hoàn tất</h3>
-                                <div class="alert alert-warning text-sm shadow-sm mb-4">
-                                    <i class="fa-solid fa-circle-info"></i>
-                                    <span>Nếu bạn đánh giá <strong>4 sao trở lên</strong>, gia sư sẽ nhận được điểm. Nếu dưới <strong>4 sao</strong>, Admin sẽ xem xét lại.</span>
-                                </div>
+                        <!-- Student Rating Card -->
+                        <?php if ($request['status'] === 'answered' && $is_student): ?>
+                            <div class="glass-card-vsd rating-card-vsd mt-12 animate-in zoom-in duration-500">
+                                <h3 class="font-black text-2xl mb-2 flex items-center gap-4">
+                                    <i class="fa-solid fa-star"></i> Đánh giá & Hoàn tất
+                                </h3>
+                                <p class="text-sm font-bold opacity-80 mb-8 leading-relaxed">
+                                    Nếu bạn hài lòng với câu trả lời (4-5 sao), gia sư sẽ nhận được điểm thù lao. 
+                                    Nếu dưới 4 sao, đội ngũ Admin sẽ tham gia hỗ trợ xử lý khiếu nại.
+                                </p>
                                 
-                                <form id="ratingForm">
+                                <form id="ratingForm" class="space-y-6">
                                     <input type="hidden" name="action" value="rate_tutor">
                                     <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
                                     
-                                    <div class="rating rating-lg rating-half mb-4">
+                                    <div class="rating rating-lg rating-half flex justify-center mb-4">
                                         <input type="radio" name="rating" class="rating-hidden" />
-                                        <input type="radio" name="rating" value="0.5" class="mask mask-star-2 mask-half-1 bg-orange-400" />
-                                        <input type="radio" name="rating" value="1" class="mask mask-star-2 mask-half-2 bg-orange-400" />
-                                        <input type="radio" name="rating" value="1.5" class="mask mask-star-2 mask-half-1 bg-orange-400" />
-                                        <input type="radio" name="rating" value="2" class="mask mask-star-2 mask-half-2 bg-orange-400" />
-                                        <input type="radio" name="rating" value="2.5" class="mask mask-star-2 mask-half-1 bg-orange-400" />
-                                        <input type="radio" name="rating" value="3" class="mask mask-star-2 mask-half-2 bg-orange-400" />
-                                        <input type="radio" name="rating" value="3.5" class="mask mask-star-2 mask-half-1 bg-orange-400" />
-                                        <input type="radio" name="rating" value="4" class="mask mask-star-2 mask-half-2 bg-orange-400" />
-                                        <input type="radio" name="rating" value="4.5" class="mask mask-star-2 mask-half-1 bg-orange-400" />
-                                        <input type="radio" name="rating" value="5" class="mask mask-star-2 mask-half-2 bg-orange-400" checked />
+                                        <input type="radio" name="rating" value="0.5" class="mask mask-star-2 mask-half-1 bg-orange-500" />
+                                        <input type="radio" name="rating" value="1" class="mask mask-star-2 mask-half-2 bg-orange-500" />
+                                        <input type="radio" name="rating" value="1.5" class="mask mask-star-2 mask-half-1 bg-orange-500" />
+                                        <input type="radio" name="rating" value="2" class="mask mask-star-2 mask-half-2 bg-orange-500" />
+                                        <input type="radio" name="rating" value="2.5" class="mask mask-star-2 mask-half-1 bg-orange-500" />
+                                        <input type="radio" name="rating" value="3" class="mask mask-star-2 mask-half-2 bg-orange-500" />
+                                        <input type="radio" name="rating" value="3.5" class="mask mask-star-2 mask-half-1 bg-orange-500" />
+                                        <input type="radio" name="rating" value="4" class="mask mask-star-2 mask-half-2 bg-orange-500" />
+                                        <input type="radio" name="rating" value="4.5" class="mask mask-star-2 mask-half-1 bg-orange-500" />
+                                        <input type="radio" name="rating" value="5" class="mask mask-star-2 mask-half-2 bg-orange-500" checked />
                                     </div>
                                     
                                     <div class="form-control">
-                                        <textarea name="review" required class="textarea textarea-bordered" placeholder="Nhận xét của bạn (Bắt buộc)"></textarea>
+                                        <textarea name="review" required class="vsd-textarea h-32" placeholder="Cảm ơn gia sư hoặc để lại góp ý tại đây..."></textarea>
                                     </div>
                                     
-                                    <div class="card-actions justify-end mt-4">
-                                        <button type="submit" class="btn btn-warning">Gửi đánh giá</button>
-                                    </div>
+                                    <button type="submit" class="vsd-btn-send w-full justify-center bg-orange-600 shadow-orange-900/20">Hoàn tất hỗ trợ</button>
                                 </form>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
 
-                    <!-- Completed/Review Display -->
-                    <?php if ($request['status'] === 'completed' || $request['status'] === 'disputed'): ?>
-                        <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
-                            <div class="card-body">
-                                <h3 class="card-title"><i class="fa-solid fa-star text-yellow-500"></i> Đánh giá từ học viên</h3>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <div class="rating rating-md rating-half pointer-events-none">
+                        <!-- Completed Review Display -->
+                        <?php if ($request['status'] === 'completed' || $request['status'] === 'disputed'): ?>
+                            <div class="glass-card-vsd mt-12">
+                                <h3 class="font-black text-xs uppercase tracking-widest opacity-30 mb-8 border-b border-base-content/5 pb-4">Đánh giá chung</h3>
+                                <div class="flex flex-col items-center py-10">
+                                    <div class="rating rating-lg rating-half pointer-events-none mb-4">
                                         <input type="radio" class="rating-hidden" />
                                         <?php for($i=0.5; $i<=5; $i+=0.5): ?>
-                                            <input type="radio" class="mask mask-star-2 bg-orange-400 <?= fmod($i, 1) !== 0.0 ? 'mask-half-1' : 'mask-half-2' ?>" <?= ($request['rating'] ?? 0) == $i ? 'checked' : '' ?> />
+                                            <input type="radio" class="mask mask-star-2 bg-orange-500 <?= fmod($i, 1) !== 0.0 ? 'mask-half-1' : 'mask-half-2' ?>" <?= ($request['rating'] ?? 0) == $i ? 'checked' : '' ?> />
                                         <?php endfor; ?>
                                     </div>
-                                    <span class="font-bold text-lg text-orange-500"><?= $request['rating'] ?>/5</span>
+                                    <div class="text-4xl font-black mb-4"><?= $request['rating'] ?>/5</div>
+                                    <p class="text-xl font-bold italic opacity-60 text-center">"<?= htmlspecialchars($request['review'] ?? 'Không có nhận xét') ?>"</p>
                                 </div>
-                                <p class="italic text-base-content/70">"<?= htmlspecialchars($request['review'] ?? 'Không có nhận xét') ?>"</p>
                                 
                                 <?php if($request['status'] === 'disputed'): ?>
-                                    <div class="alert alert-error mt-4">
-                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                        <span>Đang chờ Admin xử lý khiếu nại (Đánh giá thấp).</span>
+                                    <div class="alert bg-red-500/10 border-red-500/20 text-red-600 rounded-3xl p-6 mt-6">
+                                        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                                        <div>
+                                            <h4 class="font-black uppercase text-xs tracking-widest">Đang khiếu nại</h4>
+                                            <p class="text-sm font-bold opacity-70">Admin đang xem xét yêu cầu này do đánh giá thấp hoặc sự cố hỗ trợ.</p>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
 
-                    <!-- Tutor Answer Input (Allow answering only if pending) -->
-                    <?php if ($is_tutor && $request['status'] === 'pending'): ?>
-                        <div class="card bg-base-100 shadow-xl border border-primary mt-6">
-                            <div class="card-body">
-                                <h3 class="card-title text-primary"><i class="fa-solid fa-pen-nib"></i> <?= $request['status'] === 'answered' ? 'Gửi thêm câu trả lời' : 'Trả lời câu hỏi' ?></h3>
-                                <p class="text-sm mb-4">Bạn sẽ nhận được <strong><?= $request['points_used'] ?> Points</strong> sau khi học viên hài lòng (đánh giá >= 4 sao).</p>
+                        <!-- Message Input Panel -->
+                        <?php if (($is_tutor && $request['status'] === 'pending') || ($is_student && $request['status'] === 'pending' && !empty($request['answers'])) || ($is_tutor && $request['status'] === 'answered')): ?>
+                            <div class="input-glass-vsd animate-in slide-in-from-bottom duration-700">
+                                <h3 class="font-black text-xs uppercase tracking-[0.2em] opacity-30 mb-8"><?= $is_tutor ? 'Gia sư trả lời' : 'Học viên nhắn tin' ?></h3>
                                 
-                                <form id="answerForm" enctype="multipart/form-data">
-                                    <input type="hidden" name="action" value="answer_request">
+                                <form id="<?= $is_tutor ? 'answerForm' : 'chatForm' ?>" class="space-y-6" enctype="multipart/form-data">
+                                    <input type="hidden" name="action" value="<?= $is_tutor ? 'answer_request' : 'student_chat' ?>">
                                     <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
+                                    
                                     <div class="form-control">
-                                        <textarea name="content" required class="textarea textarea-bordered h-48 focus:textarea-primary" placeholder="Nhập câu trả lời chi tiết của bạn tại đây..."></textarea>
-                                    </div>
-                                    <!-- Attachment simple UI -->
-                                    <div class="form-control mt-2">
-                                        <label class="label"><span class="label-text">Đính kèm file (tùy chọn)</span></label>
-                                        <input type="file" name="attachment" class="file-input file-input-bordered w-full max-w-xs" />
+                                        <textarea name="content" required class="vsd-textarea h-40" placeholder="Nhập nội dung tin nhắn của bạn..."></textarea>
                                     </div>
                                     
-                                    <div class="card-actions justify-end mt-4 gap-2">
-                                        <button type="button" onclick="finishRequestManual()" class="btn btn-outline btn-success">
-                                            <i class="fa-solid fa-check-double"></i> Kết thúc hỗ trợ
-                                        </button>
-                                        <button type="submit" class="btn btn-primary">Gửi câu trả lời</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    <?php elseif ($is_student && $request['status'] === 'pending'): ?>
-                        <!-- Student Message Input -->
-                        <div class="card bg-base-100 shadow-xl border border-secondary mt-6">
-                            <div class="card-body">
-                                <h3 class="card-title text-secondary"><i class="fa-solid fa-reply"></i> Đổi thoại với Gia sư</h3>
-                                <p class="text-sm mb-4">Bạn có thể hỏi thêm chi tiết hoặc làm rõ câu trả lời tại đây.</p>
-                                
-                                <form id="chatForm" enctype="multipart/form-data">
-                                    <input type="hidden" name="action" value="student_chat">
-                                    <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
-                                    <div class="form-control">
-                                        <textarea name="content" required class="textarea textarea-bordered focus:textarea-secondary" placeholder="Nhập câu hỏi hoặc phản hồi của bạn..."></textarea>
-                                    </div>
-                                    <div class="form-control mt-2">
-                                        <input type="file" name="attachment" class="file-input file-input-bordered file-input-sm w-full max-w-xs" />
-                                    </div>
-                                    
-                                    <div class="card-actions justify-end mt-4">
-                                        <button type="submit" class="btn btn-secondary">Gửi tin nhắn</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+                                    <div class="flex flex-col md:flex-row gap-6 items-center justify-between">
+                                        <div class="flex items-center gap-4 w-full md:w-auto">
+                                            <label class="btn btn-ghost rounded-2xl h-14 px-6 border border-base-content/5 flex items-center gap-2 cursor-pointer hover:bg-base-200">
+                                                <i class="fa-solid fa-paperclip opacity-40"></i>
+                                                <span class="text-[10px] font-black uppercase tracking-widest opacity-40">Đính kèm file</span>
+                                                <input type="file" name="attachment" class="hidden" />
+                                            </label>
+                                        </div>
 
-                        <?php if($request['status'] === 'pending'): ?>
-                            <div class="alert alert-info mt-4">
-                                <i class="fa-solid fa-hourglass-half"></i>
-                                <span>Đang chờ Gia sư phản hồi lần đầu.</span>
+                                        <div class="flex gap-4 w-full md:w-auto">
+                                            <?php if($is_tutor): ?>
+                                                <button type="button" onclick="finishRequestManual()" class="btn btn-outline border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/5 rounded-2xl h-14 px-8 font-black text-xs uppercase tracking-widest">
+                                                    Hoàn tất hỗ trợ
+                                                </button>
+                                            <?php endif; ?>
+                                            <button type="submit" class="vsd-btn-send flex-1 md:flex-none">Gửi tin nhắn</button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
                         <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Sidebar Info -->
-                <div class="col-span-1">
-                    <div class="card bg-base-100 shadow-xl">
-                        <div class="card-body">
-                            <h3 class="font-bold text-lg mb-4">Hướng dẫn</h3>
-                            <ul class="steps steps-vertical text-sm">
-                                <li class="step step-primary">Đặt câu hỏi</li>
-                                <li class="step <?= ($request['status'] == 'answered' || $request['status'] == 'completed') ? 'step-primary' : '' ?>">Gia sư trả lời</li>
-                                <li class="step <?= $request['status'] == 'completed' ? 'step-primary' : '' ?>">Hoàn tất & Đánh giá</li>
-                            </ul>
-                        </div>
                     </div>
+
+                    <!-- Sidebar Progress -->
+                    <div class="lg:col-span-4">
+                        <aside class="progress-sidebar-vsd">
+                            <div class="glass-card-vsd animate-in slide-in-from-right duration-700">
+                                <h3 class="font-black text-xs uppercase tracking-[0.25em] mb-10 opacity-30">Trình trạng yêu cầu</h3>
+                                
+                                <div class="space-y-0">
+                                    <div class="step-item-vsd active">
+                                        <div class="step-icon-vsd"><i class="fa-solid fa-paper-plane"></i></div>
+                                        <div class="step-content-vsd">
+                                            <h4 class="step-title-vsd">Gửi câu hỏi</h4>
+                                            <p class="text-[10px] font-bold opacity-40 uppercase">Thành công</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="step-item-vsd <?= ($request['status'] == 'answered' || $request['status'] == 'completed' || $request['status'] == 'disputed') ? 'active' : '' ?>">
+                                        <div class="step-icon-vsd"><i class="fa-solid fa-chalkboard-user"></i></div>
+                                        <div class="step-content-vsd">
+                                            <h4 class="step-title-vsd">Gia sư phản hồi</h4>
+                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['status'] == 'pending' ? 'Đang thực hiện' : 'Hoàn tất' ?></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="step-item-vsd <?= ($request['status'] == 'completed' || $request['status'] == 'disputed') ? 'active' : '' ?>">
+                                        <div class="step-icon-vsd"><i class="fa-solid fa-check-double"></i></div>
+                                        <div class="step-content-vsd">
+                                            <h4 class="step-title-vsd">Hoàn tất & Đánh giá</h4>
+                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['status'] == 'completed' ? 'Đã xong' : 'Chưa hoàn tất' ?></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-8 pt-8 border-t border-base-content/5">
+                                    <p class="text-[10px] font-bold opacity-30 leading-relaxed text-center italic">
+                                        "Mọi cuộc hội thoại đều được hệ thống ghi lại để đảm bảo chất lượng dịch vụ và bảo vệ quyền lợi hai bên."
+                                    </p>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+
                 </div>
             </div>
-        </div>
-    </main>
-    <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-</div>
-</div>
-
-<script>
-const CURRENT_USER_ID = <?= $user_id ?>;
-const REQUEST_ID = <?= $request_id ?>;
-const TUTOR_ID = <?= $request['tutor_id'] ?>;
-let lastMsgId = 0;
-let currentStatus = '<?= $request['status'] ?>';
-
-// Update lastMsgId from existing messages
-document.querySelectorAll('[data-msg-id]').forEach(msg => {
-    const id = parseInt(msg.dataset.msgId);
-    if(id > lastMsgId) lastMsgId = id;
-});
-
-// Generic handler for tutor request actions
-async function handleTutorAction(formId, action) {
-    const form = document.getElementById(formId);
-    if (!form) return;
-
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = this.querySelector('button[type="submit"]');
-        btn.disabled = true;
-
-        const formData = new FormData(this);
-        formData.append('action', action);
+        </main>
         
-        try {
-            const res = await fetch('/handler/tutor_handler.php', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            
-            if(data.success) {
-                // For chat/answer messages, we don't need alert/reload anymore
-                if (action === 'send_chat_message' || action === 'answer_request' || action === 'student_chat') {
-                    form.reset();
-                    pollMessages(); // Poll immediately
-                } else {
-                    alert(data.message);
-                    location.reload();
-                }
-            } else {
-                alert(data.message);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            btn.disabled = false;
-        }
-    });
-}
+        <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+    </div>
 
-function scrollToBottom() {
-    window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-    });
-}
-
-function renderMessage(msg) {
-    const isMe = msg.sender_id == CURRENT_USER_ID;
-    const isSenderTutor = msg.sender_id == TUTOR_ID;
-    const side = isMe ? 'chat-end' : 'chat-start';
-    const bubbleClass = isSenderTutor ? 'chat-bubble-success bg-success/20 text-success-content' : 'chat-bubble-primary';
-    const ringClass = isMe ? 'ring-primary/20' : 'ring-secondary/20';
-    const roleTxt = isSenderTutor ? 'Gia sư' : 'Học viên';
+    <script>
+    const CURRENT_USER_ID = <?= $user_id ?>;
+    const REQUEST_ID = <?= $request_id ?>;
+    const TUTOR_ID = <?= $request['tutor_id'] ?>;
+    let lastMsgId = 0;
+    let currentStatus = '<?= $request['status'] ?>';
     
-    // Format time
-    const time = new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    document.querySelectorAll('[data-msg-id]').forEach(msg => {
+        const id = parseInt(msg.dataset.msgId);
+        if(id > lastMsgId) lastMsgId = id;
+    });
 
-    let avatarContent = '';
-    let placeholderClasses = '';
-    if(msg.sender_avatar) {
-        avatarContent = `<img src="../uploads/avatars/${msg.sender_avatar}" alt="Avatar" />`;
-    } else {
-        const bg = isSenderTutor ? 'bg-success text-success-content' : 'bg-primary text-primary-content';
-        placeholderClasses = `${bg} flex items-center justify-center font-bold`;
-        avatarContent = `<span>${msg.sender_name.charAt(0).toUpperCase()}</span>`;
-    }
+    async function handleTutorAction(formId, action) {
+        const form = document.getElementById(formId);
+        if (!form) return;
 
-    let attachmentHtml = '';
-    if(msg.attachment) {
-        attachmentHtml = `
-            <div class="mt-2 pt-2 border-t border-base-content/10">
-                <a href="/uploads/tutors/${msg.attachment}" download class="btn btn-xs btn-ghost gap-1">
-                    <i class="fa-solid fa-paperclip"></i> File đính kèm
-                </a>
-            </div>
-        `;
-    }
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
 
-    return `
-        <div class="chat ${side} mb-4" data-msg-id="${msg.id}">
-            <div class="chat-image avatar ${msg.sender_avatar ? '' : 'placeholder'}">
-                <div class="w-10 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-2 ${ringClass} ${placeholderClasses}">
-                    ${avatarContent}
-                </div>
-            </div>
-            <div class="chat-header opacity-50 text-xs mb-1">
-                ${msg.sender_name}
-                <time class="text-[10px]">${time}</time>
-            </div>
-            <div class="chat-bubble shadow-sm ${bubbleClass} text-sm">
-                <div class="whitespace-pre-wrap">${msg.content.trim()}</div>
-                ${attachmentHtml}
-            </div>
-            <div class="chat-footer opacity-50 text-[10px]">
-                ${roleTxt}
-            </div>
-        </div>
-    `;
-}
-
-async function pollMessages() {
-    try {
-        const res = await fetch(`/api/tutor_chat.php?action=poll_messages&request_id=${REQUEST_ID}&last_id=${lastMsgId}`);
-        const data = await res.json();
-        
-        if(data.success) {
-            if(data.messages.length > 0) {
-                const container = document.getElementById('conversationSection');
-                data.messages.forEach(msg => {
-                    if(parseInt(msg.id) > lastMsgId) {
-                        container.innerHTML += renderMessage(msg);
-                        lastMsgId = parseInt(msg.id);
-                    }
-                });
-                scrollToBottom();
-            }
-
-            // If status changed, reload to update UI (forms, badges etc)
-            if(data.status && data.status !== currentStatus) {
-                setTimeout(() => location.reload(), 2000); // Small delay to let user see the final message
-            }
-        }
-        
-        // If status changed to something that requires reload (e.g. completed)
-        // But status in detail is stable usually.
-    } catch (err) {
-        console.error('Polling error:', err);
-    }
-}
-
-// Start polling every 3 seconds
-setInterval(pollMessages, 3000);
-
-async function finishRequestManual() {
-    vsdConfirm({
-        title: 'Xác nhận hoàn tất',
-        message: 'Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi hoàn tất, bạn không thể gửi thêm tin nhắn và học viên sẽ thực hiện đánh giá.',
-        type: 'success',
-        confirmText: 'Kết thúc ngay',
-        onConfirm: async function() {
+            const formData = new FormData(this);
+            formData.append('action', action);
+            
             try {
-                const formData = new FormData();
-                formData.append('action', 'finish_request');
-                formData.append('request_id', <?= $request['id'] ?>);
-                
-                const res = await fetch('/api/tutor_chat.php', {
+                const res = await fetch('/handler/tutor_handler.php', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await res.json();
                 
                 if(data.success) {
-                    alert(data.message);
-                    location.reload();
+                    if (action === 'send_chat_message' || action === 'answer_request' || action === 'student_chat') {
+                        form.reset();
+                        pollMessages();
+                        showAlert('Đã gửi tin nhắn!', 'success');
+                    } else {
+                        showAlert(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    }
                 } else {
-                    alert(data.message);
+                    showAlert(data.message, 'error');
                 }
             } catch (err) {
                 console.error(err);
+            } finally {
+                btn.disabled = false;
             }
-        }
-    });
-}
+        });
+    }
 
-// Initialize all forms
-handleTutorAction('answerForm', 'send_chat_message');
-handleTutorAction('chatForm', 'send_chat_message');
-handleTutorAction('ratingForm', 'rate_tutor');
-</script>
+    function scrollToBottom() {
+        const section = document.getElementById('conversationSection');
+        if(section.lastElementChild) {
+            section.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function renderMessage(msg) {
+        const isMe = msg.sender_id == CURRENT_USER_ID;
+        const isSenderTutor = msg.sender_id == TUTOR_ID;
+        const sideClass = isMe ? 'chat-end-vsd' : 'chat-start-vsd';
+        const ringClass = isMe ? 'ring-primary/20' : 'ring-secondary/20';
+        
+        const time = new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+        let avatarHtml = '';
+        if(!isMe) {
+            avatarHtml = `<div class="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center text-xs font-black overflow-hidden">
+                ${msg.sender_avatar ? `<img src="../uploads/avatars/${msg.sender_avatar}" />` : `<span>${msg.sender_name.charAt(0).toUpperCase()}</span>`}
+            </div>`;
+        }
+
+        let attachmentHtml = '';
+        if(msg.attachment) {
+            attachmentHtml = `
+                <div class="mt-4 pt-4 border-t border-base-content/10">
+                    <a href="/uploads/tutors/${msg.attachment}" download class="flex items-center gap-3 text-xs font-black hover:opacity-70 transition-opacity">
+                        <i class="fa-solid fa-paperclip"></i> File đính kèm
+                    </a>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="chat-bubble-vsd ${sideClass} animate-in slide-in-from-${isMe ? 'right' : 'left'} duration-500" data-msg-id="${msg.id}">
+                <div class="chat-header-vsd">
+                    ${avatarHtml}
+                    ${msg.sender_name}
+                    <time class="opacity-40 text-[9px]">${time}</time>
+                </div>
+                <div class="whitespace-pre-wrap font-medium">${msg.content.trim()}</div>
+                ${attachmentHtml}
+            </div>
+        `;
+    }
+
+    async function pollMessages() {
+        try {
+            const res = await fetch(`/api/tutor_chat.php?action=poll_messages&request_id=${REQUEST_ID}&last_id=${lastMsgId}`);
+            const data = await res.json();
+            
+            if(data.success) {
+                if(data.messages.length > 0) {
+                    const container = document.getElementById('conversationSection');
+                    data.messages.forEach(msg => {
+                        if(parseInt(msg.id) > lastMsgId) {
+                            container.insertAdjacentHTML('beforeend', renderMessage(msg));
+                            lastMsgId = parseInt(msg.id);
+                        }
+                    });
+                    scrollToBottom();
+                }
+
+                if(data.status && data.status !== currentStatus) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }
+        } catch (err) {
+            console.error('Polling error:', err);
+        }
+    }
+
+    setInterval(pollMessages, 3000);
+
+    async function finishRequestManual() {
+        vsdConfirm({
+            title: 'Hoàn tất hỗ trợ',
+            message: 'Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi đóng, học viên sẽ thực hiện đánh giá chất lượng.',
+            type: 'success',
+            confirmText: 'Kết thúc ngay',
+            onConfirm: async function() {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'finish_request');
+                    formData.append('request_id', <?= $request['id'] ?>);
+                    
+                    const res = await fetch('/api/tutor_chat.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    
+                    if(data.success) {
+                        showAlert(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    }
+
+    handleTutorAction('answerForm', 'send_chat_message');
+    handleTutorAction('chatForm', 'send_chat_message');
+    handleTutorAction('ratingForm', 'rate_tutor');
+    
+    // Auto scroll bottom on load
+    window.addEventListener('load', () => {
+        setTimeout(scrollToBottom, 500);
+    });
+    </script>
+</body>
+</html>

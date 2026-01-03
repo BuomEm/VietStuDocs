@@ -220,7 +220,11 @@ function db_count($table, $where = []) {
             $where_str = ' WHERE ' . implode(' AND ', $conditions);
         } else { $where_str = ' WHERE ' . $where; }
     }
-    /**
+    $row = db_get_row("SELECT COUNT(*) as count FROM $table$where_str");
+    return $row ? intval($row['count']) : 0;
+}
+
+/**
  * Anti-Double-Submit Helper
  * Uses session-based tokens to prevent identical requests within a short timeframe.
  * Useful for critical actions like money additions or tutor applications.
@@ -237,10 +241,6 @@ function check_double_submit($action_name, $limit_seconds = 5) {
     
     $_SESSION[$key] = time();
     return true;
-}
-
-$row = db_get_row("SELECT COUNT(*) as count FROM $table$where_str");
-    return $row ? intval($row['count']) : 0;
 }
 
 $conn = $VSD->get_conn();

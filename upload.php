@@ -20,8 +20,8 @@ $page_title = "Upload Document - DocShare";
 $current_page = 'upload';
 
 // Count pending and approved documents
-$pending_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='pending'");
-$approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='approved'");
+$pending_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='pending'");
+$approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='approved'");
 
 ?>
 <?php include 'includes/head.php'; ?>
@@ -30,94 +30,171 @@ $approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_i
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
     
-    <main class="flex-1 p-6">
-        <!-- Stats Cards - Horizontal Layout -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <!-- Points Balance Card -->
-            <div class="card bg-primary text-primary-content shadow-lg">
-                <div class="card-body text-center">
-                    <div class="flex items-center justify-center gap-2 mb-2">
-                        <i class="fa-solid fa-coins text-lg"></i>
-                        <h3 class="text-sm font-semibold uppercase tracking-wide opacity-90">Your Points Balance</h3>
-                    </div>
-                    <div class="text-4xl font-bold my-2"><?= number_format($user_points['current_points']) ?></div>
-                    <div class="text-xs opacity-80">Earned: <?= number_format($user_points['total_earned']) ?> | Spent: <?= number_format($user_points['total_spent']) ?></div>
-                </div>
-            </div>
-
-            <!-- Your Documents Card -->
-            <div class="card bg-base-100 shadow-lg">
-                <div class="card-body">
-                    <h3 class="card-title text-lg mb-4">
-                        <i class="fa-solid fa-file-invoice text-lg"></i>
-                        Your Documents
-                    </h3>
-                    <div class="stats stats-horizontal shadow-sm w-full">
-                        <div class="stat">
-                            <div class="stat-title text-xs">Pending Review</div>
-                            <div class="stat-value text-warning text-2xl"><?= $pending_count ?></div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-title text-xs">Approved</div>
-                            <div class="stat-value text-success text-2xl"><?= $approved_count ?></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-between items-center mb-6">
+    <main class="flex-1 p-4 lg:p-8">
+        <!-- Header Section -->
+        <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-primary text-2xl"></i>
-                    Upload Documents
+                <h1 class="text-4xl font-extrabold flex items-center gap-3 text-base-content">
+                    <div class="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    Tải Lên Tài Liệu
                 </h1>
-                <p class="text-base-content/70 mt-2">Upload and share your documents with the community</p>
+                <p class="text-base-content/60 mt-2 font-medium">Chia sẻ kiến thức, nhận lại giá trị xứng đáng</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <div class="badge badge-lg py-4 px-6 bg-base-100 border-base-300 shadow-sm font-bold gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-primary/60"></i>
+                    Chờ duyệt: <span class="text-warning ml-1"><?= $pending_count ?></span>
+                </div>
+                <div class="badge badge-lg py-4 px-6 bg-base-100 border-base-300 shadow-sm font-bold gap-2">
+                    <i class="fa-solid fa-circle-check text-primary/60"></i>
+                    Đã duyệt: <span class="text-success ml-1"><?= $approved_count ?></span>
+                </div>
             </div>
         </div>
 
-        <div id="alertMessage" class="mb-4"></div>
+        <div id="alertMessage" class="mb-6"></div>
 
-        <form id="uploadForm" class="upload-form">
-            <!-- Drag Drop Area -->
-            <div id="dragDropArea" class="card bg-base-200 border-dashed border-4 border-primary cursor-pointer hover:bg-base-300 transition-colors min-h-[400px] flex flex-col items-center justify-center p-8 mb-6">
-                <i class="fa-solid fa-cloud-arrow-up text-primary text-6xl mb-4"></i>
-                <p class="text-2xl font-bold text-primary mb-2">Drag & Drop Files Here</p>
-                <p class="text-base-content/70">or click to select files from your device</p>
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            <!-- Left Side: Upload Zone -->
+            <div class="xl:col-span-8 flex flex-col gap-6">
+                <form id="uploadForm" class="upload-form">
+                    <!-- Premium Drag Drop Area -->
+                    <div id="dragDropArea" class="group relative overflow-hidden rounded-[2rem] bg-base-100 border-2 border-dashed border-base-300 hover:border-primary transition-all duration-500 cursor-pointer min-h-[450px] flex flex-col items-center justify-center p-12 shadow-sm hover:shadow-2xl hover:shadow-primary/5">
+                        <!-- Decorative Background -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <div class="w-24 h-24 rounded-3xl bg-primary/5 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-content transition-all duration-500 shadow-sm">
+                                <i class="fa-solid fa-folder-open text-4xl"></i>
+                            </div>
+                            <h2 class="text-3xl font-black mb-3 text-base-content group-hover:text-primary transition-colors">Kéo thả file vào đây</h2>
+                            <p class="text-base-content/50 max-w-sm mb-8 text-lg">Hoặc nhấp để chọn tệp từ thiết bị của bạn. Hỗ trợ PDF, Word, Excel, PowerPoint và nhiều định dạng khác.</p>
+                            
+                            <div class="flex flex-wrap justify-center gap-2 max-w-md opacity-40 group-hover:opacity-100 transition-opacity">
+                                <span class="badge badge-outline gap-1 p-3"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+                                <span class="badge badge-outline gap-1 p-3"><i class="fa-solid fa-file-word"></i> Word</span>
+                                <span class="badge badge-outline gap-1 p-3"><i class="fa-solid fa-file-excel"></i> Excel</span>
+                                <span class="badge badge-outline gap-1 p-3"><i class="fa-solid fa-file-powerpoint"></i> PPT</span>
+                            </div>
+                        </div>
+
+                        <!-- Pulse Ring for Attraction -->
+                        <div class="absolute w-full h-full border-2 border-primary/20 rounded-[2rem] scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-700 animate-pulse"></div>
+                    </div>
+
+                    <input type="file" id="fileInput" name="documents" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip" class="file-input-hidden">
+
+                    <!-- File List Container -->
+                    <div id="fileList" class="mt-8 hidden">
+                        <div class="flex items-center justify-between mb-4 px-2">
+                             <h3 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group text-primary"></i>
+                                Danh sách chờ tải lên (<span id="fileCount" class="text-primary">0</span>)
+                            </h3>
+                        </div>
+                        <div id="fileListContent" class="grid grid-cols-1 gap-6"></div>
+                    </div>
+
+                    <!-- Upload Progress -->
+                    <div id="uploadProgress" class="mt-8 hidden">
+                        <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+                            <div class="card-body p-6">
+                                <h3 class="card-title text-xl mb-6 flex items-center gap-2">
+                                    <span class="loading loading-spinner loading-md text-primary"></span>
+                                    Đang xử lý dữ liệu...
+                                </h3>
+                                <div id="progressContainer" class="space-y-6"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Action Button -->
+                    <div id="submitContainer" class="mt-10 hidden">
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-full h-16 rounded-2xl text-xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/40 group transition-all duration-300">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl group-hover:-translate-y-1 transition-transform"></i>
+                            BẮT ĐẦU TẢI LÊN NGAY
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <input type="file" id="fileInput" name="documents" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip" class="file-input-hidden">
+            <!-- Right Side: Guidelines & Points Info -->
+            <div class="xl:col-span-4 flex flex-col gap-6">
+                <!-- User Balance Card -->
+                 <div class="group relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-primary to-primary-focus p-8 text-primary-content shadow-xl shadow-primary/30">
+                    <div class="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
+                    <div class="absolute right-6 top-6 text-white/20">
+                        <i class="fa-solid fa-wallet text-6xl"></i>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <span class="text-xs font-bold uppercase tracking-[0.2em] opacity-80">Số dư hiện tại</span>
+                        <div class="text-5xl font-black my-3 flex items-baseline gap-2">
+                            <?= number_format($user_points['current_points']) ?>
+                             <span class="text-sm font-bold opacity-70">VSD</span>
+                        </div>
+                        <div class="divider divider-horizontal bg-white/10 h-px my-4"></div>
+                        <div class="flex justify-between items-center text-sm font-medium">
+                            <div class="flex flex-col">
+                                <span class="opacity-70">Đã nhận</span>
+                                <span class="text-lg font-bold"><?= number_format($user_points['total_earned']) ?></span>
+                            </div>
+                            <div class="w-px h-8 bg-white/20"></div>
+                            <div class="flex flex-col text-right">
+                                <span class="opacity-70">Đã dùng</span>
+                                <span class="text-lg font-bold"><?= number_format($user_points['total_spent']) ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- File List -->
-            <div id="fileList" class="card bg-base-100 shadow-md mb-6 hidden">
-                <div class="card-body">
-                    <h3 class="card-title text-lg mb-4">
-                        <i class="fa-solid fa-list-ul text-lg"></i>
-                        Files to Upload (<span id="fileCount">0</span>)
-                    </h3>
-                    <div id="fileListContent" class="space-y-4 max-h-[600px] overflow-y-auto"></div>
+                <!-- Guidelines Card -->
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-xl mb-6 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-heart text-primary"></i>
+                            Quy trình Tải lên
+                        </h3>
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <div class="flex-none w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">1</div>
+                                <div>
+                                    <h4 class="font-bold text-sm">Chọn Tệp</h4>
+                                    <p class="text-xs text-base-content/60 mt-1">Chọn một hoặc nhiều tệp cùng lúc.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="flex-none w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">2</div>
+                                <div>
+                                    <h4 class="font-bold text-sm">Thông tin Tài liệu</h4>
+                                    <p class="text-xs text-base-content/60 mt-1">Nhập tiêu đề (tối thiểu 40 ký tự) và mô tả chi tiết.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="flex-none w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">3</div>
+                                <div>
+                                    <h4 class="font-bold text-sm">Phân loại & Kiểm duyệt</h4>
+                                    <p class="text-xs text-base-content/60 mt-1">Chọn đúng chuyên mục để được duyệt nhanh nhất.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 p-4 bg-warning/5 rounded-2xl border border-warning/10 border-dashed">
+                             <div class="flex gap-3">
+                                <i class="fa-solid fa-triangle-exclamation text-warning mt-1"></i>
+                                <div class="text-[11px] leading-relaxed">
+                                    <strong class="text-warning">Lưu ý:</strong> Chúng tôi nghiêm cấm đăng tải tài liệu vi phạm bản quyền hoặc nội dung trái pháp luật. Tài liệu sẽ được kiểm duyệt trong vòng 24h.
+                                </div>
+                             </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Upload Progress -->
-            <div id="uploadProgress" class="card bg-base-100 shadow-md mb-6 hidden">
-                <div class="card-body">
-                    <h3 class="card-title text-lg mb-4">
-                        <i class="fa-solid fa-spinner fa-spin text-lg"></i>
-                        Upload Progress
-                    </h3>
-                    <div id="progressContainer" class="space-y-4"></div>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="flex gap-4 mt-6">
-                <button type="submit" id="submitBtn" class="btn btn-primary btn-lg flex-1">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    Upload Files
-                </button>
-            </div>
-        </form>
+        </div>
     </main>
     
 <?php 
@@ -134,34 +211,31 @@ $approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_i
     
     /* Category cascade styling */
     .category-cascade {
-        background: hsl(var(--b2));
-        border-radius: 8px;
-        padding: 16px;
+        background: hsl(var(--b1));
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        border: 1px solid hsl(var(--b3));
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
     
-    .category-cascade .form-control {
-        margin-bottom: 12px;
+    .category-select-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
     
-    .category-cascade .form-control:last-child {
-        margin-bottom: 0;
+    .category-cascade .select-sm {
+        border-radius: 0.75rem;
+        height: 2.5rem;
     }
     
     .category-cascade .label-text {
-        font-weight: 600;
-        font-size: 12px;
+        font-weight: 800;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
         color: hsl(var(--p));
-    }
-    
-    .cascade-arrow {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: hsl(var(--p));
-        font-size: 12px;
-        margin: 8px 0;
+        opacity: 0.7;
     }
 </style>
 
@@ -219,61 +293,111 @@ $approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_i
 
     function updateFileList() {
         selectedFiles = Array.from(fileInput.files);
+        const submitContainer = document.getElementById('submitContainer');
+        
         if(selectedFiles.length > 0) {
             fileList.classList.remove('hidden');
+            submitContainer.classList.remove('hidden');
             fileCount.textContent = selectedFiles.length;
-            fileListContent.innerHTML = selectedFiles.map((file, index) => `
-                <div class="card bg-base-200 border-l-4 border-primary">
-                    <div class="card-body p-4">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex-1">
-                                <div class="font-semibold text-base">📄 ${file.name}</div>
-                                <div class="text-sm text-base-content/70">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                            </div>
-                            <button type="button" onclick="removeFile(${index})" class="btn btn-sm btn-error">
-                                <i class="fa-solid fa-trash-can"></i>
-                                Remove
-                            </button>
-                        </div>
-                        
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold">Tên Tài Liệu <span class="text-error">*</span> <small class="text-base-content/70">(Tối thiểu 40 ký tự)</small></span>
-                            </label>
-                            <input type="text" class="input input-bordered fileName" data-index="${index}" placeholder="Nhập tên tài liệu (tối thiểu 40 ký tự)..." value="${getFileNameWithoutExtension(file.name)}" required>
-                            <label class="label">
-                                <span class="label-text-alt text-base-content/70" id="name-length-${index}">0 ký tự</span>
-                            </label>
-                        </div>
-                        
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold">Mô tả <span class="text-error">*</span></span>
-                            </label>
-                            <input type="text" class="input input-bordered fileDescription" data-index="${index}" placeholder="Nhập mô tả tài liệu..." required>
-                        </div>
-                        
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold">📂 Phân loại <span class="text-error">*</span></span>
-                            </label>
-                            ${generateCategoryCascade(index)}
-                        </div>
-                        
-                        <div class="form-control">
-                            <label class="label cursor-pointer justify-start gap-2">
-                                <input type="checkbox" class="checkbox filePrivacy" data-index="${index}" checked>
-                                <span class="label-text"><strong>Public</strong> <span class="text-base-content/70">(visible to all users)</span></span>
-                            </label>
+            fileListContent.innerHTML = selectedFiles.map((file, index) => {
+                const extension = file.name.split('.').pop().toUpperCase();
+                let iconClass = 'fa-file-lines';
+                let iconColor = 'text-primary';
+                
+                if (['JPG', 'JPEG', 'PNG'].includes(extension)) {
+                    iconClass = 'fa-file-image';
+                    iconColor = 'text-info';
+                } else if (['PDF'].includes(extension)) {
+                    iconClass = 'fa-file-pdf';
+                    iconColor = 'text-error';
+                } else if (['XLS', 'XLSX'].includes(extension)) {
+                    iconClass = 'fa-file-excel';
+                    iconColor = 'text-success';
+                } else if (['PPT', 'PPTX'].includes(extension)) {
+                    iconClass = 'fa-file-powerpoint';
+                    iconColor = 'text-warning';
+                }
+
+                return `
+                <div class="group relative card bg-base-100 border border-base-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-3xl overflow-hidden">
+                    <div class="card-body p-0">
+                        <div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-base-200">
+                             <!-- File Info Column -->
+                             <div class="p-6 lg:w-1/3 bg-base-200/30 flex flex-col justify-between">
+                                <div class="flex items-start gap-4">
+                                     <div class="w-14 h-14 rounded-2xl bg-base-100 flex items-center justify-center text-2xl shadow-sm ${iconColor}">
+                                        <i class="fa-solid ${iconClass}"></i>
+                                     </div>
+                                     <div class="flex-1 min-w-0">
+                                        <div class="font-bold text-base truncate" title="${file.name}">${file.name}</div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="badge badge-sm font-bold uppercase">${extension}</span>
+                                            <span class="text-xs opacity-50 font-medium">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                        </div>
+                                     </div>
+                                </div>
+                                <button type="button" onclick="removeFile(${index})" class="mt-6 btn btn-ghost btn-sm text-error hover:bg-error/10 rounded-xl gap-2 w-fit">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                    Loại bỏ
+                                </button>
+                             </div>
+
+                             <!-- Input Fields Column -->
+                             <div class="p-6 lg:w-2/3 flex flex-col gap-6">
+                                <div class="space-y-6">
+                                     <div class="form-control w-full">
+                                        <label class="label pt-0">
+                                            <span class="label-text-alt uppercase font-black text-primary/80 tracking-wider">Tên Tài Liệu <span class="text-error font-extrabold">*</span></span>
+                                        </label>
+                                        <input type="text" class="input input-bordered input-md bg-base-200/50 focus:bg-base-100 rounded-xl fileName w-full" data-index="${index}" placeholder="Tên tệp sẽ hiển thị trên web..." value="${getFileNameWithoutExtension(file.name)}" required>
+                                        <label class="label pb-0">
+                                            <span class="label-text-alt opacity-50 font-bold" id="name-length-${index}">0 ký tự</span>
+                                            <span class="label-text-alt text-[10px] uppercase font-bold text-base-content/40 italic">Tối thiểu 40 ký tự</span>
+                                        </label>
+                                     </div>
+                                     
+                                     <div class="form-control w-full">
+                                        <label class="label pt-0">
+                                            <span class="label-text-alt uppercase font-black text-primary/80 tracking-wider">Mô tả tóm tắt <span class="text-error font-extrabold">*</span></span>
+                                        </label>
+                                        <textarea class="textarea textarea-bordered bg-base-200/50 focus:bg-base-100 rounded-xl fileDescription w-full h-24" data-index="${index}" placeholder="Vài lời giới thiệu về tài liệu..." required></textarea>
+                                     </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-8">
+                                    <div class="form-control">
+                                        <label class="label pt-0">
+                                            <span class="label-text-alt uppercase font-black text-primary/80 tracking-wider">📂 Phân loại chuyên sâu <span class="text-error font-extrabold">*</span></span>
+                                        </label>
+                                        ${generateCategoryCascade(index)}
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <label class="label pt-0">
+                                            <span class="label-text-alt uppercase font-black text-primary/80 tracking-wider">🔧 Cấu hình nâng cao</span>
+                                        </label>
+                                        <div class="p-4 bg-base-200/50 rounded-2xl border border-dashed border-base-300">
+                                            <label class="label cursor-pointer justify-start gap-3 p-0">
+                                                <input type="checkbox" class="checkbox checkbox-primary checkbox-sm rounded-lg filePrivacy" data-index="${index}" checked>
+                                                <div>
+                                                    <span class="label-text font-bold block">Chế độ Công khai</span>
+                                                    <span class="label-text-alt opacity-50">Tất cả người dùng trên hệ thống có thể thấy.</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;}).join('');
             
             // Initialize cascade handlers for each file
             initializeCascadeHandlers();
         } else {
             fileList.classList.add('hidden');
+            submitContainer.classList.add('hidden');
         }
         
         // Add event listeners to remove error highlighting and update character count
@@ -330,87 +454,85 @@ $approved_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_i
     // Generate cascade category selectors for each file
     function generateCategoryCascade(fileIndex) {
         return `
-            <div class="category-cascade" id="cascade-${fileIndex}">
-                <!-- Cấp học -->
-                <div class="form-control">
-                    <label class="label py-1">
-                        <span class="label-text">Cấp học</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full education-level-select" 
-                            data-index="${fileIndex}"
-                            onchange="onEducationLevelChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn cấp học --</option>
-                        ${educationLevels.map(level => `<option value="${level.code}">${level.name}</option>`).join('')}
-                    </select>
+            <div class="category-cascade shadow-sm" id="cascade-${fileIndex}">
+                <div class="category-select-group">
+                    <!-- Cấp học -->
+                    <div class="form-control">
+                        <label class="label py-0 mb-1">
+                            <span class="label-text">1. Cấp học</span>
+                        </label>
+                        <select class="select select-bordered select-sm w-full education-level-select" 
+                                data-index="${fileIndex}"
+                                onchange="onEducationLevelChange(${fileIndex}, this.value)">
+                            <option value="">-- Chọn cấp học --</option>
+                            ${educationLevels.map(level => `<option value="${level.code}">${level.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    
+                        <!-- Lớp (for phổ thông) -->
+                        <div class="form-control hidden" id="grade-container-${fileIndex}">
+                            <label class="label py-0 mb-1">
+                                <span class="label-text">2. Lớp</span>
+                            </label>
+                            <select class="select select-bordered select-sm w-full grade-select" 
+                                    data-index="${fileIndex}"
+                                    onchange="onGradeChange(${fileIndex}, this.value)">
+                                <option value="">-- Chọn lớp --</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Môn học (for phổ thông) -->
+                        <div class="form-control hidden" id="subject-container-${fileIndex}">
+                            <label class="label py-0 mb-1">
+                                <span class="label-text">3. Môn học</span>
+                            </label>
+                            <select class="select select-bordered select-sm w-full subject-select" 
+                                    data-index="${fileIndex}"
+                                    onchange="onSubjectChange(${fileIndex}, this.value)">
+                                <option value="">-- Chọn môn học --</option>
+                            </select>
+                        </div>
+                    
+                    
+                        <!-- Nhóm ngành (for đại học) -->
+                        <div class="form-control hidden" id="major-group-container-${fileIndex}">
+                            <label class="label py-0 mb-1">
+                                <span class="label-text">2. Nhóm ngành</span>
+                            </label>
+                            <select class="select select-bordered select-sm w-full major-group-select" 
+                                    data-index="${fileIndex}"
+                                    onchange="onMajorGroupChange(${fileIndex}, this.value)">
+                                <option value="">-- Chọn nhóm ngành --</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Ngành học (for đại học) -->
+                        <div class="form-control hidden" id="major-container-${fileIndex}">
+                            <label class="label py-0 mb-1">
+                                <span class="label-text">3. Ngành học</span>
+                            </label>
+                            <select class="select select-bordered select-sm w-full major-select" 
+                                    data-index="${fileIndex}"
+                                    onchange="onMajorChange(${fileIndex}, this.value)">
+                                <option value="">-- Chọn ngành học --</option>
+                            </select>
+                        </div>
+                    
+                    <!-- Loại tài liệu -->
+                    <div class="form-control hidden" id="doc-type-container-${fileIndex}">
+                        <label class="label py-0 mb-1">
+                            <span class="label-text">4. Loại tài liệu</span>
+                        </label>
+                        <select class="select select-bordered select-sm w-full doc-type-select" 
+                                data-index="${fileIndex}"
+                                onchange="onDocTypeChange(${fileIndex}, this.value)">
+                            <option value="">-- Chọn loại tài liệu --</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <!-- Lớp (for phổ thông) -->
-                <div class="form-control hidden" id="grade-container-${fileIndex}">
-                    <!-- <div class="cascade-arrow">↓</div> -->
-                    <label class="label py-1">
-                        <span class="label-text">Lớp</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full grade-select" 
-                            data-index="${fileIndex}"
-                            onchange="onGradeChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn lớp --</option>
-                    </select>
-                </div>
-                
-                <!-- Môn học (for phổ thông) -->
-                <div class="form-control hidden" id="subject-container-${fileIndex}">
-                    <!-- <div class="cascade-arrow">↓</div> -->
-                    <label class="label py-1">
-                        <span class="label-text">Môn học</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full subject-select" 
-                            data-index="${fileIndex}"
-                            onchange="onSubjectChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn môn học --</option>
-                    </select>
-                </div>
-                
-                <!-- Nhóm ngành (for đại học) -->
-                <div class="form-control hidden" id="major-group-container-${fileIndex}">
-                    <!-- <div class="cascade-arrow">↓</div> -->
-                    <label class="label py-1">
-                        <span class="label-text">Nhóm ngành</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full major-group-select" 
-                            data-index="${fileIndex}"
-                            onchange="onMajorGroupChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn nhóm ngành --</option>
-                    </select>
-                </div>
-                
-                <!-- Ngành học (for đại học) -->
-                <div class="form-control hidden" id="major-container-${fileIndex}">
-                    <!-- <div class="cascade-arrow">↓</div> -->
-                    <label class="label py-1">
-                        <span class="label-text">Ngành học</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full major-select" 
-                            data-index="${fileIndex}"
-                            onchange="onMajorChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn ngành học --</option>
-                    </select>
-                </div>
-                
-                <!-- Loại tài liệu -->
-                <div class="form-control hidden" id="doc-type-container-${fileIndex}">
-                    <!-- <div class="cascade-arrow">↓</div> -->
-                    <label class="label py-1">
-                        <span class="label-text">Loại tài liệu</span>
-                    </label>
-                    <select class="select select-bordered select-sm w-full doc-type-select" 
-                            data-index="${fileIndex}"
-                            onchange="onDocTypeChange(${fileIndex}, this.value)">
-                        <option value="">-- Chọn loại tài liệu --</option>
-                    </select>
-                </div>
-                
-                <!-- Summary -->
-                <div class="mt-3 p-2 bg-base-100 rounded text-xs hidden" id="category-summary-${fileIndex}"></div>
+                <!-- Summary Area -->
+                <div class="mt-4 p-3 bg-primary/5 rounded-xl border border-primary/10 hidden" id="category-summary-${fileIndex}"></div>
             </div>
         `;
     }

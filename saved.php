@@ -38,98 +38,126 @@ $total_saved = count($all_saved_docs);
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
     
-    <main class="flex-1 p-6">
+    <main class="flex-1 p-4 lg:p-8">
+        <!-- Header Section -->
+        <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-extrabold flex items-center gap-3 text-base-content">
+                    <div class="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
+                        <i class="fa-solid fa-bookmark"></i>
+                    </div>
+                    Tài Liệu Đã Lưu
+                </h1>
+                <p class="text-base-content/60 mt-2 font-medium">Lưu trữ những kiến thức quan trọng của bạn</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <div class="badge badge-lg py-4 px-6 bg-base-100 border-base-300 shadow-sm font-bold gap-2 text-primary">
+                    <i class="fa-solid fa-folder-open text-primary/60"></i>
+                    Tổng số: <span class="ml-1"><?= $total_saved ?></span>
+                </div>
+            </div>
+        </div>
+
         <?php if(isset($_GET['msg']) && $_GET['msg'] == 'unsaved'): ?>
-            <div class="alert alert-success mb-4">
-                    <i class="fa-solid fa-circle-check fa-lg"></i>
-                <span>Document removed from saved</span>
+            <div class="alert bg-success/10 border-success/20 text-success mb-8 rounded-2xl animate-bounce-slow">
+                <i class="fa-solid fa-circle-check"></i>
+                <span class="font-bold">Đã bỏ lưu tài liệu thành công!</span>
             </div>
         <?php endif; ?>
 
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-3xl font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-bookmark text-primary text-3xl"></i>
-                    Saved Documents
-                </h1>
-                <p class="text-base-content/70"><?= $total_saved ?> document<?= $total_saved != 1 ? 's' : '' ?> saved</p>
-            </div>
-            <!-- <a href="dashboard.php" class="btn btn-ghost">← Back to Dashboard</a> -->
-        </div>
-
         <?php if($total_saved > 0): ?>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <?php
-                foreach($all_saved_docs as $doc) {
+                foreach($all_saved_docs as $doc):
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                     $thumbnail = $doc['thumbnail'] ?? null;
                     $total_pages = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : null;
-                    $icon_svg = '';
-                    if(in_array($ext, ['pdf', 'doc', 'docx'])) {
-                        $icon_svg = '<i class="fa-solid fa-file-pdf fa-4x text-primary"></i>';
-                    } elseif(in_array($ext, ['xls', 'xlsx', 'ppt', 'pptx'])) {
-                        $icon_svg = '<i class="fa-solid fa-file-excel fa-4x text-primary"></i>';
-                    } elseif($ext == 'txt') {
-                        $icon_svg = '<i class="fa-solid fa-file-lines fa-4x text-primary"></i>';
-                    } elseif(in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        $icon_svg = '<i class="fa-solid fa-file-image fa-4x text-primary"></i>';
-                    } elseif($ext == 'zip') {
-                        $icon_svg = '<i class="fa-solid fa-file-zipper fa-4x text-primary"></i>';
-                    } else {
-                        $icon_svg = '<i class="fa-solid fa-file fa-4x text-primary"></i>';
-                    }
-                    echo '
-                    <div class="card bg-base-100 shadow-md hover:shadow-xl transition-shadow">
-                        <figure class="relative h-40 bg-primary/10 flex items-center justify-center">
-                            ';
-                    if ($thumbnail && file_exists('uploads/' . $thumbnail)) {
-                        echo '<img src="uploads/' . htmlspecialchars($thumbnail) . '" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;">';
-                        if ($total_pages) {
-                            echo '<div class="badge badge-primary absolute bottom-2 right-2">' . $total_pages . ' trang</div>';
-                        }
-                    } else {
-                        echo $icon_svg;
-                    }
-                    echo '
-                        </figure>
-                        <div class="card-body p-4">
-                            <h3 class="card-title text-sm line-clamp-2" title="' . htmlspecialchars($doc['original_name']) . '">' . htmlspecialchars(substr($doc['original_name'], 0, 25)) . '</h3>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="avatar">
-                                    <div class="w-5 h-5 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
-                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
-                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
-                                            : '<i class="fa-solid fa-user text-[8px] text-primary"></i>') . '
-                                    </div>
+                    
+                    $icon_class = 'fa-file-lines';
+                    $icon_color = 'text-primary';
+                    if(in_array($ext, ['pdf'])) { $icon_class = 'fa-file-pdf'; $icon_color = 'text-error'; }
+                    elseif(in_array($ext, ['doc', 'docx'])) { $icon_class = 'fa-file-word'; $icon_color = 'text-info'; }
+                    elseif(in_array($ext, ['xls', 'xlsx'])) { $icon_class = 'fa-file-excel'; $icon_color = 'text-success'; }
+                    elseif(in_array($ext, ['ppt', 'pptx'])) { $icon_class = 'fa-file-powerpoint'; $icon_color = 'text-warning'; }
+                    elseif(in_array($ext, ['zip', 'rar'])) { $icon_class = 'fa-file-zipper'; $icon_color = 'text-purple-500'; }
+                ?>
+                    <div class="group relative bg-base-100 rounded-[2rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                        <!-- Thumbnail/Icon Area -->
+                        <div class="aspect-[4/3] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
+                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                            <?php else: ?>
+                                <div class="p-8 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                    <i class="fa-solid <?= $icon_class ?> text-5xl <?= $icon_color ?>"></i>
                                 </div>
-                                <span class="text-[10px] text-base-content/60 font-medium">' . htmlspecialchars($doc['username']) . '</span>
+                            <?php endif; ?>
+                            
+                            <!-- Badges Overlay -->
+                            <div class="absolute top-4 left-4 flex gap-2">
+                                <span class="badge bg-base-100/90 backdrop-blur-md border-none font-black text-[10px] py-3 uppercase shadow-sm"><?= $ext ?></span>
+                                <?php if ($total_pages): ?>
+                                    <span class="badge bg-primary/90 backdrop-blur-md border-none text-primary-content font-bold text-[10px] py-3 shadow-sm"><?= $total_pages ?> TRANG</span>
+                                <?php endif; ?>
                             </div>
-                            <p class="text-[10px] text-base-content/40 mt-1">' . date('M d, Y', strtotime($doc['created_at'])) . '</p>';
-                    if ($total_pages) {
-                        echo '<p class="text-xs text-base-content/50"><i class="fa-solid fa-file-lines mr-1"></i>' . $total_pages . ' trang</p>';
-                    }
-                    echo '
-                            <div class="card-actions justify-end mt-2">
-                                <a href="view.php?id=' . $doc['id'] . '" class="btn btn-sm btn-primary">View</a>
-                                <button class="btn btn-sm btn-error" onclick="vsdConfirm({title: \'Xác nhận bỏ lưu\', message: \'Bạn có chắc chắn muốn bỏ lưu tài liệu này?\', type: \'warning\', onConfirm: () => window.location.href=\'saved.php?unsave=' . $doc['id'] . '\'})">Unsave</button>
+
+                            <!-- Actions Overlay (Hover) -->
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                                <a href="view.php?id=<?= $doc['id'] ?>" class="btn btn-primary btn-circle btn-lg shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                    <i class="fa-solid fa-eye text-xl"></i>
+                                </a>
+                                <button onclick="vsdConfirm({title: 'Xác nhận bỏ lưu', message: 'Bạn có chắc chắn muốn bỏ lưu tài liệu này?', type: 'warning', onConfirm: () => window.location.href='saved.php?unsave=<?= $doc['id'] ?>'})" 
+                                        class="btn btn-error btn-circle btn-lg shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
+                                    <i class="fa-solid fa-bookmark-slash text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card Content -->
+                        <div class="p-6">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc['id'] ?>'">
+                                <?= htmlspecialchars($doc['original_name']) ?>
+                            </h3>
+                            
+                            <div class="divider opacity-10 my-4"></div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 overflow-hidden border border-primary/20">
+                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
+                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                        <?php else: ?>
+                                            <div class="w-full h-full flex items-center justify-center text-primary">
+                                                <i class="fa-solid fa-user text-xs"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <span class="text-xs font-bold text-base-content/60"><?= htmlspecialchars($doc['username']) ?></span>
+                                </div>
+                                <span class="text-[10px] font-black uppercase tracking-tighter opacity-30"><?= date('d M, Y', strtotime($doc['created_at'])) ?></span>
                             </div>
                         </div>
                     </div>
-                    ';
-                }
-                ?>
+                <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body text-center py-20">
-                    <div class="flex justify-center mb-4">
-                        <i class="fa-solid fa-bookmark text-primary/30 text-6xl"></i>
+            <!-- Premium Empty State -->
+            <div class="relative overflow-hidden rounded-[3rem] bg-base-100 border-2 border-dashed border-base-200 p-20 text-center shadow-inner">
+                <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                <div class="absolute -left-20 -top-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-32 h-32 rounded-[2.5rem] bg-base-200/50 flex items-center justify-center mb-8 text-primary shadow-lg border border-white/40 backdrop-blur-sm">
+                        <i class="fa-solid fa-bookmark text-5xl opacity-20"></i>
                     </div>
-                    <h2 class="card-title justify-center text-2xl">No Saved Documents</h2>
-                    <p class="text-base-content/70">You haven't saved any documents yet.<br>Start exploring and save your favorite documents!</p>
-                    <div class="card-actions justify-center mt-6">
-                        <a href="dashboard.php" class="btn btn-primary">Browse Documents</a>
-                    </div>
+                    <h2 class="text-3xl font-black mb-4">Danh sách trống</h2>
+                    <p class="text-base-content/50 max-w-sm mx-auto mb-10 text-lg font-medium leading-relaxed">
+                        Bạn chưa lưu tài liệu nào cả. Hãy khám phá kho tài liệu khổng lồ và lưu lại những kiến thức bổ ích nhé!
+                    </p>
+                    <a href="dashboard.php" class="btn btn-primary btn-lg rounded-2xl px-12 h-16 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 font-black tracking-wide">
+                        <i class="fa-solid fa-compass mr-2"></i>
+                        KHÁM PHÁ NGAY
+                    </a>
                 </div>
             </div>
         <?php endif; ?>
@@ -138,5 +166,6 @@ $total_saved = count($all_saved_docs);
     <?php include 'includes/footer.php'; ?>
 </div>
 </div>
-
+<?php 
+// No more stray code here
 ?>

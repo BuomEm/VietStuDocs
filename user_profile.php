@@ -18,7 +18,6 @@ if ($profile_id === 0) {
 $profile_user = $VSD->get_row("SELECT id, username, email, avatar, created_at FROM users WHERE id = $profile_id");
 
 if (!$profile_user) {
-    // User not found
     include 'includes/head.php';
     include 'includes/navbar.php';
     echo '<div class="container mx-auto p-10 text-center"><h1 class="text-2xl font-bold mb-4">Người dùng không tồn tại</h1><a href="index.php" class="btn btn-primary">Về trang chủ</a></div>';
@@ -45,228 +44,386 @@ $total_likes_query = $VSD->get_row("
     JOIN documents d ON di.document_id = d.id
     WHERE d.user_id = $profile_id AND di.type = 'like' AND d.is_public = 1 AND d.status = 'approved'
 ");
-$total_likes = $total_likes_query['total'] ?? 0;
+$total_likes = intval($total_likes_query['total'] ?? 0);
 
 $current_user_id = getCurrentUserId();
+include 'includes/head.php'; 
 ?>
-<?php include 'includes/head.php'; ?>
-
-<!-- PDF.js & DOCX Preview Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.4/dist/docx-preview.min.js"></script>
-
-    <?php include 'includes/sidebar.php'; ?>
-    <div class="drawer-content flex flex-col bg-base-100">
-    <?php include 'includes/navbar.php'; ?>
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
     
-    <main class="flex-1 w-full max-w-7xl mx-auto p-6">
-        <!-- Profile Header -->
-        <div class="card bg-base-100 shadow-xl mb-8 overflow-hidden transform transition-all hover:shadow-2xl">
-            <!-- Cover Photo / Banner (Gradient) -->
-            <div class="h-48 bg-gradient-to-r from-primary/80 to-secondary/80 w-full relative">
-                <div class="absolute inset-0 bg-grid-white/[0.1] bg-[length:20px_20px]"></div>
-            </div>
-            
-            <div class="card-body px-8 pt-0 pb-8 relative">
-                <div class="flex flex-col md:flex-row gap-6 items-start">
-                    <!-- Avatar container - overlapping the banner -->
-                    <div class="-mt-16 flex-shrink-0">
-                        <div class="avatar">
-                            <div class="w-32 h-32 rounded-full ring-4 ring-base-100 shadow-2xl bg-base-100 flex items-center justify-center overflow-hidden">
-                                <?php if (!empty($profile_user['avatar']) && file_exists('uploads/avatars/' . $profile_user['avatar'])): ?>
-                                    <img src="uploads/avatars/<?= htmlspecialchars($profile_user['avatar']) ?>" alt="<?= htmlspecialchars($profile_user['username']) ?>" class="object-cover" />
-                                <?php else: ?>
-                                    <div class="bg-primary/10 w-full h-full flex items-center justify-center">
-                                        <i class="fa-solid fa-circle-user text-6xl text-primary/50"></i>
-                                    </div>
-                                <?php endif; ?>
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    .profile-banner {
+        height: 260px;
+        background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
+    }
+
+    .profile-header-card {
+        max-width: 1200px;
+        margin: -80px auto 40px;
+        position: relative;
+        z-index: 10;
+        padding: 0 24px;
+    }
+
+    .profile-info-vsd {
+        background: var(--glass-bg);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        border: 1px solid var(--glass-border);
+        border-radius: 3rem;
+        padding: 48px;
+        box-shadow: 0 40px 100px -20px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-avatar-vsd {
+        width: 160px;
+        height: 160px;
+        margin-top: -128px;
+        margin-bottom: 24px;
+        border-radius: 3.5rem;
+        padding: 8px;
+        background: oklch(var(--b1));
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2);
+        position: relative;
+    }
+
+    .profile-avatar-vsd img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: calc(3.5rem - 8px);
+    }
+
+    .profile-avatar-vsd .placeholder-icon {
+        width: 100%;
+        height: 100%;
+        background: oklch(var(--bc) / 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: oklch(var(--p) / 0.3);
+        border-radius: calc(3.5rem - 8px);
+    }
+
+    .profile-name-vsd {
+        font-size: 2.5rem;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .premium-badge-vsd {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        box-shadow: 0 10px 20px -5px rgba(251, 191, 36, 0.4);
+    }
+
+    .profile-stats-vsd {
+        display: flex;
+        gap: 40px;
+        margin-top: 32px;
+        padding-top: 32px;
+        border-top: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .stat-vsd-item {
+        text-align: center;
+    }
+
+    .stat-vsd-value {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: oklch(var(--p));
+        line-height: 1;
+    }
+
+    .stat-vsd-label {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: oklch(var(--bc) / 0.4);
+        margin-top: 4px;
+    }
+
+    /* Document Grid Layout */
+    .docs-section-vsd {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px 60px;
+    }
+
+    .section-title-vsd {
+        font-size: 1.5rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        margin-bottom: 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .section-title-vsd::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: oklch(var(--bc) / 0.05);
+    }
+
+    .doc-grid-vsd {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 32px;
+    }
+
+    .doc-card-vsd {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2rem;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        cursor: pointer;
+    }
+
+    .doc-card-vsd:hover {
+        transform: translateY(-12px);
+        box-shadow: 0 30px 60px -12px rgba(0,0,0,0.1);
+        border-color: oklch(var(--p) / 0.3);
+    }
+
+    .doc-preview-vsd {
+        height: 200px;
+        background: oklch(var(--bc) / 0.03);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .doc-preview-vsd i {
+        font-size: 4rem;
+        color: oklch(var(--bc) / 0.1);
+    }
+
+    .doc-preview-vsd img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .doc-badge-vsd {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+    }
+
+    .doc-content-vsd {
+        padding: 24px;
+    }
+
+    .doc-title-vsd {
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.4;
+        margin-bottom: 16px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.8em;
+    }
+
+    .doc-meta-vsd {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 16px;
+        border-top: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .doc-type-badge {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: oklch(var(--p));
+        background: oklch(var(--p) / 0.1);
+        padding: 4px 10px;
+        border-radius: 100px;
+    }
+
+    .doc-likes-vsd {
+        font-size: 11px;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.4);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .doc-likes-vsd i {
+        color: oklch(var(--p));
+    }
+</style>
+
+<body class="bg-base-100">
+    <?php include 'includes/sidebar.php'; ?>
+
+    <div class="drawer-content flex flex-col min-h-screen">
+        <?php include 'includes/navbar.php'; ?>
+
+        <main class="flex-1">
+            <!-- Banner -->
+            <div class="profile-banner"></div>
+
+            <!-- Profile Info Section -->
+            <div class="profile-header-card">
+                <div class="profile-info-vsd animate-in fade-in zoom-in duration-700">
+                    <div class="profile-avatar-vsd">
+                        <?php if (!empty($profile_user['avatar']) && file_exists('uploads/avatars/' . $profile_user['avatar'])): ?>
+                            <img src="uploads/avatars/<?= htmlspecialchars($profile_user['avatar']) ?>" alt="<?= htmlspecialchars($profile_user['username']) ?>" />
+                        <?php else: ?>
+                            <div class="placeholder-icon">
+                                <i class="fa-solid fa-user"></i>
                             </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <h1 class="profile-name-vsd">
+                        <?= htmlspecialchars($profile_user['username']) ?>
+                        <?php if (isPremium($profile_id)): ?>
+                            <div class="premium-badge-vsd">
+                                <i class="fa-solid fa-crown mr-1"></i> Premium
+                            </div>
+                        <?php endif; ?>
+                    </h1>
+
+                    <div class="flex items-center gap-4 text-xs font-black uppercase tracking-widest opacity-40">
+                        <span><i class="fa-regular fa-calendar mr-1"></i> Thành viên từ <?= date('m/Y', strtotime($profile_user['created_at'])) ?></span>
+                    </div>
+
+                    <div class="profile-stats-vsd">
+                        <div class="stat-vsd-item">
+                            <div class="stat-vsd-value"><?= number_format(intval($total_docs)) ?></div>
+                            <div class="stat-vsd-label">Tài liệu</div>
+                        </div>
+                        <div class="stat-vsd-item">
+                            <div class="stat-vsd-value"><?= number_format(intval($total_likes)) ?></div>
+                            <div class="stat-vsd-label">Tổng lượt thích</div>
                         </div>
                     </div>
-                    
-                    <!-- User Info -->
-                    <div class="flex-1 pt-4 mt-2 md:mt-0">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h1 class="text-3xl font-extrabold text-base-content flex items-center gap-2">
-                                    <?= htmlspecialchars($profile_user['username']) ?>
-                                    <?php if (isPremium($profile_id)): ?>
-                                        <div class="badge badge-warning gap-1 shadow-sm" title="Thành viên Premium">
-                                            <i class="fa-solid fa-crown text-xs"></i> Premium
-                                        </div>
-                                    <?php endif; ?>
-                                </h1>
-                                <p class="text-base-content/60 text-sm mt-1 flex items-center gap-2">
-                                    <i class="fa-regular fa-calendar"></i>
-                                    Tham gia từ <?= date('d/m/Y', strtotime($profile_user['created_at'])) ?>
-                                </p>
-                            </div>
-                            
-                            <!-- Action Buttons (if looking at own profile) -->
-                            <?php if ($current_user_id === $profile_id): ?>
-                                <a href="profile.php" class="btn btn-outline btn-primary btn-sm gap-2">
-                                    <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa hồ sơ
-                                </a>
-                            <?php endif; ?>
+
+                    <?php if ($current_user_id === $profile_id): ?>
+                        <div class="mt-8">
+                            <a href="profile.php" class="btn btn-primary btn-sm rounded-xl px-6 font-black tracking-widest text-[10px]">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i> CHỈNH SỬA HỒ SƠ
+                            </a>
                         </div>
-                        
-                        <!-- Stats -->
-                        <div class="flex flex-wrap gap-4 mt-6">
-                            <div class="stats shadow-sm border border-base-200 bg-base-100/50">
-                                <div class="stat px-6 py-2">
-                                    <div class="stat-figure text-primary">
-                                        <i class="fa-regular fa-file-lines text-2xl"></i>
-                                    </div>
-                                    <div class="stat-title text-xs font-semibold uppercase tracking-wider">Tài liệu</div>
-                                    <div class="stat-value text-primary text-2xl"><?= $total_docs ?></div>
-                                </div>
-                            </div>
-                            
-                            <div class="stats shadow-sm border border-base-200 bg-base-100/50">
-                                <div class="stat px-6 py-2">
-                                    <div class="stat-figure text-secondary">
-                                        <i class="fa-regular fa-heart text-2xl"></i>
-                                    </div>
-                                    <div class="stat-title text-xs font-semibold uppercase tracking-wider">Lượt thích</div>
-                                    <div class="stat-value text-secondary text-2xl"><?= $total_likes ?></div>
-                                </div>
-                            </div>
-                            
-                            <!-- Placeholder for future stats like Reviews -->
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
-        </div>
 
-        <!-- Documents Section -->
-        <div>
-            <div class="flex items-center justify-between mb-6 pb-2 border-b-2 border-primary/10">
-                <h2 class="text-2xl font-bold flex items-center gap-3">
-                    <span class="bg-primary/10 p-2 rounded-lg text-primary">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </span>
+            <!-- Documents Section -->
+            <div class="docs-section-vsd">
+                <h2 class="section-title-vsd">
+                    <i class="fa-solid fa-layer-group text-primary"></i>
                     Tài liệu đã chia sẻ
                 </h2>
-                <!-- Filter/Sort could go here -->
-            </div>
 
-            <?php if ($total_docs > 0): ?>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-                    <?php foreach ($user_docs as $doc): 
-                        $doc_id = $doc['id'];
-                        $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                        $file_path = "uploads/" . $doc['file_name'];
-                        
-                        // Likes Stats
-                        $likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-                        $dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
-                        $total_interactions = $likes + $dislikes;
-                        $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
-                        
-                        // Category & Type
-                        $doc_category = getDocumentCategoryWithNames($doc_id);
-                        $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Khác';
-                        
-                        // Previews
-                        $is_pdf = ($ext === 'pdf');
-                        $is_docx = in_array($ext, ['doc', 'docx']);
-                        $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                        $preview_id = 'preview_profile_' . $doc_id;
-                        $page_count_id = 'pagecount_profile_' . $doc_id;
-                        
-                        $doc_name_short = preg_replace('/\.[^.]+$/', '', $doc['original_name']);
-                        
-                        $thumbnail = $doc['thumbnail'] ?? null;
-                        $thumbnail_path = 'uploads/' . $thumbnail;
-                        $has_thumbnail = $thumbnail && file_exists($thumbnail_path);
-                        $page_count = $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
-                        
-                        // Simple content generation logic reused from dashboard
-                        $preview_html = '';
-                        if ($has_thumbnail) {
-                            $preview_html = '<img src="' . $thumbnail_path . '" class="w-full h-full object-cover" />';
-                        } elseif ($is_pdf) {
-                            $preview_html = '<div class="flex items-center justify-center h-full text-base-content/20"><i class="fa-regular fa-file-pdf text-6xl"></i></div>';
-                        } elseif ($is_docx) {
-                             $preview_html = '<div class="docx-preview-container w-full h-full bg-white"></div>';
-                        } elseif ($is_image) {
-                             $preview_html = '<img src="' . $file_path . '" class="w-full h-full object-cover" />';
-                        } else {
-                             $preview_html = '<div class="flex items-center justify-center h-full text-base-content/20"><i class="fa-regular fa-file text-6xl"></i></div>';
-                        }
-                    ?>
-                        <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer group rounded-xl border border-base-200 overflow-hidden" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
-                            <!-- Preview Area -->
-                            <figure class="relative h-48 bg-base-200/50 group-hover:bg-base-200 transition-colors">
-                                <div class="w-full h-full" id="<?= $preview_id ?>">
-                                    <?= $preview_html ?>
-                                </div>
-                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors"></div>
-                                <div class="badge badge-primary absolute bottom-2 right-2 shadow-sm font-mono text-xs" id="<?= $page_count_id ?>"><?= $page_count ?> trang</div>
-                            </figure>
+                <?php if ($total_docs > 0): ?>
+                    <div class="doc-grid-vsd">
+                        <?php foreach ($user_docs as $doc): 
+                            $doc_id = $doc['id'];
+                            $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                            $file_path = "uploads/" . $doc['file_name'];
                             
-                            <!-- Content -->
-                            <div class="card-body p-4 gap-3">
-                                <h3 class="card-title text-sm font-bold line-clamp-2 leading-snug min-h-[2.5em] group-hover:text-primary transition-colors">
-                                    <?= htmlspecialchars($doc_name_short) ?>
-                                </h3>
-                                
-                                <div class="flex items-center justify-between text-xs text-base-content/60 border-t border-base-100 pt-3 mt-1">
-                                    <span class="flex items-center gap-1.5 bg-base-200/50 px-2 py-1 rounded max-w-[60%] truncate">
-                                        <i class="fa-solid fa-tag text-[10px] text-primary"></i>
-                                        <?= htmlspecialchars($doc_type) ?>
-                                    </span>
-                                    <div class="flex items-center gap-3">
-                                         <div class="flex items-center gap-1 text-success font-bold" title="Lượt thích">
+                            $likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
+                            
+                            $doc_category = getDocumentCategoryWithNames($doc_id);
+                            $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Khác';
+                            
+                            $doc_name_short = preg_replace('/\.[^.]+$/', '', $doc['original_name']);
+                            
+                            $thumbnail = $doc['thumbnail'] ?? null;
+                            $thumbnail_path = 'uploads/' . $thumbnail;
+                            $has_thumbnail = $thumbnail && file_exists($thumbnail_path);
+                            $page_count = intval($doc['total_pages'] > 0 ? $doc['total_pages'] : 1);
+                        ?>
+                            <div class="doc-card-vsd animate-in fade-in slide-in-from-bottom-4 duration-500" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
+                                <div class="doc-preview-vsd">
+                                    <?php if ($has_thumbnail): ?>
+                                        <img src="<?= $thumbnail_path ?>" alt="Thumbnail" />
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    <?php endif; ?>
+                                    <div class="doc-badge-vsd"><?= $page_count ?> TRANG</div>
+                                </div>
+                                <div class="doc-content-vsd">
+                                    <h3 class="doc-title-vsd"><?= htmlspecialchars($doc_name_short) ?></h3>
+                                    <div class="doc-meta-vsd">
+                                        <span class="doc-type-badge"><?= htmlspecialchars($doc_type) ?></span>
+                                        <div class="doc-likes-vsd">
                                             <i class="fa-solid fa-thumbs-up"></i>
-                                            <?= $likes ?>
+                                            <?= number_format($likes) ?>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Scripts for specific file types if no thumbnail -->
-                        <?php if (!$has_thumbnail && $is_pdf): ?>
-                            <script>
-                                // Simple PDF render fallback if needed, but thumbnails are preferred
-                            </script>
-                        <?php endif; ?>
-                        
-                        <?php if (!$has_thumbnail && $is_docx): ?>
-                            <script>
-                                (async function() {
-                                    const container = document.querySelector('#<?= $preview_id ?> .docx-preview-container');
-                                    if(!container) return;
-                                    try {
-                                        const response = await fetch('<?= $file_path ?>');
-                                        const blob = await response.blob();
-                                        await docx.renderAsync(blob, container, null, { 
-                                            inWrapper: false, 
-                                            ignoreWidth: false, 
-                                            ignoreHeight: false 
-                                        });
-                                    } catch(e) { console.error('Docx fail', e); }
-                                })();
-                            </script>
-                        <?php endif; ?>
-
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="flex flex-col items-center justify-center py-16 bg-base-100 rounded-3xl border-2 border-dashed border-base-200">
-                    <div class="bg-base-200/50 w-20 h-20 rounded-full flex items-center justify-center mb-4">
-                        <i class="fa-regular fa-folder-open text-4xl text-base-content/30"></i>
+                        <?php endforeach; ?>
                     </div>
-                    <h3 class="text-lg font-bold">Chưa có tài liệu nào</h3>
-                    <p class="text-base-content/60 text-sm">Người dùng này chưa chia sẻ tài liệu công khai nào.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-    </main>
+                <?php else: ?>
+                    <div class="text-center py-20 bg-base-200/30 rounded-[3rem] border border-dashed border-base-content/10">
+                        <i class="fa-solid fa-folder-open text-6xl opacity-10 mb-6"></i>
+                        <h3 class="text-xl font-black opacity-30 uppercase tracking-widest">Chưa có tài liệu nào</h3>
+                        <p class="text-sm font-bold opacity-20 mt-2">Người dùng này chưa chia sẻ tài liệu công khai nào.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </main>
 
-    <?php include 'includes/footer.php'; ?>
-    </div> <!-- Close drawer-content -->
-</div> <!-- Close drawer -->
+        <?php include 'includes/footer.php'; ?>
+    </div>
+</body>
+</html>

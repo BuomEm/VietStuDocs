@@ -129,12 +129,34 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Points Display -->
                     <?php if($user_points): ?>
-                        <li>
-                            <div class="stats stats-vertical shadow-sm bg-primary/10">
-                                <div class="stat py-3 px-4">
-                                    <div class="stat-title text-xs">Points Balance</div>
-                                    <div class="stat-value text-lg text-primary"><?= number_format($user_points['current_points']) ?></div>
-                                    <div class="stat-desc text-xs">Earned: <?= number_format($user_points['total_earned']) ?></div>
+                        <li class="mt-4 px-2 points-card">
+                            <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-4 transition-all hover:bg-primary/20">
+                                <!-- Background Decoration -->
+                                <div class="absolute -right-2 -bottom-2 text-primary/10 transition-transform group-hover:scale-110">
+                                    <i class="fa-solid fa-coins text-5xl"></i>
+                                </div>
+                                
+                                <div class="relative z-10 flex flex-col gap-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-base-content/60">Số dư điểm</span>
+                                        <i class="fa-solid fa-circle-info text-[10px] text-primary/40"></i>
+                                    </div>
+                                    
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="text-2xl font-black text-primary"><?= number_format($user_points['current_points']) ?></span>
+                                        <span class="text-[10px] font-bold text-primary/60">VSD</span>
+                                    </div>
+                                    
+                                    <div class="mt-2 flex items-center justify-between border-t border-primary/10 pt-2 text-[10px]">
+                                        <div class="flex flex-col">
+                                            <span class="text-base-content/50">Đã nhận</span>
+                                            <span class="font-bold"><?= number_format($user_points['total_earned']) ?></span>
+                                        </div>
+                                        <div class="flex flex-col text-right">
+                                            <span class="text-base-content/50">Đã dùng</span>
+                                            <span class="font-bold"><?= number_format($user_points['total_spent']) ?></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </li>

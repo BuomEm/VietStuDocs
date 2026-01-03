@@ -13,25 +13,28 @@ $is_premium = isPremium($user_id);
 $premium_info = getPremiumInfo($user_id);
 
 // Calculate days remaining for Premium
-$days_remaining = null;
-$hours_remaining = null;
+$days_remaining = 0;
+$hours_remaining = 0;
 $show_countdown = false;
 
 if($is_premium && $premium_info) {
-    $end_date = new DateTime($premium_info['end_date']);
-    $now = new DateTime();
-    $interval = $now->diff($end_date);
-    
-    $days_remaining = $interval->days;
-    $hours_remaining = $interval->h;
-    
-    // Show countdown if less than 7 days
-    if($days_remaining < 7) {
-        $show_countdown = true;
-    }
+    try {
+        $end_date = new DateTime($premium_info['end_date']);
+        $now = new DateTime();
+        
+        if ($end_date > $now) {
+            $interval = $now->diff($end_date);
+            $days_remaining = intval($interval->days);
+            $hours_remaining = intval($interval->h);
+            
+            if($days_remaining < 7) {
+                $show_countdown = true;
+            }
+        }
+    } catch (Exception $e) {}
 }
 
-$page_title = "Profile - DocShare";
+$page_title = "Cài đặt tài khoản - DocShare";
 $current_page = 'profile';
 
 $error = '';
@@ -58,16 +61,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['avatar']) && $_FILES[
             }
 
             if ($VSD->query("UPDATE users SET avatar = '$new_name' WHERE id = $user_id")) {
-                $success = "Avatar updated successfully";
+                $success = "Cập nhật ảnh đại diện thành công!";
                 $user = getUserInfo($user_id);
             } else {
-                $error = "Database update failed";
+                $error = "Lỗi cập nhật cơ sở dữ liệu.";
             }
         } else {
-            $error = "Failed to upload file";
+            $error = "Không thể tải tệp lên.";
         }
     } else {
-        $error = "Invalid file type. Only JPG, PNG, and GIF allowed.";
+        $error = "Định dạng không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF.";
     }
 }
 
@@ -77,14 +80,14 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     $email = $_POST['email'];
     
     if(strlen($username) < 3) {
-        $error = "Username must be at least 3 characters";
+        $error = "Tên đăng nhập phải có ít nhất 3 ký tự.";
     } elseif(!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = "Invalid email format";
+        $error = "Email không hợp lệ.";
     } elseif(updateUserProfile($user_id, $username, $email)) {
-        $success = "Profile updated successfully";
+        $success = "Cập nhật thông tin thành công!";
         $user = getUserInfo($user_id);
     } else {
-        $error = "Failed to update profile";
+        $error = "Cập nhật thông tin thất bại.";
     }
 }
 
@@ -95,285 +98,430 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
     $confirm_password = $_POST['confirm_password'];
     
     if(empty($old_password) || empty($new_password) || empty($confirm_password)) {
-        $error = "All fields are required";
+        $error = "Vui lòng nhập đầy đủ các trường.";
     } elseif($new_password !== $confirm_password) {
-        $error = "Passwords do not match";
+        $error = "Mật khẩu xác nhận không khớp.";
     } elseif(strlen($new_password) < 6) {
-        $error = "Password must be at least 6 characters";
+        $error = "Mật khẩu mới phải có ít nhất 6 ký tự.";
     } elseif(changePassword($user_id, $old_password, $new_password)) {
-        $success = "Password changed successfully";
+        $success = "Đổi mật khẩu thành công!";
     } else {
-        $error = "Old password is incorrect";
+        $error = "Mật khẩu cũ không chính xác.";
     }
 }
 
 // Count user's documents
-$my_docs_count = $VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id");
-$saved_docs_count = $VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'");
+$my_docs_count = intval($VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id") ?: 0);
+$saved_docs_count = intval($VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'") ?: 0);
 
+include 'includes/head.php'; 
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
-
-<div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
     
-    <main class="flex-1 p-6">
-        <h1 class="text-3xl font-bold text-primary mb-6 flex items-center gap-2">
-            <i class="fa-solid fa-user-gear text-primary text-3xl"></i>
-            Profile Settings
-        </h1>
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
 
-        <?php if($error): ?>
-            <div class="alert alert-error mb-4">
-                    <i class="fa-solid fa-circle-xmark fa-lg"></i>
-                <span><?= htmlspecialchars($error) ?></span>
-            </div>
-        <?php endif; ?>
-        <?php if($success): ?>
-            <div class="alert alert-success mb-4">
-                    <i class="fa-solid fa-circle-check fa-lg"></i>
-                <span><?= htmlspecialchars($success) ?></span>
-            </div>
-        <?php endif; ?>
+    .profile-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
 
-        <!-- Profile Info Card -->
-        <div class="card bg-base-100 shadow-xl mb-6">
-            <div class="card-body">
-                <div class="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-base-200">
-                    <div class="relative group">
-                        <div class="avatar">
-                            <div class="w-24 h-24 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden bg-base-200">
-                                <?php if(!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])): ?>
-                                    <img src="uploads/avatars/<?= $user['avatar'] ?>" alt="Avatar" class="object-cover w-full h-full" />
-                                <?php else: ?>
-                                    <div class="flex items-center justify-center w-full h-full text-primary">
-                                        <i class="fa-solid fa-user text-4xl"></i>
-                                    </div>
-                                <?php endif; ?>
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2.5rem;
+        padding: 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 32px;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: oklch(var(--p));
+    }
+
+    /* Avatar Section */
+    .avatar-wrapper {
+        position: relative;
+        width: 120px;
+        height: 120px;
+    }
+
+    .avatar-ring {
+        width: 100%;
+        height: 100%;
+        border-radius: 2.5rem;
+        padding: 6px;
+        background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
+        box-shadow: 0 15px 30px -10px oklch(var(--p) / 0.4);
+    }
+
+    .avatar-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: calc(2.5rem - 6px);
+        background: var(--glass-bg);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .avatar-inner img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .avatar-edit-btn {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: oklch(var(--b1));
+        border: 1px solid var(--glass-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .avatar-edit-btn:hover {
+        transform: scale(1.1);
+        background: oklch(var(--p));
+        color: white;
+    }
+
+    /* Stats Grid */
+    .stats-vsd-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 32px;
+    }
+
+    .stat-vsd-card {
+        padding: 24px;
+        border-radius: 2rem;
+        background: oklch(var(--bc) / 0.03);
+        border: 1px solid oklch(var(--bc) / 0.05);
+        text-align: center;
+    }
+
+    .stat-vsd-val {
+        font-size: 2rem;
+        font-weight: 900;
+        color: oklch(var(--p));
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+
+    .stat-vsd-label {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: oklch(var(--bc) / 0.4);
+    }
+
+    /* Form Styling */
+    .form-group-vsd {
+        margin-bottom: 24px;
+    }
+
+    .label-vsd {
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: oklch(var(--bc) / 0.5);
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .input-vsd {
+        width: 100%;
+        height: 56px;
+        border-radius: 1.25rem;
+        background: oklch(var(--bc) / 0.03);
+        border: 1px solid oklch(var(--bc) / 0.05);
+        padding: 0 20px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+
+    .input-vsd:focus {
+        background: oklch(var(--b1));
+        border-color: oklch(var(--p));
+        outline: none;
+        box-shadow: 0 0 0 4px oklch(var(--p) / 0.1);
+    }
+
+    .btn-vsd-save {
+        width: 100%;
+        height: 56px;
+        border-radius: 1.25rem;
+        background: oklch(var(--p));
+        color: white;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        box-shadow: 0 15px 30px -10px oklch(var(--p) / 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-vsd-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 40px -12px oklch(var(--p) / 0.4);
+    }
+
+    /* Premium Countdown Premium */
+    .premium-box-vsd {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        border-radius: 2rem;
+        padding: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 32px;
+    }
+
+    .countdown-unit {
+        text-align: center;
+        background: rgba(255,255,255,0.2);
+        padding: 12px 20px;
+        border-radius: 1.25rem;
+        min-width: 80px;
+    }
+
+    .countdown-val {
+        font-size: 1.75rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .countdown-label {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+</style>
+
+<body class="bg-base-100">
+    <?php include 'includes/sidebar.php'; ?>
+
+    <div class="drawer-content flex flex-col min-h-screen">
+        <?php include 'includes/navbar.php'; ?>
+
+        <main class="flex-1">
+            <div class="profile-container">
+                
+                <!-- Alerts -->
+                <?php if($error): ?>
+                    <div class="glass-card !py-4 border-l-4 border-error mb-6">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-circle-xmark text-error text-xl"></i>
+                            <span class="font-bold text-sm"><?= htmlspecialchars($error) ?></span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                <?php if($success): ?>
+                    <div class="glass-card !py-4 border-l-4 border-success mb-6">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-circle-check text-success text-xl"></i>
+                            <span class="font-bold text-sm"><?= htmlspecialchars($success) ?></span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Header / Profile Info -->
+                <div class="glass-card">
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <div class="avatar-wrapper">
+                            <div class="avatar-ring">
+                                <div class="avatar-inner">
+                                    <?php if(!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])): ?>
+                                        <img src="uploads/avatars/<?= $user['avatar'] ?>" />
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-user text-5xl text-primary/50"></i>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <button onclick="document.getElementById('avatar-input').click()" class="avatar-edit-btn">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+                            <form id="avatar-form" method="POST" enctype="multipart/form-data" class="hidden">
+                                <input type="file" id="avatar-input" name="avatar" accept="image/*" onchange="document.getElementById('avatar-form').submit()">
+                            </form>
+                        </div>
+
+                        <div class="flex-1 text-center md:text-left">
+                            <h1 class="text-3xl font-black tracking-tight mb-2"><?= htmlspecialchars($user['username']) ?></h1>
+                            <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                                <span class="bg-base-200 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest opacity-60">
+                                    <i class="fa-solid fa-envelope mr-1"></i> <?= htmlspecialchars($user['email']) ?>
+                                </span>
+                                <span class="bg-base-200 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest opacity-60">
+                                    <i class="fa-solid fa-calendar mr-1"></i> Tham gia <?= date('m/Y', strtotime($user['created_at'])) ?>
+                                </span>
                             </div>
                         </div>
-                        <button onclick="document.getElementById('avatar-input').click()" class="absolute bottom-0 right-0 btn btn-circle btn-sm btn-primary shadow-lg border-2 border-base-100 hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-camera text-xs"></i>
-                        </button>
-                        <form id="avatar-form" method="POST" enctype="multipart/form-data" class="hidden">
-                            <input type="file" id="avatar-input" name="avatar" accept="image/*" onchange="document.getElementById('avatar-form').submit()">
+
+                        <div class="flex gap-2">
+                             <?php if($is_premium): ?>
+                                <div class="badge badge-warning p-4 font-black text-[10px] tracking-widest rounded-xl">
+                                    <i class="fa-solid fa-crown mr-1"></i> PREMIUM
+                                </div>
+                             <?php else: ?>
+                                <a href="premium.php" class="btn btn-ghost btn-sm rounded-xl font-bold">Nâng cấp <i class="fa-solid fa-arrow-right ml-1"></i></a>
+                             <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="stats-vsd-grid">
+                        <div class="stat-vsd-card">
+                            <div class="stat-vsd-val"><?= intval($my_docs_count) ?></div>
+                            <div class="stat-vsd-label">Tải lên</div>
+                        </div>
+                        <div class="stat-vsd-card">
+                            <div class="stat-vsd-val"><?= intval($saved_docs_count) ?></div>
+                            <div class="stat-vsd-label">Đã lưu</div>
+                        </div>
+                        <div class="stat-vsd-card">
+                            <div class="stat-vsd-val">
+                                <i class="fa-solid fa-<?= $is_premium ? 'circle-check text-success' : 'circle-xmark text-base-content/20' ?>"></i>
+                            </div>
+                            <div class="stat-vsd-label">Trạng thái Premium</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Premium Status Box -->
+                <?php if($is_premium): ?>
+                    <div class="premium-box-vsd mb-8">
+                        <div class="flex-1">
+                            <h3 class="font-black text-xl mb-1 uppercase tracking-tighter">Premium đang hoạt động</h3>
+                            <p class="text-xs font-bold opacity-80 uppercase tracking-widest">Hết hạn vào <?= date('d/m/Y', strtotime($premium_info['end_date'])) ?></p>
+                        </div>
+                        <?php if($show_countdown): ?>
+                            <div class="flex gap-2">
+                                <div class="countdown-unit">
+                                    <div class="countdown-val"><?= $days_remaining ?></div>
+                                    <div class="countdown-label">Ngày</div>
+                                </div>
+                                <div class="countdown-unit">
+                                    <div class="countdown-val"><?= $hours_remaining ?></div>
+                                    <div class="countdown-label">Giờ</div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Update Profile -->
+                    <div class="glass-card">
+                        <h2 class="section-title"><i class="fa-solid fa-user-pen"></i> Cài đặt tài khoản</h2>
+                        <form method="POST">
+                            <div class="form-group-vsd">
+                                <label class="label-vsd">Tên đăng nhập</label>
+                                <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" class="input-vsd">
+                            </div>
+                            <div class="form-group-vsd">
+                                <label class="label-vsd">Địa chỉ Email</label>
+                                <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" class="input-vsd">
+                            </div>
+                            <button type="submit" name="update_profile" class="btn-vsd-save">Cập nhật thông tin</button>
                         </form>
                     </div>
-                    <div class="text-center sm:text-left">
-                        <h2 class="text-2xl font-bold"><?= htmlspecialchars($user['username']) ?></h2>
-                        <p class="text-base-content/70 flex items-center gap-1">
-                            <i class="fa-solid fa-envelope w-4 h-4"></i>
-                            <?= htmlspecialchars($user['email']) ?>
-                        </p>
-                        <p class="text-sm text-base-content/50">Joined: <?= date('M d, Y', strtotime($user['created_at'])) ?></p>
+
+                    <!-- Change Password -->
+                    <div class="glass-card">
+                        <h2 class="section-title"><i class="fa-solid fa-lock"></i> Bảo mật</h2>
+                        <form method="POST">
+                            <div class="form-group-vsd">
+                                <label class="label-vsd">Mật khẩu hiện tại</label>
+                                <input type="password" name="old_password" class="input-vsd" placeholder="••••••••">
+                            </div>
+                            <div class="form-group-vsd">
+                                <label class="label-vsd">Mật khẩu mới</label>
+                                <input type="password" name="new_password" class="input-vsd" placeholder="Tối thiểu 6 ký tự">
+                            </div>
+                            <div class="form-group-vsd">
+                                <label class="label-vsd">Xác nhận mật khẩu mới</label>
+                                <input type="password" name="confirm_password" class="input-vsd" placeholder="Nhập lại mật khẩu mới">
+                            </div>
+                            <button type="submit" name="change_password" class="btn-vsd-save">Đổi mật khẩu</button>
+                        </form>
                     </div>
                 </div>
 
-                <!-- Stats -->
-                <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
-                    <div class="stat">
-                        <div class="stat-value text-primary"><?= $my_docs_count ?></div>
-                        <div class="stat-title">Documents Uploaded</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value text-primary"><?= $saved_docs_count ?></div>
-                        <div class="stat-title">Documents Saved</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value <?= $is_premium ? 'text-success' : 'text-error' ?>">
-                            <?= $is_premium ? '✓' : '✗' ?>
+                <!-- Notifications Settings -->
+                <div class="glass-card">
+                    <h2 class="section-title"><i class="fa-solid fa-bell"></i> Thông báo</h2>
+                    <div class="flex items-center justify-between p-6 bg-base-200/30 rounded-3xl border border-base-content/5">
+                        <div>
+                            <span class="font-black text-sm uppercase tracking-tight block">Thông báo trình duyệt (Web Push)</span>
+                            <span class="text-[10px] font-bold opacity-30 mt-1 uppercase tracking-widest" id="push-status">Trạng thái: Đang kiểm tra...</span>
                         </div>
-                        <div class="stat-title">Premium Status</div>
+                        <input type="checkbox" id="btn-toggle-push" class="toggle toggle-primary toggle-lg" onchange="handlePushToggle(this)" />
                     </div>
                 </div>
 
-        <!-- Premium Countdown (if less than 7 days) -->
-        <?php if($show_countdown): ?>
-        <div style="background: linear-gradient(135deg, #ffd700, #ffed4e); padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ff9800;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div>
-                    <h3 style="color: #333; font-size: 16px; margin-bottom: 5px;" class="flex items-center gap-2">
-                        <i class="fa-solid fa-hourglass-half"></i>
-                        Premium Expiring Soon
-                    </h3>
-                    <p style="color: #555; font-size: 13px;">Your Premium membership will expire in:</p>
-                </div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px;">
-                <div style="background: white; padding: 15px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 28px; font-weight: 700; color: #ff9800;">
-                        <?= $days_remaining ?>
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 5px;">Days</div>
-                </div>
-                <div style="background: white; padding: 15px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 28px; font-weight: 700; color: #ff9800;">
-                        <?= $hours_remaining ?>
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 5px;">Hours</div>
-                </div>
-            </div>
+        </main>
 
-            <p style="color: #555; font-size: 13px; margin-top: 15px; text-align: center;">
-                Expires on: <strong><?= date('M d, Y H:i', strtotime($premium_info['end_date'])) ?></strong>
-            </p>
+        <?php include 'includes/footer.php'; ?>
+    </div>
 
-            <div style="margin-top: 15px;">
-                <a href="premium.php" style="display: inline-block; width: 100%; padding: 12px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-weight: 600; transition: background 0.3s;">
-                    Renew Premium Now
-                </a>
-            </div>
-        </div>
-        <?php elseif($is_premium): ?>
-        <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745; color: #155724;">
-            <p style="font-size: 14px; margin: 0;" class="flex items-center gap-2">
-                <i class="fa-solid fa-circle-check"></i>
-                Your Premium membership is active and will expire on <strong><?= date('M d, Y', strtotime($premium_info['end_date'])) ?></strong>
-            </p>
-        </div>
-        <?php else: ?>
-        <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
-            <p style="font-size: 14px; color: #333; margin-bottom: 10px;">
-                <span class="flex items-center gap-2">
-                    <i class="fa-solid fa-gift"></i>
-                    You don't have Premium yet.
-                </span>
-            </p>
-            <a href="premium.php" style="display: inline-block; padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">
-                View Premium Plans
-            </a>
-        </div>
-        <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Update Profile Card -->
-        <div class="card bg-base-100 shadow-xl mb-6">
-            <div class="card-body">
-                <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-user-pen w-5 h-5"></i>
-                    Update Profile
-                </h3>
-
-                <form method="POST" class="space-y-4">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">Username</span>
-                        </label>
-                        <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" 
-                               class="input input-bordered" required>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">Email</span>
-                        </label>
-                        <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" 
-                               class="input input-bordered" required>
-                    </div>
-
-                    <div class="form-control mt-6">
-                        <button type="submit" name="update_profile" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Notification Settings Card -->
-        <div class="card bg-base-100 shadow-xl mb-6 border-l-4 border-primary">
-            <div class="card-body">
-                <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-bell w-5 h-5"></i>
-                    Cài đặt thông báo
-                </h3>
-                
-                <p class="text-sm opacity-70 mb-4">Bật thông báo đẩy để nhận tin nhắn và cập nhật tài liệu ngay lập tức trên thiết bị của bạn.</p>
-                
-                <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg">
-                    <div>
-                        <span class="font-bold block">Thông báo đẩy (Web Push)</span>
-                        <span class="text-[10px] opacity-50" id="push-status">Trạng thái: Đang kiểm tra...</span>
-                    </div>
-                    <input type="checkbox" id="btn-toggle-push" class="toggle toggle-primary" onchange="handlePushToggle(this)" />
-                </div>
-            </div>
-        </div>
-
-        <script>
+    <script>
         async function handlePushToggle(el) {
-            const status = checkNotificationStatus();
-            
-            if (status === 'denied') {
+            if (typeof checkNotificationStatus !== 'function') {
+                alert('Hệ thống thông báo chưa được khởi tạo.');
                 el.checked = false;
-                alert('Bạn đã chặn thông báo. Vui lòng mở cài đặt trình duyệt để bật lại.');
                 return;
             }
-
+            const status = checkNotificationStatus();
+            if (status === 'denied') {
+                el.checked = false;
+                alert('Bạn đã chặn thông báo. Vui lòng đặt lại quyền trên trình duyệt.');
+                return;
+            }
             if (el.checked) {
-                // ON
                 if (status === 'default') {
                     const result = await Notification.requestPermission();
-                    if (result === 'granted') {
-                        await subscribePush();
-                    } else {
-                        el.checked = false;
-                    }
-                } else {
-                    await subscribePush();
-                }
+                    if (result === 'granted') { await subscribePush(); } 
+                    else { el.checked = false; }
+                } else { await subscribePush(); }
             } else {
-                // OFF
                 await unsubscribePush();
                 alert('Đã tắt thông báo trên thiết bị này.');
             }
-            
-            updateNotificationUI();
         }
-        
-        // Initial sync handled by notifications.js
-        </script>
-
-
-        <!-- Change Password Card -->
-        <div class="card bg-base-100 shadow-xl mb-6">
-            <div class="card-body">
-                <h3 class="card-title text-primary border-b border-primary pb-2 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-lock w-5 h-5"></i>
-                    Change Password
-                </h3>
-
-                <form method="POST" class="space-y-4">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">Current Password</span>
-                        </label>
-                        <input type="password" name="old_password" class="input input-bordered" required>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">New Password</span>
-                        </label>
-                        <input type="password" name="new_password" class="input input-bordered" required>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">Confirm New Password</span>
-                        </label>
-                        <input type="password" name="confirm_password" class="input input-bordered" required>
-                    </div>
-
-                    <div class="form-control mt-6">
-                        <button type="submit" name="change_password" class="btn btn-primary">Change Password</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </main>
-    
-    <?php include 'includes/footer.php'; ?>
-</div>
-</div>
+    </script>
+</body>
+</html>

@@ -75,17 +75,33 @@ if(isset($_SESSION['user_id'])) {
 
             <!-- Profile Dropdown -->
             <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-                    <div class="w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-primary/20 hover:ring-2 transition-all">
-                        <?php if(!empty($user_info['avatar']) && file_exists('uploads/avatars/' . $user_info['avatar'])): ?>
-                            <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" alt="Avatar" class="object-cover w-full h-full" />
-                        <?php else: ?>
-                            <span class="text-3xl flex items-center justify-center w-full h-full mb-0.5">
-                                <i class="fa-solid fa-circle-user leading-none"></i>
-                            </span>
+                <div tabindex="0" role="button" class="btn btn-ghost p-0 min-h-0 h-11 w-11 rounded-full group/avatar relative">
+                    <div class="avatar h-full w-full flex items-center justify-center overflow-visible">
+                        <!-- Multi-Tier Glow Ring -->
+                        <div class="absolute -inset-[1px] rounded-full transition-all duration-500 <?= $is_premium ? 'bg-gradient-to-tr from-yellow-500 via-amber-200 to-yellow-600 animate-pulse-slow shadow-[0_0_10px_-3px_rgba(234,179,8,0.4)] opacity-100' : 'bg-primary/30 border border-primary/20 opacity-100' ?>"></div>
+                        
+                        <!-- Main Avatar Container -->
+                        <div class="w-9 h-9 rounded-full bg-base-100 p-[1px] relative z-10 transition-transform duration-300 group-hover/avatar:scale-105">
+                            <div class="w-full h-full rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden border border-white/10">
+                                <?php if(!empty($user_info['avatar']) && file_exists('uploads/avatars/' . $user_info['avatar'])): ?>
+                                    <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" alt="Avatar" class="object-cover w-full h-full" />
+                                <?php else: ?>
+                                    <span class="text-2xl flex items-center justify-center w-full h-full">
+                                        <i class="fa-solid fa-circle-user"></i>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Premium Crown Badge -->
+                        <?php if($is_premium): ?>
+                            <div class="absolute -top-1 -right-1 flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-600 text-black rounded-full w-5 h-5 border-2 border-base-100 shadow-md z-20 animate-bounce-slow">
+                                <i class="fa-solid fa-crown text-[9px]"></i>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
+
                 <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-xl bg-base-100 rounded-box w-64 text-base-content border border-base-300">
                     <li class="menu-title flex flex-row items-center gap-3 px-4 py-3">
                         <div class="avatar">
@@ -99,6 +115,7 @@ if(isset($_SESSION['user_id'])) {
                                 <?php endif; ?>
                             </div>
                         </div>
+
                         <div class="flex flex-col">
                             <span class="font-bold text-base-content"><?= htmlspecialchars($user_info['username'] ?? getCurrentUsername()) ?></span>
                             <span class="text-[10px] opacity-60 font-normal truncate w-32">

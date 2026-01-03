@@ -96,242 +96,375 @@ $current_page = 'search';
 <?php include 'includes/head.php'; ?>
 
 <style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+    
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
     .search-container {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 30px 20px;
+        padding: 40px 24px;
     }
 
     .search-header {
-        margin-bottom: 30px;
+        margin-bottom: 40px;
+        position: relative;
     }
 
     .search-title {
-        font-size: 28px;
-        font-weight: 800;
+        font-size: 2.5rem;
+        font-weight: 900;
         color: oklch(var(--bc));
-        margin-bottom: 10px;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.05em;
+        line-height: 1.1;
+        margin-bottom: 12px;
     }
 
     .search-meta {
-        font-size: 14px;
-        color: oklch(var(--bc) / 0.7);
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: oklch(var(--bc) / 0.4);
     }
 
     .search-layout {
         display: grid;
-        grid-template-columns: 320px 1fr;
-        gap: 30px;
+        grid-template-columns: 340px 1fr;
+        gap: 40px;
+        align-items: start;
     }
 
-    /* Filters Sidebar */
+    /* Filters Sidebar - Ultra Premium */
     .filters-sidebar {
-        background: oklch(var(--b1));
-        border-radius: var(--rounded-box);
-        padding: 24px;
-        border: 1px solid oklch(var(--b3));
-        box-shadow: 0 4px 20px -10px rgba(0,0,0,0.05);
-        height: fit-content;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2.5rem;
+        padding: 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
         position: sticky;
         top: 100px;
-    }
-
-    .filters-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid oklch(var(--b3));
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        z-index: 10;
     }
 
     .filters-title {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 1.25rem;
+        font-weight: 900;
         color: oklch(var(--bc));
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
     }
 
     .filter-reset {
-        background: none;
-        border: none;
+        text-transform: uppercase;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
         color: oklch(var(--p));
-        font-size: 13px;
+        padding: 8px 16px;
+        background: oklch(var(--p) / 0.05);
+        border: none;
+        border-radius: 12px;
         cursor: pointer;
-        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 24px;
+        transition: all 0.3s ease;
     }
 
     .filter-reset:hover {
-        text-decoration: underline;
+        background: oklch(var(--p) / 0.1);
+        transform: translateY(-1px);
     }
 
     .filter-group {
-        margin-bottom: 20px;
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .filter-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
     }
 
     .filter-group-title {
-        font-size: 11px;
-        font-weight: 800;
-        color: oklch(var(--p));
-        margin-bottom: 10px;
+        font-size: 0.7rem;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.3);
+        margin-bottom: 12px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.15em;
     }
 
-    .filter-cascade-arrow {
-        text-align: center;
-        color: oklch(var(--p));
-        opacity: 0.5;
-        font-size: 12px;
-        margin: 8px 0;
-    }
-
-    .filter-apply-btn {
+    .filter-select {
         width: 100%;
-        margin-top: 10px;
+        height: 48px;
+        background-color: oklch(var(--b2) / 0.5);
+        border: 1px solid oklch(var(--bc) / 0.1);
+        border-radius: 1rem;
+        padding: 0 16px;
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: oklch(var(--bc));
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
 
-    /* Results Section */
+    .filter-select:focus {
+        outline: none;
+        border-color: oklch(var(--p));
+        background-color: oklch(var(--b1));
+        box-shadow: 0 0 0 4px oklch(var(--p) / 0.1);
+    }
+
+    .btn-apply {
+        width: 100%;
+        height: 56px;
+        background: oklch(var(--p));
+        color: oklch(var(--pc));
+        border: none;
+        border-radius: 1rem;
+        font-weight: 900;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 10px 15px -3px oklch(var(--p) / 0.3);
+        transition: all 0.3s ease;
+        margin-top: 16px;
+    }
+
+    .btn-apply:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px oklch(var(--p) / 0.4);
+    }
+
+    /* Results Sections */
     .results-section {
-        background: oklch(var(--b1));
-        border-radius: var(--rounded-box);
-        padding: 24px;
-        border: 1px solid oklch(var(--b3));
-        box-shadow: 0 4px 20px -10px rgba(0,0,0,0.05);
+        min-width: 0;
     }
 
     .results-toolbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid oklch(var(--b3));
+        margin-bottom: 32px;
     }
 
-    .sort-options {
+    .sort-group {
         display: flex;
-        gap: 8px;
         align-items: center;
+        gap: 8px;
+        background-color: oklch(var(--b2) / 0.5);
+        padding: 6px;
+        border-radius: 1rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
     }
 
-    .sort-label {
-        font-size: 13px;
-        color: oklch(var(--bc) / 0.6);
-        font-weight: 600;
-        margin-right: 4px;
+    .sort-btn {
+        height: 40px;
+        padding: 0 20px;
+        border: none;
+        background: transparent;
+        border-radius: 0.75rem;
+        font-weight: 900;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: oklch(var(--bc) / 0.4);
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
 
-    /* Document Cards */
+    .sort-btn.active {
+        background: oklch(var(--p));
+        color: oklch(var(--pc));
+    }
+
+    /* Document Cards - Premium List Style */
     .documents-grid {
-        display: grid;
-        gap: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
     }
 
     .document-card {
+        position: relative;
         display: flex;
-        gap: 24px;
-        padding: 20px;
-        background: oklch(var(--b2) / 0.3);
-        border-radius: var(--rounded-box);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid oklch(var(--b3));
+        gap: 32px;
+        padding: 24px;
+        background-color: oklch(var(--b1));
+        border-radius: 2.5rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
     }
 
     .document-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 24px -10px rgba(0,0,0,0.1);
-        background: oklch(var(--b1));
-        border-color: oklch(var(--p) / 0.3);
+        border-color: oklch(var(--p) / 0.2);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
     }
 
     .document-thumbnail {
-        width: 140px;
-        height: 190px;
-        background: oklch(var(--b3));
-        border-radius: 8px;
-        overflow: hidden;
+        width: 160px;
+        height: 220px;
+        border-radius: 2rem;
+        background-color: oklch(var(--b2));
         flex-shrink: 0;
         position: relative;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+        border: 1px solid oklch(var(--bc) / 0.05);
+        z-index: 1;
     }
 
     .document-thumbnail img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    .document-icon {
-        width: 140px;
-        height: 190px;
+    .document-card:hover .document-thumbnail img {
+        transform: scale(1.1);
+    }
+
+    .document-badge-pages {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        color: white;
+        font-size: 10px;
+        font-weight: 900;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: oklch(var(--b3) / 0.5);
-        border-radius: 8px;
-        font-size: 56px;
-        flex-shrink: 0;
-        color: oklch(var(--p) / 0.3);
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 2;
     }
 
     .document-info {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 4px 0;
         min-width: 0;
-        padding-top: 4px;
     }
 
     .document-title {
-        font-size: 20px;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 900;
         color: oklch(var(--bc));
-        margin-bottom: 8px;
-        text-decoration: none;
-        display: block;
-        line-height: 1.3;
-        transition: color 0.2s;
-    }
-
-    .document-title:hover {
-        color: oklch(var(--p));
-    }
-
-    .document-category-path {
-        font-size: 11px;
-        font-weight: 700;
-        color: oklch(var(--p));
+        line-height: 1.2;
         margin-bottom: 12px;
+        transition: color 0.3s ease;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .document-card:hover .document-title {
+        color: oklch(var(--p));
+    }
+
+    .document-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
+        margin-bottom: 12px;
     }
 
-    .document-category-path span {
-        background: oklch(var(--p) / 0.1);
-        padding: 2px 10px;
-        border-radius: 20px;
+    .tag-vsd {
+        padding: 4px 12px;
+        border-radius: 2rem;
+        background: oklch(var(--p) / 0.05);
         border: 1px solid oklch(var(--p) / 0.1);
+        font-size: 10px;
+        font-weight: 900;
+        color: oklch(var(--p));
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .document-meta {
+    .document-meta-row {
         display: flex;
+        align-items: center;
         flex-wrap: wrap;
         gap: 20px;
-        font-size: 13px;
-        color: oklch(var(--bc) / 0.7);
-        margin-bottom: 16px;
+        margin-bottom: 12px;
     }
 
-    .document-meta span {
+    .meta-vsd {
         display: flex;
         align-items: center;
         gap: 6px;
+        font-size: 11px;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.4);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .user-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background-color: oklch(var(--b2) / 0.6);
+        padding: 4px 10px;
+        border-radius: 0.75rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .user-avatar-small {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: oklch(var(--p) / 0.1);
+    }
+
+    .user-avatar-small img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .document-description {
-        font-size: 14px;
-        color: oklch(var(--bc) / 0.8);
-        line-height: 1.6;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: oklch(var(--bc) / 0.5);
+        line-height: 1.5;
         margin-bottom: 16px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -339,63 +472,77 @@ $current_page = 'search';
         overflow: hidden;
     }
 
-    .document-stats {
+    .document-footer {
         display: flex;
-        gap: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        color: oklch(var(--bc) / 0.5);
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 16px;
+        border-top: 1px solid oklch(var(--bc) / 0.05);
+        margin-top: auto;
     }
 
-    .stat-item {
+    .price-tag {
         display: flex;
         align-items: center;
         gap: 6px;
+        padding: 6px 14px;
+        border-radius: 0.75rem;
+        font-weight: 900;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    /* Mobile Responsive */
+    .price-free {
+        background-color: oklch(var(--s) / 0.1);
+        color: oklch(var(--s));
+    }
+
+    .price-points {
+        background-color: oklch(var(--wa) / 0.1);
+        color: oklch(var(--wa));
+    }
+
+    .stats-vsd {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .stat-vsd-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.3);
+        text-transform: uppercase;
+    }
+
+    /* Mobile Enhancements */
     @media (max-width: 1024px) {
         .search-layout {
             grid-template-columns: 1fr;
         }
-
         .filters-sidebar {
             position: static;
-            margin-bottom: 20px;
         }
     }
 
     @media (max-width: 640px) {
         .document-card {
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
         }
-
-        .document-thumbnail,
-        .document-icon {
+        .document-thumbnail {
             width: 100%;
-            height: 200px;
-        }
-        
-        .results-toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-        }
-        
-        .sort-options {
-            width: 100%;
-            overflow-x: auto;
-            padding-bottom: 8px;
+            height: 240px;
         }
     }
 
     @keyframes float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-10px); }
-    }
-    .animate-float {
-        animation: float 3s ease-in-out infinite;
     }
 </style>
 
@@ -407,37 +554,30 @@ $current_page = 'search';
     <main class="flex-grow p-4 lg:p-6 pb-20">
         <div class="search-container">
     <div class="search-header">
-        <h1 class="search-title">
-            <?php if (!empty($keyword)): ?>
-                Kết quả tìm kiếm: "<?= htmlspecialchars($keyword) ?>"
-            <?php else: ?>
-                Tài liệu nổi bật
-            <?php endif; ?>
-        </h1>
         <div class="search-meta">
             <?php if ($search_results['total'] > 0): ?>
-                Tìm thấy <strong><?= number_format($search_results['total']) ?></strong> tài liệu
-                <?php if ($search_results['total_pages'] > 1): ?>
-                    - Trang <?= $page ?>/<?= $search_results['total_pages'] ?>
-                <?php endif; ?>
+                ĐÃ TÌM THẤY <?= number_format($search_results['total']) ?> TÀI LIỆU PHÙ HỢP
             <?php else: ?>
-                Không tìm thấy kết quả
+                KHÔNG CÓ KẾT QUẢ NÀO
             <?php endif; ?>
         </div>
+        <h1 class="search-title">
+            <?php if (!empty($keyword)): ?>
+                Kết quả cho <span class="text-primary">"<?= htmlspecialchars($keyword) ?>"</span>
+            <?php else: ?>
+                Tài liệu <span class="text-primary">Nổi bật</span>
+            <?php endif; ?>
+        </h1>
     </div>
 
     <div class="search-layout">
                 <aside class="filters-sidebar">
-            <div class="filters-header">
-                <h2 class="filters-title flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-primary"></i> Lọc kết quả
-                </h2>
+                <h2 class="filters-title">BỘ LỌC TÌM KIẾM</h2>
                 <?php if (!empty($filters)): ?>
-                    <button class="filter-reset flex items-center gap-1 text-primary hover:opacity-80 transition-opacity" onclick="resetFilters()">
-                        <i class="fa-solid fa-rotate-left"></i> Xóa lọc
+                    <button class="filter-reset" onclick="resetFilters()">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> XÓA TẤT CẢ
                     </button>
                 <?php endif; ?>
-            </div>
 
             <form method="GET" action="search.php" id="filterForm">
                 <input type="hidden" name="q" value="<?= htmlspecialchars($keyword) ?>">
@@ -445,11 +585,9 @@ $current_page = 'search';
 
                 <!-- Cấp học -->
                 <div class="filter-group">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-graduation-cap"></i> Cấp học
-                    </div>
-                    <select name="education_level" id="filter_education_level" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả cấp học --</option>
+                    <div class="filter-group-title">Cấp học</div>
+                    <select name="education_level" id="filter_education_level" class="filter-select">
+                        <option value="">Tất cả cấp học</option>
                         <?php foreach ($education_levels as $level): ?>
                             <option value="<?= $level['code'] ?>" <?= $category_filters['education_level'] === $level['code'] ? 'selected' : '' ?>>
                                 <?= $level['name'] ?>
@@ -460,56 +598,46 @@ $current_page = 'search';
 
                 <!-- Lớp (for phổ thông) -->
                 <div class="filter-group hidden" id="filter_grade_container">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-layer-group"></i> Lớp
-                    </div>
-                    <select name="grade_id" id="filter_grade_id" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả lớp --</option>
+                    <div class="filter-group-title">Lớp</div>
+                    <select name="grade_id" id="filter_grade_id" class="filter-select">
+                        <option value="">Tất cả lớp</option>
                     </select>
                 </div>
 
                 <!-- Môn học (for phổ thông) -->
                 <div class="filter-group hidden" id="filter_subject_container">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-book"></i> Môn học
-                    </div>
-                    <select name="subject_code" id="filter_subject_code" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả môn --</option>
+                    <div class="filter-group-title">Môn học</div>
+                    <select name="subject_code" id="filter_subject_code" class="filter-select">
+                        <option value="">Tất cả môn</option>
                     </select>
                 </div>
 
                 <!-- Nhóm ngành (for đại học) -->
                 <div class="filter-group hidden" id="filter_major_group_container">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-users-rectangle"></i> Nhóm ngành
-                    </div>
-                    <select name="major_group_id" id="filter_major_group_id" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả nhóm ngành --</option>
+                    <div class="filter-group-title">Nhóm ngành</div>
+                    <select name="major_group_id" id="filter_major_group_id" class="filter-select">
+                        <option value="">Tất cả nhóm ngành</option>
                     </select>
                 </div>
 
                 <!-- Ngành học (for đại học) -->
                 <div class="filter-group hidden" id="filter_major_container">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-briefcase"></i> Ngành học
-                    </div>
-                    <select name="major_code" id="filter_major_code" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả ngành --</option>
+                    <div class="filter-group-title">Ngành học</div>
+                    <select name="major_code" id="filter_major_code" class="filter-select">
+                        <option value="">Tất cả ngành</option>
                     </select>
                 </div>
 
                 <!-- Loại tài liệu -->
                 <div class="filter-group hidden" id="filter_doc_type_container">
-                    <div class="filter-group-title flex items-center gap-2">
-                        <i class="fa-solid fa-file-contract"></i> Loại tài liệu
-                    </div>
-                    <select name="doc_type_code" id="filter_doc_type_code" class="select select-bordered select-sm w-full bg-base-100">
-                        <option value="">-- Tất cả loại --</option>
+                    <div class="filter-group-title">Loại tài liệu</div>
+                    <select name="doc_type_code" id="filter_doc_type_code" class="filter-select">
+                        <option value="">Tất cả loại</option>
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block shadow-lg mt-4">
-                    <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+                <button type="submit" class="btn-apply">
+                    <i class="fa-solid fa-filter mr-2"></i> LỌC KẾT QUẢ
                 </button>
             </form>
         </aside>
@@ -518,19 +646,11 @@ $current_page = 'search';
         <main class="results-section">
             <?php if (!empty($search_results['results'])): ?>
                 <div class="results-toolbar">
-                    <div class="sort-options">
-                        <span class="sort-label text-base-content/50 uppercase tracking-widest text-[10px] mr-2">Sắp xếp:</span>
-                        <div class="join shadow-sm border border-base-300">
-                            <button class="btn btn-sm join-item <?= $sort === 'relevance' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('relevance')">
-                                <i class="fa-solid fa-bolt-lightning mr-1 opacity-70"></i> Phù hợp nhất
-                            </button>
-                            <button class="btn btn-sm join-item <?= $sort === 'popular' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('popular')">
-                                <i class="fa-solid fa-fire mr-1 opacity-70"></i> Phổ biến
-                            </button>
-                            <button class="btn btn-sm join-item <?= $sort === 'recent' ? 'btn-primary' : 'btn-ghost bg-base-100' ?>" onclick="changeSort('recent')">
-                                <i class="fa-solid fa-clock mr-1 opacity-70"></i> Mới nhất
-                            </button>
-                        </div>
+                    <div class="text-sm font-black text-base-content/30 uppercase tracking-[0.2em]">KẾT QUẢ TÌM THẤY</div>
+                    <div class="sort-group">
+                        <button class="sort-btn <?= $sort === 'relevance' ? 'active' : '' ?>" onclick="changeSort('relevance')">PHÙ HỢP</button>
+                        <button class="sort-btn <?= $sort === 'popular' ? 'active' : '' ?>" onclick="changeSort('popular')">PHỔ BIẾN</button>
+                        <button class="sort-btn <?= $sort === 'recent' ? 'active' : '' ?>" onclick="changeSort('recent')">MỚI NHẤT</button>
                     </div>
                 </div>
 
@@ -538,72 +658,88 @@ $current_page = 'search';
                     <?php foreach ($search_results['results'] as $doc): 
                         $thumbnail = $doc['thumbnail'] ?? null;
                         $total_pages = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : null;
-                        
-                        // Get category info for this document
                         $doc_category = getDocumentCategoryWithNames($doc['id']);
+                        $points = $doc['points'] ?? 0;
                     ?>
-                        <div class="document-card">
-                            <?php if ($thumbnail && file_exists($thumbnail)): ?>
-                                <div class="document-thumbnail">
+                        <div class="document-card group">
+                            <!-- Thumbnail -->
+                            <div class="document-thumbnail">
+                                <?php if ($thumbnail && file_exists($thumbnail)): ?>
                                     <img src="<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail">
-                                    <?php if ($total_pages): ?>
-                                        <span class="badge badge-primary" style="position: absolute; bottom: 8px; right: 8px; font-size: 10px;"><?= $total_pages ?> trang</span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="document-icon"><i class="fa-solid fa-file-lines text-primary/30"></i></div>
-                            <?php endif; ?>
-                            <div class="document-info">
-                                <a href="view.php?id=<?= $doc['id'] ?>" class="document-title">
-                                    <?= htmlspecialchars($doc['original_name']) ?>
-                                </a>
-                                
-                                <?php if ($doc_category): ?>
-                                    <div class="document-category-path">
-                                        <span><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
-                                        <?php if (isset($doc_category['grade_name'])): ?>
-                                            <span><?= htmlspecialchars($doc_category['grade_name']) ?></span>
-                                            <span><?= htmlspecialchars($doc_category['subject_name']) ?></span>
-                                        <?php elseif (isset($doc_category['major_name'])): ?>
-                                            <span><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
-                                        <?php endif; ?>
-                                        <span><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
+                                <?php else: ?>
+                                    <div class="w-full h-full flex items-center justify-center text-primary/20">
+                                        <i class="fa-solid fa-file-invoice text-5xl"></i>
                                     </div>
                                 <?php endif; ?>
                                 
-                                <div class="document-meta" style="flex-wrap: wrap; gap: 10px;">
-                                    <span class="flex items-center gap-1.5 bg-base-100 px-2 py-0.5 rounded-full border border-base-200">
-                                        <div class="avatar">
-                                            <div class="w-4 h-4 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                                <?php if ($total_pages): ?>
+                                    <div class="document-badge-pages">
+                                        <i class="fa-solid fa-file-lines mr-2 opacity-50"></i>
+                                        <?= $total_pages ?> TRANG
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Content Info -->
+                            <div class="document-info">
+                                <div>
+                                    <div class="document-tags">
+                                        <?php if ($doc_category): ?>
+                                            <span class="tag-vsd"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
+                                            <span class="tag-vsd"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <a href="view.php?id=<?= $doc['id'] ?>" class="document-title">
+                                        <?= htmlspecialchars($doc['original_name']) ?>
+                                    </a>
+
+                                    <div class="document-meta-row">
+                                        <div class="user-badge">
+                                            <div class="user-avatar-small bg-primary/10 flex items-center justify-center">
                                                 <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                                                    <img src="uploads/avatars/<?= $doc['avatar'] ?>" alt="Avatar" />
+                                                    <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                                                 <?php else: ?>
-                                                    <i class="fa-solid fa-user text-[6px] text-primary"></i>
+                                                    <i class="fa-solid fa-user text-[8px] text-primary"></i>
                                                 <?php endif; ?>
                                             </div>
+                                            <span class="text-[10px] font-black uppercase text-base-content/60"><?= htmlspecialchars($doc['username']) ?></span>
                                         </div>
-                                        <span class="text-[11px] font-medium text-base-content/70"><?= htmlspecialchars($doc['username']) ?></span>
-                                    </span>
-                                    <span class="flex items-center gap-1 text-[11px] text-base-content/50"><i class="fa-solid fa-calendar-days text-[10px]"></i> <?= date('d/m/Y', strtotime($doc['created_at'])) ?></span>
-                                    <?php 
-                                    $points = $doc['points'] ?? 0;
-                                    if ($points > 0): ?>
-                                        <span><i class="fa-solid fa-coins mr-1 text-xs"></i> <?= number_format($points) ?> điểm</span>
-                                    <?php else: ?>
-                                         <span style="color: #10b981;"><i class="fa-solid fa-gift mr-1 text-xs"></i> Miễn phí</span>
-                                    <?php endif; ?>
-                                    <?php if ($total_pages): ?>
-                                        <span><i class="fa-solid fa-file-lines mr-1 text-xs"></i> <?= $total_pages ?> trang</span>
+                                        <div class="meta-vsd">
+                                            <i class="fa-solid fa-calendar-day"></i>
+                                            <?= date('d M, Y', strtotime($doc['created_at'])) ?>
+                                        </div>
+                                    </div>
+
+                                    <?php if (!empty($doc['description'])): ?>
+                                        <p class="document-description">
+                                            <?= htmlspecialchars($doc['description']) ?>
+                                        </p>
                                     <?php endif; ?>
                                 </div>
-                                <?php if (!empty($doc['description'])): ?>
-                                    <div class="document-description">
-                                        <?= htmlspecialchars($doc['description']) ?>
+
+                                <!-- Footer -->
+                                <div class="document-footer">
+                                    <div class="price-tag <?= $points > 0 ? 'price-points' : 'price-free' ?>">
+                                        <?php if ($points > 0): ?>
+                                            <i class="fa-solid fa-coins"></i>
+                                            <?= number_format($points) ?> <span class="opacity-50">ĐIỂM</span>
+                                        <?php else: ?>
+                                            <i class="fa-solid fa-gift"></i>
+                                            MIỄN PHÍ
+                                        <?php endif; ?>
                                     </div>
-                                <?php endif; ?>
-                                <div class="document-stats">
-                                    <span class="stat-item"><i class="fa-solid fa-eye mr-1 text-xs"></i> <?= number_format($doc['views'] ?? 0) ?> lượt xem</span>
-                                    <span class="stat-item"><i class="fa-solid fa-download mr-1 text-xs"></i> <?= number_format($doc['downloads'] ?? 0) ?> tải xuống</span>
+
+                                    <div class="stats-vsd">
+                                        <div class="stat-vsd-item">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <?= number_format($doc['views'] ?? 0) ?>
+                                        </div>
+                                        <div class="stat-vsd-item">
+                                            <i class="fa-solid fa-download"></i>
+                                            <?= number_format($doc['downloads'] ?? 0) ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -637,41 +773,32 @@ $current_page = 'search';
                 <?php endif; ?>
             <?php else: ?>
                 <!-- No Results Premium View -->
-                <div class="no-results flex flex-col items-center justify-center py-20 px-4 text-center">
-                    <div class="relative mb-8 animate-float">
-                        <div class="w-32 h-32 rounded-3xl bg-primary/5 flex items-center justify-center rotate-12">
-                            <i class="fa-solid fa-box-open text-6xl text-primary/20 -rotate-12"></i>
+                <div class="flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <div class="relative mb-12" style="animation: float 3s ease-in-out infinite;">
+                        <div class="w-40 h-40 rounded-[3rem] bg-primary/5 flex items-center justify-center rotate-12 border border-primary/10">
+                            <i class="fa-solid fa-box-open text-7xl text-primary/20 -rotate-12"></i>
                         </div>
-                        <div class="absolute -bottom-4 -right-4 w-14 h-14 rounded-2xl bg-base-100 flex items-center justify-center shadow-xl border border-base-200 text-primary">
-                            <i class="fa-solid fa-magnifying-glass text-xl"></i>
+                        <div class="absolute -bottom-4 -right-4 w-16 h-16 rounded-2xl bg-base-100 flex items-center justify-center shadow-2xl border border-base-200 text-primary">
+                            <i class="fa-solid fa-magnifying-glass text-2xl"></i>
                         </div>
                     </div>
                     
-                    <h2 class="text-3xl font-extrabold text-base-content mb-3 tracking-tight">Hic! Không tìm thấy kết quả</h2>
-                    <p class="text-base-content/60 max-w-md mx-auto mb-10 leading-relaxed text-lg">
+                    <h2 class="text-4xl font-black text-base-content mb-4 tracking-tight uppercase">Hic! Không tìm thấy</h2>
+                    <p class="text-base-content/50 max-w-md mx-auto mb-12 font-medium leading-relaxed">
                         <?php if (!empty($keyword)): ?>
-                            Rất tiếc, chúng mình không tìm thấy tài liệu nào khớp với từ khóa <span class="text-primary font-bold">"<?= htmlspecialchars($keyword) ?>"</span>.
+                            Rất tiếc, hệ thống không tìm thấy tài liệu nào khớp với từ khóa <span class="text-primary font-black">"<?= htmlspecialchars($keyword) ?>"</span>.
                         <?php else: ?>
-                            Có vẻ như các bộ lọc hiện tại của bạn không có tài liệu nào phù hợp với các tiêu chí tìm kiếm.
+                            Các bộ lọc hiện tại của bạn không có tài liệu nào phù hợp. Hãy thử thay đổi tiêu chí nhé!
                         <?php endif; ?>
                     </p>
                     
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button class="btn btn-primary btn-wide shadow-xl shadow-primary/20 h-14" onclick="resetFilters()">
-                            <i class="fa-solid fa-rotate-left mr-2"></i> Thử lại từ đầu
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+                        <button class="btn btn-primary h-14 px-10 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20" onclick="resetFilters()">
+                            <i class="fa-solid fa-rotate-left mr-2"></i> THỬ LẠI
                         </button>
-                        <a href="dashboard.php" class="btn btn-ghost btn-wide h-14 border-base-300 hover:bg-base-200 transition-all">
-                            <i class="fa-solid fa-house mr-2"></i> Về Dashboard
+                        <a href="dashboard.php" class="btn btn-ghost h-14 px-10 rounded-2xl font-black uppercase tracking-widest border-base-300">
+                            <i class="fa-solid fa-house mr-2"></i> DASHBOARD
                         </a>
-                    </div>
-                    
-                    <div class="mt-16 pt-8 border-t border-base-300/50 w-full max-w-lg">
-                        <p class="text-xs uppercase tracking-widest text-base-content/40 font-bold mb-4 italic">Gợi ý cho bạn:</p>
-                        <ul class="text-sm text-base-content/60 space-y-2">
-                            <li>• Kiểm tra lại lỗi chính tả của từ khóa</li>
-                            <li>• Thử sử dụng các từ khóa ngắn gọn hơn</li>
-                            <li>• Tháo bớt các bộ lọc để có nhiều kết quả hơn</li>
-                        </ul>
                     </div>
                 </div>
             <?php endif; ?>

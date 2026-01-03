@@ -7,15 +7,13 @@ redirectIfNotLoggedIn();
 $user_id = getCurrentUserId();
 $is_tutor = isTutor($user_id);
 $tutor_profile = $is_tutor ? getTutorProfile($user_id) : null;
-$page_title = "Tutor Dashboard";
+$page_title = "Bảng điều khiển Gia sư";
 $current_page = 'tutor_dashboard'; 
-// Actually sidebar handles /tutor/ matching.
 
 // Get incoming requests if tutor
 $incoming_requests = $is_tutor ? getRequestsForTutor($user_id) : [];
 
 // Get my requests (as student)
-// We need a helper for this, adding ad-hoc query here for speed
 $pdo = getTutorDBConnection();
 $stmt = $pdo->prepare("SELECT r.*, t.username as tutor_name, t.avatar as tutor_avatar 
                       FROM tutor_requests r 
@@ -26,298 +24,497 @@ $stmt->execute([$user_id]);
 $my_requests = $stmt->fetchAll();
 ?>
 <?php require_once __DIR__ . '/../includes/head.php'; ?>
-<?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
 
-<div class="drawer-content flex flex-col">
-    <?php require_once __DIR__ . '/../includes/navbar.php'; ?>
-    <main class="flex-1 p-6">
-        <div class="container mx-auto">
-            
-            <!-- Profile Header (if Tutor) -->
-            <?php if ($is_tutor): ?>
-            <div class="card bg-base-100 shadow-xl mb-8">
-                <div class="card-body">
-                    <div class="flex items-center gap-4">
-                        <div class="avatar placeholder">
-                            <div class="bg-primary text-primary-content rounded-full w-16">
-                                <span class="text-2xl"><i class="fa-solid fa-chalkboard-user"></i></span>
-                            </div>
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --vsd-red: #991b1b;
+        --red-gradient: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+    }
+    
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
+
+    /* Glass Card Style */
+    .glass-card-vsd {
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2.5rem;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Profile Header */
+    .dashboard-header {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        margin-bottom: 48px;
+        position: relative;
+    }
+
+    .header-info-vsd {
+        flex: 1;
+    }
+
+    .header-info-vsd h1 {
+        font-size: 2.5rem;
+        font-weight: 1000;
+        letter-spacing: -0.05em;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .header-info-vsd p {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0.5;
+    }
+
+    .header-stats-vsd {
+        display: flex;
+        gap: 16px;
+    }
+
+    .stat-box-vsd {
+        padding: 16px 28px;
+        border-radius: 1.5rem;
+        background: oklch(var(--b2) / 0.5);
+        border: 1px solid oklch(var(--bc) / 0.05);
+        text-align: center;
+        min-width: 130px;
+    }
+
+    .stat-label-vsd {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        opacity: 0.4;
+        margin-bottom: 4px;
+    }
+
+    .stat-value-vsd {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--vsd-red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    /* Tabs Navigation */
+    .tabs-nav-vsd {
+        display: inline-flex;
+        background: oklch(var(--b2) / 0.5);
+        padding: 8px;
+        border-radius: 2rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+        margin-bottom: 48px;
+    }
+
+    .tab-btn-vsd {
+        padding: 12px 32px;
+        border-radius: 1.5rem;
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        color: oklch(var(--bc) / 0.5);
+        border: none;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .tab-btn-vsd i {
+        font-size: 1rem;
+    }
+
+    .tab-btn-vsd.active {
+        background: white;
+        color: var(--vsd-red);
+        box-shadow: 0 10px 25px -10px rgba(0,0,0,0.1);
+    }
+
+    [data-theme="dark"] .tab-btn-vsd.active {
+        background: #1e293b;
+    }
+
+    /* Request Cards */
+    .req-card-vsd {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 2rem;
+        padding: 32px;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .req-card-vsd:hover {
+        transform: translateY(-4px);
+        border-color: rgba(153, 27, 27, 0.2);
+        box-shadow: 0 30px 60px -15px rgba(0,0,0,0.05);
+    }
+
+    .req-badge-vsd {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 6px 12px;
+        border-radius: 100px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .badge-pending-vsd { background: #fde68a; color: #92400e; }
+    .badge-answered-vsd { background: #bbf7d0; color: #166534; }
+    .badge-completed-vsd { background: oklch(var(--b3)); color: oklch(var(--bc) / 0.5); }
+
+    .req-title-vsd {
+        font-size: 1.25rem;
+        font-weight: 900;
+        margin-bottom: 12px;
+        color: oklch(var(--bc));
+    }
+
+    .req-meta-vsd {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 24px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        opacity: 0.5;
+    }
+
+    .req-user-box-vsd {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: oklch(var(--b2) / 0.5);
+        padding: 8px 16px;
+        border-radius: 1rem;
+        margin-bottom: 24px;
+    }
+
+    .small-avatar-vsd {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--vsd-red);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 12px;
+    }
+
+    .small-avatar-vsd img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .vsd-btn-view {
+        background: var(--vsd-red);
+        color: white;
+        border: none;
+        height: 48px;
+        padding: 0 24px;
+        border-radius: 1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .vsd-btn-view:hover {
+        filter: brightness(1.1);
+        box-shadow: 0 10px 20px -5px rgba(153, 27, 27, 0.3);
+    }
+
+    /* Table Styling for My Questions */
+    .vsd-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 12px;
+    }
+
+    .vsd-table th {
+        text-align: left;
+        padding: 0 24px 12px;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        opacity: 0.3;
+    }
+
+    .vsd-table tr[content] {
+        background: var(--glass-bg);
+        border-radius: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .vsd-table tr[content]:hover {
+        transform: scale(1.005);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+    }
+
+    .vsd-table td {
+        padding: 24px;
+    }
+
+    .vsd-table td:first-child { border-radius: 1.5rem 0 0 1.5rem; }
+    .vsd-table td:last-child { border-radius: 0 1.5rem 1.5rem 0; }
+
+</style>
+
+<body class="bg-base-100">
+    <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+
+    <div class="drawer-content flex flex-col min-h-screen">
+        <?php include __DIR__ . '/../includes/navbar.php'; ?>
+        
+        <main class="flex-1">
+            <div class="dashboard-container">
+                
+                <!-- Header with Stats -->
+                <div class="dashboard-header animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div class="header-info-vsd">
+                        <h1>Bảng điều khiển</h1>
+                        <p>Chào mừng trở lại, <?= htmlspecialchars($user_info['username']) ?>!</p>
+                    </div>
+                    
+                    <?php if ($is_tutor): ?>
+                    <div class="header-stats-vsd">
+                        <div class="stat-box-vsd">
+                            <div class="stat-label-vsd">Đánh giá</div>
+                            <div class="stat-value-vsd"><?= $tutor_profile['rating'] ?> <i class="fa-solid fa-star text-yellow-500 text-lg"></i></div>
                         </div>
-                        <div>
-                            <h2 class="card-title">Tutor Dashboard</h2>
-                            <p class="text-base-content/70">Chào mừng <?= htmlspecialchars($tutor_profile['username']) ?></p>
-                        </div>
-                        <div class="ml-auto flex gap-4 text-center">
-                            <div class="bg-base-200 p-2 rounded-box min-w-[100px]">
-                                <div class="text-xs text-secondary font-bold">RATING</div>
-                                <div class="text-xl font-black"><?= $tutor_profile['rating'] ?> <i class="fa-solid fa-star text-yellow-500"></i></div>
-                            </div>
-                            <div class="bg-base-200 p-2 rounded-box min-w-[100px]">
-                                <div class="text-xs text-primary font-bold">ANSWERS</div>
-                                <div class="text-xl font-black"><?= $tutor_profile['total_answers'] ?></div>
-                            </div>
+                        <div class="stat-box-vsd">
+                            <div class="stat-label-vsd">Đã trả lời</div>
+                            <div class="stat-value-vsd"><?= $tutor_profile['total_answers'] ?></div>
                         </div>
                     </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($is_tutor): ?>
+                        <div class="ml-8">
+                            <a href="/tutors/profile_edit" class="btn btn-ghost btn-square rounded-2xl w-14 h-14 bg-base-200/50 hover:bg-base-200">
+                                <i class="fa-solid fa-user-gear text-xl"></i>
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </div>
-            <?php endif; ?>
 
-            <!-- MODERN TAB NAVIGATION -->
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
-                <div class="inline-flex p-1.5 bg-base-300/30 backdrop-blur-md rounded-2xl border border-base-300/50 shadow-inner">
+                <!-- Tabs Navigation -->
+                <div class="tabs-nav-vsd animate-in fade-in zoom-in-95 duration-700">
                     <?php if ($is_tutor): ?>
                     <button onclick="switchTab(event, 'incoming')" 
-                            class="dashboard-tab active flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                            class="tab-btn-vsd active"
                             id="tab-btn-incoming">
-                        <i class="fa-solid fa-inbox"></i>
-                        <span>Câu hỏi từ học viên</span>
-                        <?php if(!empty($incoming_requests)): ?>
-                            <span class="badge badge-sm badge-primary ml-1"><?= count($incoming_requests) ?></span>
-                        <?php endif; ?>
+                        <i class="fa-solid fa-inbox text-blue-500"></i>
+                        <span>Học viên hỏi (<?= count($incoming_requests) ?>)</span>
                     </button>
                     <?php endif; ?>
                     
                     <button onclick="switchTab(event, 'outgoing')" 
-                            class="dashboard-tab <?= !$is_tutor ? 'active' : '' ?> flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                            class="tab-btn-vsd <?= !$is_tutor ? 'active' : '' ?>"
                             id="tab-btn-outgoing">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span>Câu hỏi của tôi</span>
+                        <i class="fa-solid fa-paper-plane text-red-500"></i>
+                        <span>Câu hỏi của tôi (<?= count($my_requests) ?>)</span>
                     </button>
                 </div>
 
+                <!-- INCOMING REQUESTS (Tutor Role) -->
                 <?php if ($is_tutor): ?>
-                <div class="flex gap-2">
-                    <a href="/tutors/profile_edit" class="btn btn-ghost btn-sm rounded-xl border-base-300">
-                        <i class="fa-solid fa-user-gear"></i> Cấu hình hồ sơ
-                    </a>
-                </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- INCOMING REQUESTS (Tutor Only) -->
-            <?php if ($is_tutor): ?>
-            <div id="incoming" class="tab-content animate-in fade-in slide-in-from-bottom-2 duration-500 <?= $is_tutor ? 'block' : 'hidden' ?>">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-inbox text-primary"></i> 
-                        Câu hỏi từ học viên
-                    </h3>
-                </div>
-                
-                <?php if (empty($incoming_requests)): ?>
-                    <div class="alert alert-info bg-base-200 border-none">
-                        <i class="fa-solid fa-circle-info text-info"></i>
-                        <span>Hiện tại chưa có câu hỏi nào. Hãy cập nhật hồ sơ để thu hút học viên nhé!</span>
+                <div id="incoming" class="tab-content animate-in fade-in slide-in-from-bottom-4 duration-500 block">
+                    <div class="flex flex-wrap justify-between items-center mb-10 gap-4">
+                        <h2 class="text-xs font-black uppercase tracking-[0.3em] opacity-30">Học viên hỏi</h2>
+                        <div class="flex gap-3">
+                            <a href="/tutors" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg">
+                                <i class="fa-solid fa-plus text-xs"></i> <span>Đặt câu hỏi</span>
+                            </a>
+                            <a href="/tutors/profile_edit" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg bg-emerald-600">
+                                <i class="fa-solid fa-user-pen text-xs"></i> <span>Cập nhật hồ sơ</span>
+                            </a>
+                        </div>
                     </div>
-                <?php else: ?>
-                    <div class="grid grid-cols-1 gap-4">
-                        <?php foreach($incoming_requests as $req): ?>
-                            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-all border border-base-200">
-                                <div class="card-body p-5">
-                                    <div class="flex flex-col md:flex-row justify-between items-start gap-4">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="badge <?= $req['package_type'] == 'premium' ? 'badge-warning' : ($req['package_type'] == 'standard' ? 'badge-info' : 'badge-success') ?> badge-outline uppercase text-xs font-bold">
-                                                    <?= $req['package_type'] ?>
-                                                </span>
-                                                <span class="text-xs text-base-content/60"><i class="fa-regular fa-clock"></i> <?= date('d/m/Y H:i', strtotime($req['created_at'])) ?></span>
-                                            </div>
-                                            <h4 class="card-title text-lg hover:text-primary transition-colors">
-                                                <a href="/tutors/request?id=<?= $req['id'] ?>"><?= htmlspecialchars($req['title']) ?></a>
-                                                <?php if($req['status'] === 'pending'): ?>
-                                                    <span class="badge badge-warning badge-sm animate-pulse">Mới</span>
-                                                <?php endif; ?>
-                                            </h4>
-                                            <div class="flex items-center gap-2 mt-2 text-sm bg-base-100 px-2 py-1 rounded-full border border-base-200">
-                                                <div class="avatar <?= !empty($req['student_avatar']) ? '' : 'placeholder' ?>">
-                                                    <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-primary/10 <?= empty($req['student_avatar']) ? 'bg-primary text-primary-content flex items-center justify-center font-bold text-[10px]' : '' ?>">
-                                                        <?php if(!empty($req['student_avatar']) && file_exists('../uploads/avatars/' . $req['student_avatar'])): ?>
-                                                            <img src="../uploads/avatars/<?= $req['student_avatar'] ?>" alt="Student Avatar" />
-                                                        <?php else: ?>
-                                                            <span><?= strtoupper(substr($req['student_name'], 0, 1)) ?></span>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </div>
-                                                <span class="font-medium text-xs"><?= htmlspecialchars($req['student_name']) ?></span>
-                                            </div>
-                                            <p class="mt-3 text-base-content/80 line-clamp-2 text-sm bg-base-200/50 p-3 rounded-lg border border-base-200">
-                                                <?= htmlspecialchars($req['content']) ?>
-                                            </p>
+
+                    <?php if (empty($incoming_requests)): ?>
+                        <div class="glass-card-vsd border-dashed border-2 flex flex-col items-center justify-center py-24 opacity-60">
+                            <div class="w-20 h-20 rounded-full bg-emerald-500/5 flex items-center justify-center mb-8">
+                                <i class="fa-solid fa-graduation-cap text-3xl text-emerald-600 opacity-50"></i>
+                            </div>
+                            <h3 class="font-black text-2xl mb-3">Chưa có câu hỏi nào</h3>
+                            <p class="text-sm font-bold opacity-40 mb-10 text-center max-w-sm">Đừng lo lắng, hãy đảm bảo hồ sơ của bạn luôn đầy đủ và ấn tượng để thu hút học viên!</p>
+                            <a href="/tutors/profile_edit" class="vsd-btn-view bg-emerald-600">Hoàn thiện hồ sơ</a>
+                        </div>
+                    <?php else: ?>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <?php foreach($incoming_requests as $req): ?>
+                                <div class="req-card-vsd">
+                                    <div class="flex justify-between items-start">
+                                        <div class="req-badge-vsd <?= $req['status'] === 'pending' ? 'badge-pending-vsd' : ($req['status'] === 'answered' ? 'badge-answered-vsd' : 'badge-completed-vsd') ?>">
+                                            <i class="fa-solid <?= $req['status'] === 'pending' ? 'fa-hourglass-half' : 'fa-check-double' ?>"></i>
+                                            <?= $req['status'] === 'pending' ? 'Chờ trả lời' : ($req['status'] === 'answered' ? 'Đã trả lời' : 'Hoàn tất') ?>
                                         </div>
-                                        
-                                        <div class="flex flex-col items-end gap-3 min-w-[120px]">
-                                            <?php if($req['status'] === 'pending'): ?>
-                                                <div class="badge badge-warning gap-1 p-3 w-full justify-center font-bold">
-                                                    <i class="fa-solid fa-hourglass-half"></i> Chờ trả lời
-                                                </div>
-                                                <a href="/tutors/request?id=<?= $req['id'] ?>" class="btn btn-primary btn-sm w-full">
-                                                    Trả lời ngay <i class="fa-solid fa-arrow-right"></i>
-                                                </a>
-                                            <?php elseif($req['status'] === 'answered'): ?>
-                                                <div class="badge badge-success gap-1 p-3 w-full justify-center font-bold text-white">
-                                                    <i class="fa-solid fa-check"></i> Đã trả lời
-                                                </div>
-                                                <a href="/tutors/request?id=<?= $req['id'] ?>" class="btn btn-ghost btn-sm w-full">Xem lại</a>
+                                        <div class="text-[10px] font-black uppercase opacity-30"><?= $req['package_type'] ?></div>
+                                    </div>
+                                    
+                                    <h3 class="req-title-vsd"><?= htmlspecialchars($req['title']) ?></h3>
+                                    
+                                    <div class="req-meta-vsd">
+                                        <span><i class="fa-regular fa-clock"></i> <?= date('d/m/Y H:i', strtotime($req['created_at'])) ?></span>
+                                        <span class="text-error font-black">+<?= $req['points_used'] ?> PTS</span>
+                                    </div>
+                                    
+                                    <div class="req-user-box-vsd">
+                                        <div class="small-avatar-vsd">
+                                            <?php if(!empty($req['student_avatar']) && file_exists('../uploads/avatars/' . $req['student_avatar'])): ?>
+                                                <img src="../uploads/avatars/<?= $req['student_avatar'] ?>" />
                                             <?php else: ?>
-                                                <div class="badge badge-ghost gap-1 p-3 w-full justify-center font-bold">
-                                                    <i class="fa-solid fa-check-double"></i> Hoàn tất
-                                                </div>
+                                                <?= strtoupper(substr($req['student_name'], 0, 1)) ?>
                                             <?php endif; ?>
                                         </div>
+                                        <div class="text-xs font-bold"><?= htmlspecialchars($req['student_name']) ?></div>
+                                    </div>
+                                    
+                                    <div class="flex gap-3">
+                                        <a href="/tutors/request?id=<?= $req['id'] ?>" class="vsd-btn-view flex-1 text-center justify-center">
+                                            <?= $req['status'] === 'pending' ? 'Trả lời ngay' : 'Xem chi tiết' ?>
+                                        </a>
                                     </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
-            <!-- OUTGOING REQUESTS (My Questions) -->
-            <div id="outgoing" class="tab-content animate-in fade-in slide-in-from-bottom-2 duration-500 <?= $is_tutor ? 'hidden' : 'block' ?>">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-paper-plane text-secondary"></i>
-                        Câu hỏi tôi đã gửi
-                    </h3>
-                    <a href="/tutors" class="btn btn-primary btn-sm gap-2">
-                        <i class="fa-solid fa-plus"></i> Đặt câu hỏi mới
-                    </a>
-                </div>
-                
-                <?php if (empty($my_requests)): ?>
-                    <div class="flex flex-col items-center justify-center py-16 bg-base-200/30 rounded-xl border border-dashed border-base-300">
-                        <div class="w-16 h-16 bg-base-200 rounded-full flex items-center justify-center mb-4 text-primary">
-                            <i class="fa-solid fa-question text-3xl"></i>
+                            <?php endforeach; ?>
                         </div>
-                        <p class="text-lg font-semibold mb-2">Bạn chưa đặt câu hỏi nào</p>
-                        <p class="text-base-content/60 mb-6 text-sm max-w-md text-center">Hãy tìm một gia sư phù hợp và đặt câu hỏi để nhận được sự trợ giúp tốt nhất nhé!</p>
-                        <a href="/tutors" class="btn btn-primary">Tìm Gia Sư Ngay</a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- OUTGOING REQUESTS (Student Role) -->
+                <div id="outgoing" class="tab-content animate-in fade-in slide-in-from-bottom-4 duration-500 <?= $is_tutor ? 'hidden' : 'block' ?>">
+                    <div class="flex justify-between items-center mb-10">
+                        <h2 class="text-xs font-black uppercase tracking-[0.3em] opacity-30">Câu hỏi của tôi</h2>
+                        <a href="/tutors" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg">
+                            <i class="fa-solid fa-plus text-xs"></i> <span>Thuê gia sư</span>
+                        </a>
                     </div>
-                <?php else: ?>
-                    <div class="overflow-x-auto rounded-lg border border-base-200">
-                        <table class="table table-zebra w-full whitespace-nowrap">
-                            <thead class="bg-base-200/50 text-base-content/80 font-bold uppercase text-xs tracking-wider">
-                                <tr>
-                                    <th class="py-4">Tiêu đề</th>
-                                    <th>Gia sư</th>
-                                    <th>Trạng thái</th>
-                                    <th>Gói / Điểm</th>
-                                    <th>Ngày tạo</th>
-                                    <th class="text-right">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach($my_requests as $req): ?>
-                                <tr class="hover:bg-base-100 transition-colors">
-                                    <td class="max-w-[200px] md:max-w-[300px]">
-                                        <div class="flex items-center gap-3">
-                                            <div class="font-bold truncate text-base text-primary">
-                                                <?= htmlspecialchars($req['title']) ?>
-                                            </div>
-                                        </div>
-                                        <div class="text-xs text-base-content/50 truncate mt-1 max-w-[200px]">
-                                            <?= htmlspecialchars(mb_strimwidth($req['content'], 0, 50, "...")) ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="flex items-center gap-2">
-                                            <div class="avatar <?= !empty($req['tutor_avatar']) ? '' : 'placeholder' ?>">
-                                                <div class="w-8 h-8 rounded-full border border-base-300 overflow-hidden ring ring-offset-base-100 ring-1 ring-success/10 <?= empty($req['tutor_avatar']) ? 'bg-success text-success-content flex items-center justify-center font-bold text-[10px]' : '' ?>">
+
+                    <?php if (empty($my_requests)): ?>
+                        <div class="glass-card-vsd border-dashed border-2 flex flex-col items-center justify-center py-24 opacity-60">
+                            <div class="w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center mb-8">
+                                <i class="fa-solid fa-paper-plane text-3xl text-primary opacity-50"></i>
+                            </div>
+                            <h3 class="font-black text-2xl mb-3">Bạn chưa gửi câu hỏi nào</h3>
+                            <p class="text-sm font-bold opacity-40 mb-10 text-center max-w-sm">Hãy tìm một gia sư phù hợp và đặt câu hỏi để nhận được sự trợ giúp tốt nhất!</p>
+                            <a href="/tutors" class="vsd-btn-view">Khám phá ngay</a>
+                        </div>
+                    <?php else: ?>
+                        <div class="overflow-x-auto">
+                            <table class="vsd-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tiêu đề & Nội dung</th>
+                                        <th>Gia sư</th>
+                                        <th>Trạng thái</th>
+                                        <th>Khoản phí</th>
+                                        <th>Ngày gửi</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach($my_requests as $req): ?>
+                                    <tr content>
+                                        <td>
+                                            <div class="font-black text-sm mb-1"><?= htmlspecialchars($req['title']) ?></div>
+                                            <div class="text-[10px] opacity-40 font-bold max-w-[250px] truncate"><?= htmlspecialchars($req['content']) ?></div>
+                                        </td>
+                                        <td>
+                                            <div class="flex items-center gap-3">
+                                                <div class="small-avatar-vsd !bg-emerald-500">
                                                     <?php if(!empty($req['tutor_avatar']) && file_exists('../uploads/avatars/' . $req['tutor_avatar'])): ?>
-                                                        <img src="../uploads/avatars/<?= $req['tutor_avatar'] ?>" alt="Tutor Avatar" />
+                                                        <img src="../uploads/avatars/<?= $req['tutor_avatar'] ?>" />
                                                     <?php else: ?>
-                                                        <span><?= strtoupper(substr($req['tutor_name'], 0, 1)) ?></span>
+                                                        <?= strtoupper(substr($req['tutor_name'], 0, 1)) ?>
                                                     <?php endif; ?>
                                                 </div>
+                                                <div class="text-xs font-black"><?= htmlspecialchars($req['tutor_name']) ?></div>
                                             </div>
-                                            <span class="font-medium text-sm"><?= htmlspecialchars($req['tutor_name']) ?></span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <?php if($req['status'] === 'pending'): ?>
-                                            <span class="badge badge-warning badge-sm gap-1 font-semibold">
-                                                <i class="fa-solid fa-spinner fa-spin-pulse text-[10px]"></i> Đang chờ
-                                            </span>
-                                        <?php elseif($req['status'] === 'answered'): ?>
-                                            <span class="badge badge-success badge-sm gap-1 font-semibold text-white">
-                                                <i class="fa-solid fa-check text-[10px]"></i> Đã trả lời
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="badge badge-ghost badge-sm font-semibold"><?= ucfirst($req['status']) ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold uppercase tracking-wide opacity-70"><?= $req['package_type'] ?></span>
-                                            <span class="text-error font-bold text-sm">-<?= $req['points_used'] ?> pts</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-sm text-base-content/70">
-                                        <?= date('d/m', strtotime($req['created_at'])) ?>
-                                        <span class="text-xs opacity-50 block"><?= date('H:i', strtotime($req['created_at'])) ?></span>
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="/tutors/request?id=<?= $req['id'] ?>" class="btn btn-sm btn-ghost btn-square tooltip tooltip-left" data-tip="Xem chi tiết">
-                                            <i class="fa-solid fa-arrow-right-long text-primary"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if($req['status'] === 'pending'): ?>
+                                                <span class="text-[10px] font-black text-amber-500 uppercase tracking-widest"><i class="fa-solid fa-circle text-[6px] mr-2"></i> Đang chờ</span>
+                                            <?php elseif($req['status'] === 'answered'): ?>
+                                                <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest"><i class="fa-solid fa-circle text-[6px] mr-2"></i> Đã trả lời</span>
+                                            <?php else: ?>
+                                                <span class="text-[10px] font-black opacity-30 uppercase tracking-widest">Hoàn tất</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <div class="text-[10px] font-black uppercase opacity-30 mb-1"><?= $req['package_type'] ?></div>
+                                            <div class="text-xs font-black text-red-500">-<?= $req['points_used'] ?> PTS</div>
+                                        </td>
+                                        <td>
+                                            <div class="text-xs font-black opacity-40"><?= date('d/m/Y', strtotime($req['created_at'])) ?></div>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="/tutors/request?id=<?= $req['id'] ?>" class="btn btn-ghost btn-circle">
+                                                <i class="fa-solid fa-chevron-right text-primary"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
             </div>
-        </div>
-    </main>
-    <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-</div> <!-- end drawer-content -->
-</div> <!-- end drawer -->
+        </main>
+        
+        <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+    </div>
 
-<style>
-.dashboard-tab {
-    @apply transition-all duration-200 cursor-pointer;
-    color: oklch(var(--bc) / 0.6);
-}
-.dashboard-tab:hover {
-    color: oklch(var(--p));
-    background-color: oklch(var(--p) / 0.05);
-}
-.dashboard-tab.active {
-    background-color: oklch(var(--b1));
-    color: oklch(var(--p));
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-/* Tailwind Animate utility simulation if not present */
-.animate-in {
-    animation-duration: 0.3s;
-    animation-fill-mode: both;
-}
-.fade-in { animation-name: fadeIn; }
-.slide-in-from-bottom-2 { animation-name: slideInBottom; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideInBottom { from { transform: translateY(8px); } to { transform: translateY(0); } }
-</style>
-
-<script>
-function switchTab(evt, tabId) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(el => {
-        el.classList.add('hidden');
-        el.classList.remove('block');
-    });
-    
-    // Show selected
-    const selectedContent = document.getElementById(tabId);
-    selectedContent.classList.remove('hidden');
-    selectedContent.classList.add('block');
-    
-    // Update tab button classes
-    document.querySelectorAll('.dashboard-tab').forEach(el => el.classList.remove('active'));
-    evt.currentTarget.classList.add('active');
-}
-</script>
+    <script>
+    function switchTab(evt, tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.add('hidden');
+        });
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn-vsd').forEach(el => el.classList.remove('active'));
+        evt.currentTarget.classList.add('active');
+    }
+    </script>
 </body>
 </html>

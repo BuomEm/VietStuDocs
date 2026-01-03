@@ -167,7 +167,7 @@ if(!file_exists($file_path)) {
 if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
     $action = $_POST['action'] ?? '';
     
-        if($action === 'like' || $action === 'dislike') {
+    if($action === 'like' || $action === 'dislike') {
         // Toggle like/dislike
         $existing = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='$action'");
         
@@ -175,11 +175,22 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
             $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
         } else {
             // Remove opposite reaction if exists
-            $VSD->query("DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id");
+            $VSD->query("DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')");
             // Add new reaction
             $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, '$action')");
         }
-        echo json_encode(['success' => true]);
+        
+        // Return updated stats
+        $new_likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
+        $new_dislikes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'") ?: 0);
+        $curr_reaction = $VSD->get_row("SELECT type FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')");
+        
+        echo json_encode([
+            'success' => true, 
+            'likes' => $new_likes, 
+            'dislikes' => $new_dislikes,
+            'user_reaction' => $curr_reaction['type'] ?? null
+        ]);
         exit;
     }
     
@@ -189,11 +200,12 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
         
         if($existing) {
             $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
-            echo json_encode(['success' => true, 'saved' => false]);
+            $saved = false;
         } else {
             $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, 'save')");
-            echo json_encode(['success' => true, 'saved' => true]);
+            $saved = true;
         }
+        echo json_encode(['success' => true, 'saved' => $saved]);
         exit;
     }
     
@@ -206,9 +218,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
 }
 
 // Get interaction stats
-$likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-$dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
-$saves = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='save'");
+$likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
+$dislikes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'") ?: 0);
+$saves = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='save'") ?: 0);
 
 // Get user's current reactions
 $user_reaction = null;
@@ -359,860 +371,641 @@ include 'includes/sidebar.php';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.4/dist/docx-preview.min.js"></script>
     
-    <style>
-        /* PDF Viewer */
-        
-        /* Modern PDF Viewer - Google Drive Style */
-        .pdf-viewer {
-            width: 100%;
-            height: 200vh; /* Larger view area to see full page */
-            background: oklch(var(--b2));
-            overflow-y: auto;
-            position: relative;
-            scrollbar-gutter: stable;
-            display: block;
-            padding: 40px 20px;
-            overscroll-behavior: contain;
-            border-radius: 16px; /* Bo card preview */
-        }
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --primary-gradient: linear-gradient(135deg, oklch(var(--p)) 0%, oklch(var(--p) / 0.8) 100%);
+    }
+    
+    [data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
 
-        /* Mobile Optimization */
-        @media (max-width: 768px) {
-            .pdf-viewer {
-                height: 250vh; /* Tall height for mobile */
-                padding: 20px 8px; /* Reduce padding to make document larger on small screens */
-                border-radius: 12px;
-            }
-            .pdf-page-container {
-                margin-bottom: 16px;
-                border-radius: 8px;
-            }
-        }
+    .view-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
 
+    /* Document Header Premium */
+    .view-header-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2.5rem;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
 
+    .view-header-card::before {
+        content: '';
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 300px;
+        height: 300px;
+        background: oklch(var(--p) / 0.03);
+        border-radius: 50%;
+        filter: blur(60px);
+    }
 
-        
-        .pdf-page-container {
-            margin: 0 auto 32px auto;
-            background: white;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
+    .view-title {
+        font-size: 2.25rem;
+        font-weight: 900;
+        color: oklch(var(--bc));
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+        margin-bottom: 24px;
+    }
 
-        }
+    .view-meta-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
 
-        .pdf-page-container canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            transform: translateZ(0); /* Hardware acceleration */
-        }
-        
-        /* Floating Page Counter */
-        .pdf-page-counter {
-            position: absolute;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.75);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            backdrop-filter: blur(8px);
-            z-index: 50;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
-        .pdf-page-counter.active {
-            opacity: 1;
-        }
+    .user-badge-premium {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: oklch(var(--b2) / 0.5);
+        padding: 8px 20px 8px 8px;
+        border-radius: 1.25rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+        transition: all 0.3s ease;
+    }
 
-        /* Page Border Highlight on Scroll? (Optional) */
-        
-        .page-loader {
-            transition: opacity 0.3s ease;
-        }
-        
-        .image-viewer {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f0f0f0;
-            min-height: 500px;
-        }
-        
-        .image-viewer img {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        
-        .text-viewer {
-            padding: 30px;
-            background: white;
-            overflow-y: auto;
-            max-height: 800px;
-        }
-        
-        .text-viewer pre {
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        
-        .docx-viewer {
-            width: 100%;
-            padding: 30px;
-            background: #f5f5f5;
-            overflow-y: auto;
-            min-height: 500px;
-            position: relative;
-        }
-        
-        .docx-viewer .docx-wrapper {
-            max-width: 100%;
-            background: transparent;
-            margin: 0 auto;
-        }
-        
-        /* Override docx-preview library default padding */
-        .docx-wrapper-wrapper {
-            padding: 5px !important;
-        }
-        
-        /* Page styling for DOCX with clear pagination */
-        .docx-viewer .docx-page {
-            page-break-after: always;
-            page-break-inside: avoid;
-            min-height: 800px;
-            padding: 40px;
-            margin-bottom: 20px;
-            background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 4px;
-        }
-        
-        .docx-viewer .docx-page:last-child {
-            page-break-after: auto;
-        }
-        
-        /* Protection styles - prevent copy and screenshot */
-        #documentViewer {
-            position: relative;
-        }
-        
-        .protected {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        .protected * {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-        }
-        
-        .protected img,
-        .protected canvas {
-            pointer-events: none;
-            -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
-        }
-        
-        /* Watermark overlay */
-        .watermark-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 1000;
-            background-image: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 100px,
-                rgba(0,0,0,0.05) 100px,
-                rgba(0,0,0,0.05) 200px
-            );
-        }
-        
-        .watermark-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 60px;
-            color: rgba(0,0,0,0.2);
-            white-space: nowrap;
-            font-weight: bold;
-            pointer-events: none;
-        }
-        
-        /* Preview limit warning */
-        .preview-limit-warning {
-            background: #fff3cd;
-            border: 2px solid #ff9800;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        /* Center alert content */
-        #documentViewer .alert.alert-warning {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            justify-content: center;
-        }
-        
-        #documentViewer .alert.alert-warning > i {
-            margin-bottom: 12px;
-        }
-        
-        #documentViewer .alert.alert-warning > div {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        
-        #documentViewer .alert.alert-warning h3 {
-            text-align: center;
-            width: 100%;
-        }
-        
-        #documentViewer .alert.alert-warning .text-sm {
-            text-align: center;
-            width: 100%;
-        }
-        
-        /* Download Queue Widget */
-        .download-queue-widget {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 280px;
-            max-width: 350px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 16px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-        
-        .download-queue-widget.show {
-            transform: translateY(0);
-            opacity: 1;
-            pointer-events: auto;
-        }
-        
-        .download-queue-widget.hidden {
-            display: none;
-        }
-        
-        .download-queue-content {
-            width: 100%;
-        }
-        
-        .download-queue-widget .progress {
-            height: 8px;
-        }
-        
-        .download-queue-widget #downloadSpeedIcon {
-            font-size: 14px;
-        }
-        
-        .preview-limit-warning h3 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-        
-        .preview-limit-warning p {
-            color: #856404;
-            margin: 5px 0;
-        }
-        
-        .preview-limit-warning .btn-purchase {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .preview-limit-warning .btn-purchase:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        /* Blur effect for pages after limit */
-        .docx-viewer .docx-page.page-limit-blur {
-            filter: blur(5px) !important;
-            opacity: 0.3 !important;
-            pointer-events: none !important;
-            position: relative !important;
-        }
-        
-        .docx-viewer .docx-wrapper .page-limit-blur {
-            filter: blur(5px) !important;
-            opacity: 0.3 !important;
-            pointer-events: none !important;
-            position: relative !important;
-        }
-        
-        .pdf-page.page-limit-blur {
-            filter: blur(5px);
-            opacity: 0.3;
-            pointer-events: none;
-            position: relative;
-        }
-        
-        .pdf-page.page-limit-blur::after {
-            content: 'Mua tài liệu để xem đầy đủ';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255,255,255,0.9);
-            padding: 20px;
-            border-radius: 8px;
-            font-weight: bold;
-            color: #333;
-            z-index: 10;
-        }
-        
-        
-        /* Share Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        .modal-overlay.show {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        
-        .modal-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 15px;
-        }
-        
-        .share-links {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .share-links a {
-            flex: 1;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 4px;
-            text-align: center;
-            text-decoration: none;
-            color: #333;
-            font-weight: 600;
-            font-size: 12px;
-            transition: background 0.3s;
-        }
-        
-        .share-links a:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        .modal-close {
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
-            color: #999;
-            cursor: pointer;
-            border: none;
-            background: none;
-        }
-        
-        .modal-close:hover {
-            color: #333;
-        }
-        
-        /* Report Modal */
-        .report-form {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .report-form textarea {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 12px;
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .report-form button {
-            padding: 10px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        
-        .report-form button:hover {
-            background: #764ba2;
-        }
-        
-        /* Info Toggle Button */
-        .info-toggle-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: none;
-            font-size: 14px;
-            color: #374151;
-            font-weight: 500;
-            order: 10;
-        }
+    .user-badge-premium:hover {
+        background: oklch(var(--b2));
+        transform: translateY(-2px);
+    }
 
-        .info-toggle-btn:hover {
-            background: #e5e7eb;
-            border-color: #d1d5db;
+    .user-avatar-vsd {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: oklch(var(--p) / 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .meta-item-vsd {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.4);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    /* Premium Status Badge */
+    .status-badge-premium {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        background: linear-gradient(135deg, oklch(var(--s)) 0%, oklch(var(--s) / 0.8) 100%);
+        color: white;
+        box-shadow: 0 10px 20px -5px oklch(var(--s) / 0.3);
+        border: 1px solid oklch(var(--s) / 0.2);
+        animation: pulseFade 2s infinite;
+    }
+
+    .status-badge-owner {
+        background: linear-gradient(135deg, oklch(var(--p)) 0%, oklch(var(--p) / 0.8) 100%);
+        box-shadow: 0 10px 20px -5px oklch(var(--p) / 0.3);
+        border: 1px solid oklch(var(--p) / 0.2);
+    }
+
+    @keyframes pulseFade {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.9; transform: scale(0.98); }
+    }
+
+    .actions-bar-vsd {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding-top: 32px;
+        border-top: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    .btn-vsd {
+        height: 48px;
+        padding: 0 24px;
+        border-radius: 1rem;
+        font-weight: 900;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+
+    .btn-vsd-primary {
+        background: oklch(var(--p));
+        color: oklch(var(--pc));
+        box-shadow: 0 10px 15px -3px oklch(var(--p) / 0.2);
+    }
+
+    .btn-vsd-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px oklch(var(--p) / 0.3);
+    }
+
+    .btn-vsd-secondary {
+        background: oklch(var(--b2) / 0.5);
+        color: oklch(var(--bc));
+        border-color: oklch(var(--bc) / 0.05);
+    }
+
+    .btn-vsd-secondary:hover {
+        background: oklch(var(--b2));
+        border-color: oklch(var(--bc) / 0.1);
+        transform: translateY(-1px);
+    }
+
+    .btn-vsd-ghost {
+        background: transparent;
+        color: oklch(var(--bc) / 0.5);
+    }
+
+    .btn-vsd-ghost:hover {
+        background: oklch(var(--bc) / 0.05);
+        color: oklch(var(--bc));
+    }
+
+    .reaction-group {
+        display: flex;
+        gap: 8px;
+        background: oklch(var(--b2) / 0.3);
+        padding: 6px;
+        border-radius: 1.25rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+    }
+
+    /* PDF Viewer Premium */
+    .viewer-card-vsd {
+        background: oklch(var(--b1));
+        border-radius: 3rem;
+        border: 1px solid oklch(var(--bc) / 0.05);
+        padding: 40px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pdf-viewer {
+        width: 100%;
+        height: 190vh;
+        background: oklch(var(--b2) / 0.5);
+        border-radius: 2rem;
+        overflow-y: auto;
+        padding: 40px;
+        position: relative;
+        scrollbar-gutter: stable;
+    }
+
+    .pdf-page-container {
+        margin: 0 auto 40px auto;
+        background: white;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pdf-page-container:hover {
+        transform: scale(1.01);
+    }
+
+    .pdf-page-counter {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: white;
+        padding: 10px 24px;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 900;
+        letter-spacing: 0.15em;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        border: 1px solid rgba(255,255,255,0.1);
+        pointer-events: none;
+    }
+
+    .pdf-page-counter.active {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    #currentPageNum {
+        color: oklch(var(--p));
+        font-size: 0.85rem;
+    }
+
+    /* Info Section Grid */
+    .info-grid-vsd {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 32px;
+        margin-bottom: 40px;
+    }
+
+    .info-card-premium {
+        background: var(--glass-bg);
+        border-radius: 2.5rem;
+        border: 1px solid var(--glass-border);
+        padding: 32px;
+    }
+
+    .info-card-title-vsd {
+        font-size: 1.25rem;
+        font-weight: 900;
+        color: oklch(var(--bc));
+        letter-spacing: -0.02em;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .info-card-title-vsd i {
+        color: oklch(var(--p));
+    }
+
+    /* Categories Styling */
+    .cat-group-vsd {
+        margin-bottom: 24px;
+    }
+
+    .cat-label-vsd {
+        font-size: 0.7rem;
+        font-weight: 900;
+        color: oklch(var(--bc) / 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 12px;
+        display: block;
+    }
+
+    .cat-tag-vsd {
+        display: inline-flex;
+        padding: 8px 20px;
+        background: oklch(var(--p) / 0.05);
+        color: oklch(var(--p));
+        border-radius: 2rem;
+        font-size: 11px;
+        font-weight: 900;
+        border: 1px solid oklch(var(--p) / 0.1);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Watermark Protection */
+    .protected {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .watermark-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 50;
+        background-image: repeating-linear-gradient(45deg, transparent, transparent 150px, rgba(0,0,0,0.02) 150px, rgba(0,0,0,0.02) 300px);
+    }
+    
+    .watermark-text {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 8rem;
+        font-weight: 900;
+        color: rgba(0,0,0,0.03);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    /* Additional Viewer Styles */
+    .image-viewer {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: oklch(var(--b2) / 0.3);
+        min-height: 500px;
+        border-radius: 2rem;
+    }
+    
+    .image-viewer img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 1rem;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    
+    .text-viewer {
+        padding: 40px;
+        background: white;
+        border-radius: 2rem;
+        overflow-y: auto;
+        max-height: 800px;
+    }
+    
+    .text-viewer pre {
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: #334155;
+    }
+
+    .docx-viewer {
+        width: 100%;
+        padding: 40px;
+        background: oklch(var(--b2) / 0.3);
+        border-radius: 2rem;
+        min-height: 500px;
+    }
+
+    .page-loader {
+        transition: opacity 0.3s ease;
+    }
+
+    /* Download Queue Widget Premium */
+    .download-queue-widget {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+        min-width: 320px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        padding: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+        transform: translateY(120%);
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        pointer-events: none;
+        opacity: 0;
+    }
+
+    .download-queue-widget.show {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .download-queue-widget .progress {
+        height: 8px;
+        border-radius: 4px;
+        background: oklch(var(--b3));
+    }
+
+    /* Loading Overlay */
+    .vsd-loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        color: white;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .vsd-loading-overlay.active {
+        display: flex;
+    }
+
+    @media (max-width: 1024px) {
+        .info-grid-vsd {
+            grid-template-columns: 1fr;
         }
+    }
 
-        .info-toggle-btn:active {
-            background: #d1d5db;
+    @media (max-width: 640px) {
+        .view-header-card {
+            padding: 24px;
+            border-radius: 1.5rem;
         }
-
-        .info-toggle-icon {
-            font-size: 18px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .view-title {
+            font-size: 1.5rem;
         }
-
-        .info-toggle-arrow {
-            font-size: 12px;
-            line-height: 1;
-            transition: transform 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6b7280;
-        }
-
-        .info-toggle-arrow.rotated {
-            transform: rotate(180deg);
-        }
-
-        /* Document Info Section */
-        .document-info-section {
-            display: none;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-
-        .document-info-section.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .info-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            border: 1px solid #e5e7eb;
-        }
-
-        .info-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-            transform: translateY(-2px);
-        }
-
-        .info-card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 16px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .info-icon {
-            font-size: 24px;
-            line-height: 1;
-        }
-
-        .info-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0;
-            letter-spacing: 0.3px;
-        }
-
-        .info-card-content {
-            padding: 20px;
-        }
-
-        .description-text {
-            font-size: 14px;
-            line-height: 1.8;
-            color: #374151;
-            margin: 0;
-            white-space: pre-wrap;
-        }
-
-        .category-section {
-            margin-bottom: 16px;
-        }
-
-        .category-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .category-section-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #f3f4f6;
-        }
-
-        .category-icon {
-            font-size: 18px;
-            line-height: 1;
-        }
-
-        .category-label-text {
-            font-size: 13px;
-            font-weight: 600;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .category-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .cat-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
-        }
-
-        .cat-badge:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        @media (max-width: 768px) {
-            .pdf-viewer {
-                height: 400px;
-            }
-
-            .info-toggle-arrow {
-                font-size: 11px;
-            }
-
-            .document-info-section {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-        }
-    </style>
+    }
+</style>
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
     <main class="flex-1 p-6">
         <div class="max-w-7xl mx-auto">
             <div class="space-y-6">
-        <!-- Header -->
-        <div class="card bg-base-100 shadow-md">
-            <div class="card-body">
-                <div class="flex flex-col lg:flex-row justify-between items-start gap-4">
-                    <div class="flex-1">
-                        <h1 class="text-2xl font-bold flex items-center gap-2 flex-wrap">
-                            <!-- <i class="fa-solid fa-file-lines"></i> -->
-                            <?= htmlspecialchars($doc['original_name']) ?>
-                            <?php if($has_purchased && $is_logged_in): ?>
-                                <span class="badge badge-success">✓ Đã Mua</span>
-                            <?php endif; ?>
-                        </h1>
-                        <div class="flex gap-4 items-center text-sm text-base-content/70 mt-3 flex-wrap">
-                            <div class="flex items-center gap-2 bg-base-200 px-3 py-1.5 rounded-full border border-base-300">
-                                <div class="avatar">
-                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" alt="Avatar" />
-                                        <?php else: ?>
-                                            <span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                                <span class="flex items-center gap-1">by <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="font-bold text-base-content hover:text-primary hover:underline transition-colors"><?= htmlspecialchars($doc['username']) ?></a></span>
-                            </div>
-                            <span class="flex items-center gap-1">
-                                <i class="fa-regular fa-calendar"></i>
-                                <?= date('M d, Y', strtotime($doc['created_at'])) ?>
-                            </span>
-                            <span class="flex items-center gap-1">
-                                <i class="fa-regular fa-eye"></i>
-                                <?= number_format($doc['views'] ?? 0) ?> lượt xem
-                            </span>
-                            <span class="flex items-center gap-1">
-                                <i class="fa-solid fa-download"></i>
-                                <?= number_format($doc['downloads'] ?? 0) ?> tải xuống
-                            </span>
-                        </div>
+    <div class="view-container">
+        <!-- Header Section Premium -->
+        <div class="view-header-card">
+            <h1 class="view-title"><?= htmlspecialchars($doc['original_name']) ?></h1>
+            
+            <div class="view-meta-row">
+                <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="user-badge-premium">
+                    <div class="user-avatar-vsd">
+                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
+                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <i class="fa-solid fa-user text-primary text-sm"></i>
+                        <?php endif; ?>
                     </div>
-                    <?php 
-                    // Get document price for use in download button and modal
-                    $doc_points = getDocumentPoints($doc_id);
-                    $price = 0;
-                    if($doc_points) {
-                        $price = $doc_points['user_price'] > 0 ? $doc_points['user_price'] : ($doc_points['admin_points'] ?? 0);
-                    }
-                    ?>
-                    <div class="flex flex-col gap-3 w-full lg:w-auto items-end">
-                        <div class="flex gap-2 flex-wrap justify-end">
-                            <?php
-                            $download_class = 'btn btn-primary';
-                            if(!$is_logged_in) {
-                                $download_class = 'btn btn-ghost btn-disabled';
-                            } elseif(!$has_purchased) {
-                                $download_class = 'btn btn-warning';
-                            }
-                            ?>
-                            <?php if($is_logged_in && $doc['user_id'] == $user_id): ?>
-                                <a href="edit-document.php?id=<?= $doc_id ?>" class="btn btn-success btn-sm">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                    Edit
-                                </a>
-                            <?php endif; ?>
-                            <button class="<?= $download_class ?> btn-sm" onclick="downloadDoc()">
-                                <i class="fa-solid fa-download"></i>
-                                Download
-                            </button>
-                            <!-- <button class="btn btn-ghost btn-sm" onclick="goToSaved()">
-                                <i class="fa-regular fa-bookmark"></i>
-                                Saved
-                            </button> -->
-                            <button class="btn btn-ghost btn-sm" onclick="toggleDocInfo()" id="infoToggleBtn">
-                                <i class="fa-solid fa-circle-info"></i>
-                                Info
-                                <span class="info-toggle-arrow" id="infoToggleArrow">▼</span>
-                            </button>
-                            <button class="btn btn-ghost btn-sm" onclick="document.location='dashboard.php'">
-                                <i class="fa-solid fa-arrow-left"></i>
-                                Back
-                            </button>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-base-content/70"><?= htmlspecialchars($doc['username']) ?></span>
+                </a>
+
+                <div class="meta-item-vsd">
+                    <i class="fa-solid fa-calendar-day"></i>
+                    <?= date('M d, Y', strtotime($doc['created_at'])) ?>
+                </div>
+
+                <div class="meta-item-vsd">
+                    <i class="fa-solid fa-eye"></i>
+                    <?= number_format($doc['views'] ?? 0) ?> XEM
+                </div>
+
+                <div class="meta-item-vsd">
+                    <i class="fa-solid fa-download"></i>
+                    <?= number_format($doc['downloads'] ?? 0) ?> TẢI
+                </div>
+
+                <?php if($is_logged_in): ?>
+                    <?php if($doc['user_id'] == $user_id): ?>
+                        <div class="status-badge-premium status-badge-owner">
+                            <i class="fa-solid fa-crown"></i> CỦA BẠN
                         </div>
-                        <?php if($is_logged_in): ?>
-                        <div class="flex gap-2 flex-wrap">
-                            <button class="btn btn-sm <?= $user_reaction === 'like' ? 'btn-success' : 'btn-ghost' ?>" onclick="toggleReaction('like')">
-                                <i class="fa-regular fa-thumbs-up"></i>
+                    <?php elseif($has_purchased): ?>
+                        <div class="status-badge-premium">
+                            <i class="fa-solid fa-check-double"></i> ĐÃ SỞ HỮU
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+
+            <?php 
+            $doc_points = getDocumentPoints($doc_id);
+            $price = 0;
+            if($doc_points) {
+                $price = $doc_points['user_price'] > 0 ? $doc_points['user_price'] : ($doc_points['admin_points'] ?? 0);
+            }
+            ?>
+
+            <div class="actions-bar-vsd">
+                <div class="flex gap-3 flex-wrap">
+                    <button class="btn-vsd btn-vsd-primary" onclick="downloadDoc()">
+                        <i class="fa-solid fa-download"></i> 
+                        <?= !$has_purchased ? 'MUA & TẢI XUỐNG' : 'TẢI XUỐNG NGAY' ?>
+                    </button>
+                    
+                    <?php if($is_logged_in && $doc['user_id'] == $user_id): ?>
+                        <a href="edit-document.php?id=<?= $doc_id ?>" class="btn-vsd btn-vsd-secondary">
+                            <i class="fa-solid fa-pen-to-square"></i> CHỈNH SỬA
+                        </a>
+                    <?php endif; ?>
+
+                    <button class="btn-vsd btn-vsd-secondary" onclick="toggleDocInfo()">
+                        <i class="fa-solid fa-circle-info"></i> THÔNG TIN
+                    </button>
+                </div>
+
+                <div class="flex gap-4 items-center">
+                    <?php if($is_logged_in): ?>
+                        <div class="reaction-group">
+                            <button class="btn-vsd btn-vsd-ghost <?= $user_reaction === 'like' ? 'text-primary' : '' ?>" onclick="toggleReaction('like')" style="height: 36px; padding: 0 16px;">
+                                <i class="fa-<?= $user_reaction === 'like' ? 'solid' : 'regular' ?> fa-thumbs-up"></i>
                                 <?= number_format($likes) ?>
                             </button>
-                            <button class="btn btn-sm <?= $user_reaction === 'dislike' ? 'btn-error' : 'btn-ghost' ?>" onclick="toggleReaction('dislike')">
-                                <i class="fa-regular fa-thumbs-down"></i>
+                            <button class="btn-vsd btn-vsd-ghost <?= $user_reaction === 'dislike' ? 'text-error' : '' ?>" onclick="toggleReaction('dislike')" style="height: 36px; padding: 0 16px;">
+                                <i class="fa-<?= $user_reaction === 'dislike' ? 'solid' : 'regular' ?> fa-thumbs-down"></i>
                                 <?= number_format($dislikes) ?>
                             </button>
-                            <!-- Save Button (Bookmark Icon) -->
-                            <button class="btn btn-sm <?= $user_saved ? 'btn-primary' : 'btn-ghost' ?>" onclick="toggleSave()">
-                                <i class="fa-regular fa-bookmark"></i>
-                                Save <?= $user_saved ? '✓' : '' ?>
-                            </button>
-                            <button class="btn btn-sm btn-ghost" onclick="openShareModal()">
-                                <i class="fa-solid fa-share-nodes"></i>
-                                Share
-                            </button>
-                            <button class="btn btn-sm btn-ghost" onclick="openReportModal()">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                Report
-                            </button>
                         </div>
-                        <?php else: ?>
-                        <div class="flex gap-2">
-                            <button class="btn btn-primary btn-sm" onclick="document.location='index.php'">Đăng Nhập để tương tác</button>
-                        </div>
-                        <?php endif; ?>
-                    </div>
+
+                        <button class="btn-vsd btn-vsd-ghost <?= $user_saved ? 'text-primary' : '' ?>" onclick="toggleSave()" title="Lưu tài liệu">
+                            <i class="fa-<?= $user_saved ? 'solid' : 'regular' ?> fa-bookmark"></i>
+                        </button>
+
+                        <button class="btn-vsd btn-vsd-ghost" onclick="openShareModal()" title="Chia sẻ">
+                            <i class="fa-solid fa-share-nodes"></i>
+                        </button>
+
+                        <button class="btn-vsd btn-vsd-ghost" onclick="openReportModal()" title="Báo cáo">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </button>
+                    <?php else: ?>
+                        <a href="index.php" class="btn-vsd btn-vsd-secondary">ĐĂNG NHẬP ĐỂ TƯƠNG TÁC</a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <!-- Document Info Section (Collapsible) -->
-        <div class="document-info-section grid grid-cols-1 md:grid-cols-2 gap-4" id="documentInfoSection" style="display: none;">
-            <!-- Description Card -->
-            <div class="card bg-base-100 shadow-md">
-                <div class="card-title rounded-t-xl bg-primary text-white p-4">
-                    <i class="fa-solid fa-file-lines"></i>
-                    <h3>Mô Tả Tài Liệu</h3>
-                </div>
-                <div class="card-body">
+        <!-- Info Grid VSD -->
+        <div class="info-grid-vsd" id="documentInfoSection" style="display: none;">
+            <div class="info-card-premium">
+                <h3 class="info-card-title-vsd">
+                    <i class="fa-solid fa-file-signature"></i> MÔ TẢ TÀI LIỆU
+                </h3>
+                <div class="text-sm leading-relaxed text-base-content/70 whitespace-pre-wrap">
                     <?php if(!empty($doc['description'])): ?>
-                        <p class="text-sm leading-relaxed whitespace-pre-wrap"><?= htmlspecialchars($doc['description']) ?></p>
+                        <?= htmlspecialchars($doc['description']) ?>
                     <?php else: ?>
-                        <p class="text-sm text-base-content/50 italic">Chưa có mô tả cho tài liệu này.</p>
+                        <span class="italic opacity-50">Tài liệu này chưa có mô tả chi tiết.</span>
                     <?php endif; ?>
                 </div>
             </div>
-            
-            <!-- Categories Card -->
-            <div class="card bg-base-100 shadow-md">
-                <div class="card-title rounded-t-xl bg-secondary text-white p-4">
-                    <i class="fa-solid fa-folder"></i>
-                    <h3>Phân Loại</h3>
-                </div>
-                <div class="card-body">
-                    <?php if($doc_category): ?>
-                        <!-- Cấp học -->
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-graduation-cap text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Cấp học</span>
+
+            <div class="info-card-premium">
+                <h3 class="info-card-title-vsd">
+                    <i class="fa-solid fa-layer-group"></i> PHÂN LOẠI
+                </h3>
+                <?php if($doc_category): ?>
+                    <div class="cat-group-vsd">
+                        <span class="cat-label-vsd">Cấp học</span>
+                        <span class="cat-tag-vsd"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
+                    </div>
+                    <?php if(isset($doc_category['grade_name'])): ?>
+                        <div class="cat-group-vsd">
+                            <span class="cat-label-vsd">Lớp & Môn học</span>
+                            <div class="flex gap-2">
+                                <span class="cat-tag-vsd"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
+                                <span class="cat-tag-vsd"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
                             </div>
-                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
                         </div>
-                        
-                        <?php if(isset($doc_category['grade_name'])): ?>
-                        <!-- Lớp -->
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-users text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Lớp</span>
-                            </div>
-                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
-                        </div>
-                        
-                        <!-- Môn học -->
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-book text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Môn học</span>
-                            </div>
-                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if(isset($doc_category['major_group_name'])): ?>
-                        <!-- Nhóm ngành -->
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-briefcase text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Nhóm ngành</span>
-                            </div>
-                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
-                        </div>
-                        
-                        <?php if(!empty($doc_category['major_name'])): ?>
-                        <!-- Ngành học -->
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-scroll text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Ngành học</span>
-                            </div>
-                            <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_name']) ?></span>
-                        </div>
-                        <?php endif; ?>
-                        <?php endif; ?>
-                        
-                        <!-- Loại tài liệu -->
-                        <div class="mb-0">
-                            <div class="flex items-center gap-2 mb-2 pb-2 border-b-2 border-base-300">
-                                <i class="fa-solid fa-file-lines text-base-content/70"></i>
-                                <span class="text-xs font-semibold uppercase text-base-content/70 tracking-wide">Loại tài liệu</span>
-                            </div>
-                            <span class="badge badge-secondary"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
-                        </div>
-                    <?php else: ?>
-                        <p class="text-sm text-base-content/50 italic">Chưa có phân loại cho tài liệu này.</p>
                     <?php endif; ?>
-                </div>
+                    <?php if(isset($doc_category['major_group_name'])): ?>
+                        <div class="cat-group-vsd">
+                            <span class="cat-label-vsd">Chuyên ngành</span>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="cat-tag-vsd"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
+                                <?php if(!empty($doc_category['major_name'])): ?>
+                                    <span class="cat-tag-vsd"><?= htmlspecialchars($doc_category['major_name']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <div class="cat-group-vsd">
+                        <span class="cat-label-vsd">Loại file</span>
+                        <span class="cat-tag-vsd" style="background: oklch(var(--s) / 0.05); color: oklch(var(--s)); border-color: oklch(var(--s) / 0.1);">
+                            <?= htmlspecialchars($doc_category['doc_type_name']) ?>
+                        </span>
+                    </div>
+                <?php else: ?>
+                    <span class="text-sm italic opacity-50">Chưa có thông tin phân loại.</span>
+                <?php endif; ?>
             </div>
         </div>
 
-        <!-- Document Viewer -->
-        <div class="card bg-base-100 shadow-lg <?= !$has_purchased ? 'protected' : '' ?>" id="documentViewer">
+        <!-- Viewer Section -->
+        <div class="viewer-card-vsd <?= !$has_purchased ? 'protected' : '' ?>">
             <?php if(!$has_purchased): ?>
                 <div class="alert alert-warning">
                     <i class="fa-solid fa-triangle-exclamation shrink-0 text-xl"></i>
@@ -1405,6 +1198,12 @@ include 'includes/sidebar.php';
         </main>
         <?php include 'includes/footer.php'; ?>
     </div>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div id="vsdGlobalLoader" class="vsd-loading-overlay">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <span class="font-black uppercase tracking-[0.2em] text-[10px] text-white">Đang xử lý...</span>
     </div>
 
     <!-- Share Modal -->
@@ -2167,17 +1966,44 @@ include 'includes/sidebar.php';
         }
         
         // Interaction functions
+        function showGlobalLoader() {
+            document.getElementById('vsdGlobalLoader').classList.add('active');
+        }
+
+        function hideGlobalLoader() {
+            document.getElementById('vsdGlobalLoader').classList.remove('active');
+        }
+
         function toggleReaction(type) {
             if (!<?= $is_logged_in ? 'true' : 'false' ?>) {
                 showAlert('Vui lòng đăng nhập để tương tác', 'lock', 'Yêu Cầu Đăng Nhập');
                 return;
             }
             
-            fetch('', {
+            const params = new URLSearchParams();
+            params.append('action', type);
+
+            fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=' + type
-            }).then(() => location.reload());
+                body: params
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update counts
+                    const likeBtn = document.querySelector('[onclick="toggleReaction(\'like\')"]');
+                    const dislikeBtn = document.querySelector('[onclick="toggleReaction(\'dislike\')"]');
+                    
+                    likeBtn.innerHTML = `<i class="fa-${data.user_reaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up"></i> ${data.likes}`;
+                    dislikeBtn.innerHTML = `<i class="fa-${data.user_reaction === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down"></i> ${data.dislikes}`;
+                    
+                    // Update classes
+                    likeBtn.classList.toggle('text-primary', data.user_reaction === 'like');
+                    dislikeBtn.classList.toggle('text-error', data.user_reaction === 'dislike');
+                }
+            })
+            .catch(err => showAlert('Lỗi kết nối', 'error'));
         }
         
         function toggleSave() {
@@ -2186,11 +2012,27 @@ include 'includes/sidebar.php';
                 return;
             }
             
-            fetch('', {
+            const params = new URLSearchParams();
+            params.append('action', 'save');
+
+            fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=save'
-            }).then(() => location.reload());
+                body: params
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const saveBtn = document.querySelector('[onclick="toggleSave()"]');
+                    saveBtn.innerHTML = `<i class="fa-${data.saved ? 'solid' : 'regular'} fa-bookmark"></i>`;
+                    saveBtn.classList.toggle('text-primary', data.saved);
+                    
+                    if(data.saved) {
+                        // Optional: subtle toast or animation
+                    }
+                }
+            })
+            .catch(err => showAlert('Lỗi kết nối', 'error'));
         }
         
         function openShareModal() {

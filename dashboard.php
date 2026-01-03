@@ -190,545 +190,293 @@ if(isset($_GET['download'])) {
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
     
-    <main class="flex-1 p-6">
+    <main class="flex-1 p-4 lg:p-8">
+        <!-- Header Section -->
+        <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-extrabold flex items-center gap-3 text-base-content">
+                    <div class="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
+                        <i class="fa-solid fa-gauge-high"></i>
+                    </div>
+                    Bảng Điều Khiển
+                </h1>
+                <p class="text-base-content/60 mt-2 font-medium">Chào mừng trở lại! Xem tổng quan tài liệu của bạn.</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <div class="badge badge-lg py-5 px-6 bg-base-100 border-base-300 shadow-sm font-bold gap-2">
+                    <i class="fa-solid fa-file-invoice text-primary/60"></i>
+                    Tài liệu của tôi: <span class="text-primary ml-1"><?= count($my_docs) ?></span>
+                </div>
+            </div>
+        </div>
+
         <?php if(isset($_GET['msg'])): ?>
             <?php if($_GET['msg'] == 'deleted'): ?>
-                <div class="alert alert-success mb-4">
-                    <i class="fa-regular fa-circle-check fa-lg"></i>
-                    <span>Document deleted successfully</span>
+                <div class="alert bg-error/10 border-error/20 text-error mb-8 rounded-2xl animate-bounce-slow">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span class="font-bold">Đã xóa tài liệu thành công!</span>
                 </div>
             <?php elseif($_GET['msg'] == 'updated'): ?>
-                <div class="alert alert-success mb-4">
-                    <i class="fa-regular fa-circle-check fa-lg"></i>
-                    <span>Document updated successfully</span>
+                <div class="alert bg-success/10 border-success/20 text-success mb-8 rounded-2xl animate-bounce-slow">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span class="font-bold">Đã cập nhật tài liệu thành công!</span>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
 
         <!-- My Documents Section -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 pb-3 border-b-2 border-primary flex items-center gap-2">
-                <i class="fa-regular fa-book fa-lg"></i>
-                My Documents
-            </h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-            <?php
-            if(count($my_docs) > 0) {
-                foreach($my_docs as $doc) {
+        <section class="mb-16">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-black flex items-center gap-3">
+                    <span class="w-1.5 h-8 bg-primary rounded-full"></span>
+                    Tài liệu của tôi
+                </h2>
+                <a href="upload.php" class="btn btn-primary btn-sm rounded-xl gap-2 shadow-lg shadow-primary/20">
+                    <i class="fa-solid fa-plus"></i>
+                    Tải Lên Mới
+                </a>
+            </div>
+
+            <?php if(count($my_docs) > 0): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <?php
+                foreach($my_docs as $doc):
                     $doc_id = $doc['id'];
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                    $file_path = "uploads/" . $doc['file_name'];
+                    $thumbnail = $doc['thumbnail'] ?? null;
+                    $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
                     
-                    // Get likes and dislikes
-                    $likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-                    $dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
+                    // Stats
+                    $likes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='like'");
+                    $dislikes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
-                    // Get category info
+                    // Category
                     $doc_category = getDocumentCategoryWithNames($doc_id);
-                    $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Other';
+                    $doc_type_name = $doc_category ? $doc_category['doc_type_name'] : 'Khác';
                     
-                    // Determine file types
-                    $is_pdf = ($ext === 'pdf');
-                    $is_docx = in_array($ext, ['doc', 'docx']);
-                    $is_office = in_array($ext, ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']);
-                    $preview_id = 'preview_' . $doc_id;
-                    $page_count_id = 'pagecount_' . $doc_id;
-                    
-                    // Get document name without extension
-                    $doc_name_without_ext = preg_replace('/\.[^.]+$/', '', $doc['original_name']);
-                    
-                    // Status badges
+                    // Icons logic from saved.php
+                    $icon_class = 'fa-file-lines';
+                    $icon_color = 'text-primary';
+                    if(in_array($ext, ['pdf'])) { $icon_class = 'fa-file-pdf'; $icon_color = 'text-error'; }
+                    elseif(in_array($ext, ['doc', 'docx'])) { $icon_class = 'fa-file-word'; $icon_color = 'text-info'; }
+                    elseif(in_array($ext, ['xls', 'xlsx'])) { $icon_class = 'fa-file-excel'; $icon_color = 'text-success'; }
+                    elseif(in_array($ext, ['ppt', 'pptx'])) { $icon_class = 'fa-file-powerpoint'; $icon_color = 'text-warning'; }
+                    elseif(in_array($ext, ['zip', 'rar'])) { $icon_class = 'fa-file-zipper'; $icon_color = 'text-purple-500'; }
+
+                    // Status
                     $status_badge = '';
-                    if($doc['status'] == 'pending') {
-                        $status_badge = '<div class="badge badge-warning absolute top-2 right-2 z-10 gap-1"><i class="fa-regular fa-clock"></i> Đang Duyệt</div>';
-                    } elseif($doc['status'] == 'rejected') {
-                        $status_badge = '<div class="badge badge-error absolute top-2 right-2 z-10 gap-1"><i class="fa-regular fa-circle-xmark"></i> Đã Từ Chối</div>';
-                    } elseif($doc['status'] == 'approved') {
-                        $status_badge = '<div class="badge badge-success absolute top-2 right-2 z-10 gap-1"><i class="fa-regular fa-circle-check"></i> Đã Duyệt</div>';
-                    }
-                    $privacy_badge = '';
-                    if($doc['is_public'] == 1) {
-                        $privacy_badge = '<div class="badge badge-info absolute top-2 left-2 z-10 gap-1"><i class="fa-regular fa-globe"></i></div>';
-                    } else {
-                        $privacy_badge = '<div class="badge badge-neutral absolute top-2 left-2 z-10 gap-1"><i class="fa-regular fa-lock"></i></div>';
-                    }
-                    
-                    // Get thumbnail and total_pages from database
-                    $thumbnail = $doc['thumbnail'] ?? null;
-                    $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
-                    $converted_pdf_path = $doc['converted_pdf_path'] ?? null;
-                    
-                    // Determine preview content
-                    $preview_content = '';
-                    $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                    $use_thumbnail = false;
-                    
-                    // If thumbnail exists in database, use it
-                    $thumbnail_file_path = 'uploads/' . $thumbnail;
-                    $thumbnail_file_exists = $thumbnail && file_exists($thumbnail_file_path);
-                    
-                    if ($thumbnail_file_exists) {
-                        $preview_content = '<img src="uploads/' . htmlspecialchars($thumbnail) . '" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display=\'none\'; this.parentElement.innerHTML=\'<div class=\\\'flex items-center justify-center h-full\\\'><i class=\\\'fa-regular fa-file fa-4x text-base-content/30\\\'></i></div>\';" />';
-                        $use_thumbnail = true;
-                    } elseif($is_pdf) {
-                        $preview_content = '<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file-pdf fa-4x text-base-content/30"></i></div>';
-                    } elseif($is_docx) {
-                        $preview_content = '<div class="docx-preview-container" style="width: 100%; height: 100%;"></div>';
-                    } elseif($is_image) {
-                        $preview_content = '<img src="' . $file_path . '" onerror="this.style.display=\'none\'; this.parentElement.innerHTML=\'<div class=\\\'flex items-center justify-center h-full\\\'><i class=\\\'fa-regular fa-file fa-4x text-base-content/30\\\'></i></div>\';" />';
-                    } else {
-                        $icon_classes = [
-                            'ppt' => 'fa-regular fa-file-powerpoint', 'pptx' => 'fa-regular fa-file-powerpoint',
-                            'xls' => 'fa-regular fa-file-excel', 'xlsx' => 'fa-regular fa-file-excel',
-                            'txt' => 'fa-regular fa-file-lines', 'zip' => 'fa-regular fa-file-zipper'
-                        ];
-                        $icon_class = $icon_classes[$ext] ?? 'fa-regular fa-file';
-                        $preview_content = '<div class="flex items-center justify-center h-full"><i class="' . $icon_class . ' fa-4x text-base-content/30"></i></div>';
-                    }
-                    
-                    echo '
-                    <div class="card bg-base-100 shadow-md hover:shadow-xl transition-shadow cursor-pointer" onclick="window.location.href=\'view.php?id=' . $doc_id . '\'">
-                        <figure class="relative h-60 bg-base-200">
-                            <div class="document-preview w-full h-full" id="' . $preview_id . '">
-                                ' . $preview_content . '
+                    if($doc['status'] == 'pending') $status_badge = '<span class="badge badge-warning font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-warning/20">Đợi duyệt</span>';
+                    elseif($doc['status'] == 'rejected') $status_badge = '<span class="badge badge-error font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-error/20">Từ chối</span>';
+                    elseif($doc['status'] == 'approved') $status_badge = '<span class="badge badge-success font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-success/20">Đã duyệt</span>';
+                ?>
+                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                        <!-- Thumbnail Area -->
+                        <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
+                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110">
+                            <?php else: ?>
+                                <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                    <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <!-- Badges -->
+                            <div class="absolute top-5 left-5 flex flex-col gap-2">
+                                <span class="badge bg-base-100/90 backdrop-blur-md border-none font-black text-[10px] py-3 uppercase shadow-sm"><?= $ext ?></span>
+                                <?= $status_badge ?>
                             </div>
-                            <div class="badge badge-primary absolute bottom-2 right-2" id="' . $page_count_id . '">' . $page_count . '</div>
-                            ' . $status_badge . '
-                            ' . $privacy_badge . '
-                        </figure>
-                        <div class="card-body p-4">
-                            <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="avatar ' . (empty($doc['avatar']) ? 'placeholder' : '') . '">
-                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
-                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
-                                            : '<span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>') . '
+
+                            <div class="absolute bottom-5 right-5">
+                                <span class="badge bg-primary/90 backdrop-blur-md border-none text-primary-content font-black text-[10px] py-3 px-4 shadow-xl"><?= $page_count ?> TRANG</span>
+                            </div>
+
+                            <!-- Actions Hover Overlay -->
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                                <a href="view.php?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                    <i class="fa-solid fa-eye text-lg"></i>
+                                </a>
+                                <a href="edit-document.php?id=<?= $doc_id ?>" class="btn btn-info btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
+                                    <i class="fa-solid fa-pen-to-square text-lg"></i>
+                                </a>
+                                <button onclick="vsdConfirm({title: 'Xóa tài liệu', message: 'Hành động này không thể hoàn tác. Bạn chắc chứ?', type: 'error', onConfirm: () => window.location.href='dashboard.php?delete=<?= $doc_id ?>'})" 
+                                        class="btn btn-error btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
+                                    <i class="fa-solid fa-trash-can text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card Content -->
+                        <div class="p-6">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
+                                <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
+                            </h3>
+                            
+                            <div class="mt-4 flex flex-col gap-3">
+                                <!-- Quality Indicator -->
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-none flex items-center justify-center w-8 h-8 rounded-full bg-success text-white shadow-lg shadow-success/20">
+                                        <i class="fa-solid fa-thumbs-up text-[10px]"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between items-center mb-1">
+                                             <span class="text-[10px] font-black opacity-40 uppercase">Độ tin cậy</span>
+                                             <span class="text-[10px] font-bold text-success"><?= $like_percentage ?>%</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-success/10 rounded-full overflow-hidden">
+                                            <div class="h-full bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)] transition-all duration-1000" style="width: <?= $like_percentage ?>%"></div>
+                                        </div>
                                     </div>
                                 </div>
-                                <span class="text-[10px] text-base-content/60 font-medium">Tôi</span>
-                                <span class="text-[10px] text-base-content/40">• ' . htmlspecialchars($doc_type) . '</span>
-                            </div>
-                            <div class="card-actions justify-center mt-2">
-                                <div class="flex items-center gap-2 w-full">
-                                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
-                                        <i class="fa-regular fa-thumbs-up text-xs"></i>
+                                
+                                <div class="divider opacity-5 my-1"></div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-black uppercase text-base-content/40 tracking-wider"><?= htmlspecialchars($doc_type_name) ?></span>
                                     </div>
-                                    <div class="flex-1 h-6 bg-success/80 rounded-full flex items-center justify-center gap-1">
-                                        <span class="text-white font-semibold text-sm">' . $like_percentage . '%</span>
-                                        <span class="text-white/80 text-xs">(' . $likes . ')</span>
+                                    <div class="flex items-center gap-1 opacity-30">
+                                        <i class="fa-solid fa-calendar-alt text-[10px]"></i>
+                                        <span class="text-[10px] font-bold uppercase"><?= date('d M, Y', strtotime($doc['created_at'])) ?></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    ';
-                    
-                    // Add JavaScript to render document previews
-                    if($is_pdf && !$use_thumbnail) {
-                        echo '<script>
-                        (async function() {
-                            try {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-                                const pdfPath = "' . $file_path . '";
-                                const previewId = "' . $preview_id . '";
-                                const pageCountId = "' . $page_count_id . '";
-                                
-                                const pdfDoc = await pdfjsLib.getDocument(pdfPath).promise;
-                                const page = await pdfDoc.getPage(1);
-                                const scale = 1.2;
-                                const viewport = page.getViewport({ scale });
-                                
-                                const canvas = document.createElement("canvas");
-                                const context = canvas.getContext("2d");
-                                canvas.width = viewport.width;
-                                canvas.height = viewport.height;
-                                
-                                await page.render({
-                                    canvasContext: context,
-                                    viewport: viewport
-                                }).promise;
-                                
-                                const previewDiv = document.getElementById(previewId);
-                                previewDiv.innerHTML = "";
-                                previewDiv.appendChild(canvas);
-                                
-                                // Update page number
-                                const pageCountDiv = document.getElementById(pageCountId);
-                                if(pageCountDiv) {
-                                    pageCountDiv.textContent = pdfDoc.numPages;
-                                    pageCountDiv.style.display = "block";
-                                }
-                            } catch(error) {
-                                console.error("Error loading PDF:", error);
-                                const previewDiv = document.getElementById("' . $preview_id . '");
-                                if(previewDiv) {
-                                    previewDiv.innerHTML = \'<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file fa-4x text-base-content/30"></i></div>\';
-                                }
-                            }
-                        })();
-                        </script>';
-                    } elseif($is_docx && !$use_thumbnail) {
-                        echo '<script>
-                        (async function() {
-                            try {
-                                let retries = 0;
-                                while ((typeof JSZip === "undefined" || (typeof docx === "undefined" && typeof docxPreview === "undefined")) && retries < 15) {
-                                    await new Promise(resolve => setTimeout(resolve, 200));
-                                    retries++;
-                                }
-                                
-                                let docxAPI = null;
-                                if (typeof docx !== "undefined" && docx.renderAsync) {
-                                    docxAPI = docx;
-                                } else if (typeof docxPreview !== "undefined" && docxPreview.renderAsync) {
-                                    docxAPI = docxPreview;
-                                } else if (window.docxPreview && window.docxPreview.renderAsync) {
-                                    docxAPI = window.docxPreview;
-                                } else if (window.docx && window.docx.renderAsync) {
-                                    docxAPI = window.docx;
-                                }
-                                
-                                if (!docxAPI) {
-                                    throw new Error("DOCX library not loaded");
-                                }
-                                
-                                const fileUrl = "' . $file_path . '";
-                                const response = await fetch(fileUrl);
-                                if (!response.ok) throw new Error("Failed to fetch file");
-                                
-                                const arrayBuffer = await response.arrayBuffer();
-                                const previewId = "' . $preview_id . '";
-                                const pageCountId = "' . $page_count_id . '";
-                                const container = document.getElementById(previewId).querySelector(".docx-preview-container");
-                                
-                                await docxAPI.renderAsync(arrayBuffer, container, null, {
-                                    className: "docx-wrapper",
-                                    inWrapper: true,
-                                    ignoreWidth: false,
-                                    ignoreHeight: false,
-                                    breakPages: true
-                                });
-                                
-                                // Wait for rendering to complete
-                                await new Promise(resolve => setTimeout(resolve, 300));
-                                
-                                // Calculate scale to fit the first page in the container
-                                const wrapper = container.querySelector(".docx-wrapper");
-                                if (wrapper) {
-                                    const firstPage = wrapper.querySelector("div");
-                                    if (firstPage) {
-                                        const containerWidth = container.offsetWidth;
-                                        const containerHeight = container.offsetHeight;
-                                        const pageWidth = firstPage.offsetWidth;
-                                        const pageHeight = firstPage.offsetHeight;
-                                        
-                                        // Calculate scale to fit width and height
-                                        const scaleX = (containerWidth - 20) / pageWidth;
-                                        const scaleY = (containerHeight - 20) / pageHeight;
-                                        const scale = Math.min(scaleX, scaleY, 1); 
-                                        
-                                        // Apply transform to show full first page
-                                        firstPage.style.transform = "scale(" + scale + ")";
-                                        firstPage.style.transformOrigin = "top left";
-                                        
-                                        // Hide other pages
-                                        const allPages = wrapper.querySelectorAll("div");
-                                        for (let i = 1; i < allPages.length; i++) {
-                                            allPages[i].style.display = "none";
-                                        }
-                                        
-                                        // Estimate page count from DOCX rendering
-                                        const estimatedPageCount = allPages.length > 0 ? allPages.length : 1;
-                                        const pageCountDiv = document.getElementById(pageCountId);
-                                        if(pageCountDiv) {
-                                            pageCountDiv.textContent = estimatedPageCount;
-                                            pageCountDiv.style.display = "block";
-                                        }
-                                    }
-                                }
-                            } catch(error) {
-                                console.error("Error loading DOCX:", error);
-                                const previewDiv = document.getElementById("' . $preview_id . '");
-                                if(previewDiv) {
-                                    previewDiv.innerHTML = \'<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file fa-4x text-base-content/30"></i></div><div class="page-number" id="' . $page_count_id . '">1</div>\';
-                                }
-                            }
-                        })();
-                        </script>';
-                    } elseif($is_office && !$is_docx) {
-                        // For PPT, PPTX, XLS, XLSX - show page count as 1 for now
-                        echo '<script>
-                        document.getElementById("' . $page_count_id . '").style.display = "block";
-                        </script>';
-                    }
-                }
-            } else {
-                echo '<div class="col-span-full text-center p-10 bg-base-100 rounded-box shadow">No documents uploaded yet</div>';
-            }
-            ?>
-            </div>
-        </div>
+                <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="relative overflow-hidden rounded-[3rem] bg-base-100 border-2 border-dashed border-base-200 p-20 text-center">
+                    <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                    <div class="relative z-10">
+                        <div class="w-24 h-24 rounded-3xl bg-base-200/50 flex items-center justify-center mb-6 mx-auto">
+                            <i class="fa-solid fa-file-circle-plus text-4xl opacity-20"></i>
+                        </div>
+                        <h3 class="text-2xl font-black mb-2">Bạn chưa có tài liệu nào</h3>
+                        <p class="text-base-content/50 mb-8 max-w-xs mx-auto">Bắt đầu chia sẻ kiến thức của bạn với cộng đồng ngay hôm nay.</p>
+                        <a href="upload.php" class="btn btn-primary rounded-2xl px-10 h-14 font-black">
+                            TẢI LÊN NGAY
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </section>
 
         <!-- Public Documents Section -->
-        <div>
-            <h2 class="text-2xl font-bold mb-6 pb-3 border-b-2 border-primary flex items-center gap-2">
-                <i class="fa-regular fa-globe fa-lg"></i>
-                Public Documents
-            </h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-            <?php
-            if(count($public_docs) > 0) {
-                foreach($public_docs as $doc) {
+        <section>
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-black flex items-center gap-3">
+                    <span class="w-1.5 h-8 bg-secondary rounded-full"></span>
+                    Khám phá tài liệu công khai
+                </h2>
+                <div class="badge badge-lg bg-base-100 border-base-200 shadow-sm font-bold text-base-content/60">
+                    Kho tài liệu mới nhất
+                </div>
+            </div>
+
+            <?php if(count($public_docs) > 0): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <?php
+                foreach($public_docs as $doc):
                     $doc_id = $doc['id'];
                     $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                    $file_path = "uploads/" . $doc['file_name'];
+                    $thumbnail = $doc['thumbnail'] ?? null;
+                    $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
                     
-                    // Get likes and dislikes
-                    $likes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-                    $dislikes = $VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
+                    // Stats
+                    $likes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='like'");
+                    $dislikes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
-                    // Get category info
-                    $doc_category = getDocumentCategoryWithNames($doc_id);
-                    $doc_type = $doc_category ? htmlspecialchars($doc_category['doc_type_name']) : 'Other';
-                    
-                    // Determine file types
-                    $is_pdf = ($ext === 'pdf');
-                    $is_docx = in_array($ext, ['doc', 'docx']);
-                    $is_office = in_array($ext, ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']);
-                    $preview_id = 'preview_public_' . $doc_id;
-                    $page_count_id = 'pagecount_public_' . $doc_id;
-                    
-                    // Get document name without extension
-                    $doc_name_without_ext = preg_replace('/\.[^.]+$/', '', $doc['original_name']);
-                    
                     $has_purchased = canUserDownloadDocument($user_id, $doc_id);
-                    $purchased_badge = $has_purchased ? '<div class="badge badge-success absolute top-2 right-2 z-10 gap-1"><i class="fa-regular fa-cart-shopping"></i> Đã Mua</div>' : '';
+                    $purchased_badge = $has_purchased ? '<span class="badge badge-success font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-success/20">Đã sở hữu</span>' : '';
                     
-                    // Get thumbnail and total_pages from database
-                    $thumbnail = $doc['thumbnail'] ?? null;
-                    $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
-                    $converted_pdf_path = $doc['converted_pdf_path'] ?? null;
-                    
-                    // Determine preview content
-                    $preview_content = '';
-                    $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                    $use_thumbnail = false;
-                    
-                    // If thumbnail exists in database, use it
-                    $thumbnail_file_path = 'uploads/' . $thumbnail;
-                    $thumbnail_file_exists = $thumbnail && file_exists($thumbnail_file_path);
-                    
-                    if ($thumbnail_file_exists) {
-                        $preview_content = '<img src="uploads/' . htmlspecialchars($thumbnail) . '" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display=\'none\'; this.parentElement.innerHTML=\'<div class=\\\'flex items-center justify-center h-full\\\'><i class=\\\'fa-regular fa-file fa-4x text-base-content/30\\\'></i></div>\';" />';
-                        $use_thumbnail = true;
-                    } elseif($is_pdf) {
-                        $preview_content = '<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file-pdf fa-4x text-base-content/30"></i></div>';
-                    } elseif($is_docx) {
-                        $preview_content = '<div class="docx-preview-container" style="width: 100%; height: 100%;"></div>';
-                    } elseif($is_image) {
-                        $preview_content = '<img src="' . $file_path . '" onerror="this.style.display=\'none\'; this.parentElement.innerHTML=\'<div class=\\\'flex items-center justify-center h-full\\\'><i class=\\\'fa-regular fa-image fa-4x text-base-content/30\\\'></i></div>\';" />';
-                    } else {
-                        $icon_classes = [
-                            'ppt' => 'fa-regular fa-file-powerpoint', 'pptx' => 'fa-regular fa-file-powerpoint',
-                            'xls' => 'fa-regular fa-file-excel', 'xlsx' => 'fa-regular fa-file-excel',
-                            'txt' => 'fa-regular fa-file-lines', 'zip' => 'fa-regular fa-file-zipper'
-                        ];
-                        $icon_class = $icon_classes[$ext] ?? 'fa-regular fa-file';
-                        $preview_content = '<div class="flex items-center justify-center h-full"><i class="' . $icon_class . ' fa-4x text-base-content/30"></i></div>';
-                    }
-                    
-                    echo '
-                    <div class="card bg-base-100 shadow-md hover:shadow-xl transition-shadow cursor-pointer" onclick="window.location.href=\'view.php?id=' . $doc_id . '\'">
-                        <figure class="relative h-60 bg-base-200">
-                            <div class="document-preview w-full h-full" id="' . $preview_id . '">
-                                ' . $preview_content . '
-                            </div>
-                            <div class="badge badge-primary absolute bottom-2 right-2" id="' . $page_count_id . '">' . $page_count . '</div>
-                            ' . $purchased_badge . '
-                        </figure>
-                        <div class="card-body p-4">
-                            <h3 class="card-title text-sm line-clamp-2">' . htmlspecialchars($doc_name_without_ext) . '</h3>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="avatar ' . (empty($doc['avatar']) ? 'placeholder' : '') . '">
-                                    <div class="w-6 h-6 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-                                        ' . (!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar']) 
-                                            ? '<img src="uploads/avatars/' . $doc['avatar'] . '" alt="Avatar" />'
-                                            : '<span class="text-xs flex items-center justify-center pt-0.5"><i class="fa-solid fa-circle-user text-primary"></i></span>') . '
-                                    </div>
+                    // Icons logic from saved.php
+                    $icon_class = 'fa-file-lines';
+                    $icon_color = 'text-primary';
+                    if(in_array($ext, ['pdf'])) { $icon_class = 'fa-file-pdf'; $icon_color = 'text-error'; }
+                    elseif(in_array($ext, ['doc', 'docx'])) { $icon_class = 'fa-file-word'; $icon_color = 'text-info'; }
+                    elseif(in_array($ext, ['xls', 'xlsx'])) { $icon_class = 'fa-file-excel'; $icon_color = 'text-success'; }
+                    elseif(in_array($ext, ['ppt', 'pptx'])) { $icon_class = 'fa-file-powerpoint'; $icon_color = 'text-warning'; }
+                ?>
+                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                        <!-- Thumbnail/Preview -->
+                        <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
+                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110">
+                            <?php else: ?>
+                                <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                    <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
                                 </div>
-                                <a href="user_profile.php?id=' . $doc['user_id'] . '" class="text-[10px] text-base-content/60 font-medium hover:text-primary hover:underline transition-colors">' . htmlspecialchars($doc['username']) . '</a>
-                                <span class="text-[10px] text-base-content/40">• ' . htmlspecialchars($doc_type) . '</span>
+                            <?php endif; ?>
+
+                            <!-- Overlay Badges -->
+                            <div class="absolute top-5 left-5 flex flex-col gap-2">
+                                <span class="badge bg-base-100/90 backdrop-blur-md border-none font-black text-[10px] py-3 uppercase shadow-sm"><?= $ext ?></span>
+                                <?= $purchased_badge ?>
                             </div>
-                            <div class="card-actions justify-center mt-2">
-                                <div class="flex items-center gap-2 w-full">
-                                    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-success text-white shadow-md flex-shrink-0">
-                                        <i class="fa-regular fa-thumbs-up text-xs"></i>
+
+                            <div class="absolute bottom-5 right-5">
+                                <span class="badge bg-primary/90 backdrop-blur-md border-none text-primary-content font-black text-[10px] py-3 px-4 shadow-xl"><?= $page_count ?> TRANG</span>
+                            </div>
+
+                            <!-- Hover Action -->
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                <a href="view.php?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                    <i class="fa-solid fa-eye text-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Card Content -->
+                        <div class="p-6">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
+                                <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
+                            </h3>
+                            
+                            <div class="divider opacity-5 my-4"></div>
+
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-primary/5 overflow-hidden border border-primary/10">
+                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
+                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                        <?php else: ?>
+                                            <div class="w-full h-full flex items-center justify-center text-primary/40">
+                                                <i class="fa-solid fa-user text-xs"></i>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="flex-1 h-6 bg-success/80 rounded-full flex items-center justify-center gap-1">
-                                        <span class="text-white font-semibold text-sm">' . $like_percentage . '%</span>
-                                        <span class="text-white/80 text-xs">(' . $likes . ')</span>
-                                    </div>
+                                    <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="text-xs font-bold text-base-content/60 hover:text-primary transition-colors"><?= htmlspecialchars($doc['username']) ?></a>
+                                </div>
+                                <div class="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 rounded-full">
+                                    <i class="fa-solid fa-thumbs-up text-success text-[10px]"></i>
+                                    <span class="text-[10px] font-black text-success"><?= $like_percentage ?>%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    ';
-                    
-                    // Add JavaScript to render document previews
-                    if($is_pdf && !$use_thumbnail) {
-                        echo '<script>
-                        (async function() {
-                            try {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-                                const pdfPath = "' . $file_path . '";
-                                const previewId = "' . $preview_id . '";
-                                const pageCountId = "' . $page_count_id . '";
-                                
-                                const pdfDoc = await pdfjsLib.getDocument(pdfPath).promise;
-                                const page = await pdfDoc.getPage(1);
-                                const scale = 1.2;
-                                const viewport = page.getViewport({ scale });
-                                
-                                const canvas = document.createElement("canvas");
-                                const context = canvas.getContext("2d");
-                                canvas.width = viewport.width;
-                                canvas.height = viewport.height;
-                                
-                                await page.render({
-                                    canvasContext: context,
-                                    viewport: viewport
-                                }).promise;
-                                
-                                const previewDiv = document.getElementById(previewId);
-                                previewDiv.innerHTML = "";
-                                previewDiv.appendChild(canvas);
-                                
-                                // Update page number
-                                const pageCountDiv = document.getElementById(pageCountId);
-                                if(pageCountDiv) {
-                                    pageCountDiv.textContent = pdfDoc.numPages;
-                                    pageCountDiv.style.display = "block";
-                                }
-                            } catch(error) {
-                                console.error("Error loading PDF:", error);
-                                const previewDiv = document.getElementById("' . $preview_id . '");
-                                if(previewDiv) {
-                                    previewDiv.innerHTML = \'<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file fa-4x text-base-content/30"></i></div>\';
-                                }
-                            }
-                        })();
-                        </script>';
-                    } elseif($is_docx && !$use_thumbnail) {
-                        echo '<script>
-                        (async function() {
-                            try {
-                                let retries = 0;
-                                while ((typeof JSZip === "undefined" || (typeof docx === "undefined" && typeof docxPreview === "undefined")) && retries < 15) {
-                                    await new Promise(resolve => setTimeout(resolve, 200));
-                                    retries++;
-                                }
-                                
-                                let docxAPI = null;
-                                if (typeof docx !== "undefined" && docx.renderAsync) {
-                                    docxAPI = docx;
-                                } else if (typeof docxPreview !== "undefined" && docxPreview.renderAsync) {
-                                    docxAPI = docxPreview;
-                                } else if (window.docxPreview && window.docxPreview.renderAsync) {
-                                    docxAPI = window.docxPreview;
-                                } else if (window.docx && window.docx.renderAsync) {
-                                    docxAPI = window.docx;
-                                }
-                                
-                                if (!docxAPI) {
-                                    throw new Error("DOCX library not loaded");
-                                }
-                                
-                                const fileUrl = "' . $file_path . '";
-                                const response = await fetch(fileUrl);
-                                if (!response.ok) throw new Error("Failed to fetch file");
-                                
-                                const arrayBuffer = await response.arrayBuffer();
-                                const previewId = "' . $preview_id . '";
-                                const pageCountId = "' . $page_count_id . '";
-                                const container = document.getElementById(previewId).querySelector(".docx-preview-container");
-                                
-                                await docxAPI.renderAsync(arrayBuffer, container, null, {
-                                    className: "docx-wrapper",
-                                    inWrapper: true,
-                                    ignoreWidth: false,
-                                    ignoreHeight: false,
-                                    breakPages: true
-                                });
-                                
-                                // Wait for rendering to complete
-                                await new Promise(resolve => setTimeout(resolve, 300));
-                                
-                                // Calculate scale to fit the first page in the container
-                                const wrapper = container.querySelector(".docx-wrapper");
-                                if (wrapper) {
-                                    const firstPage = wrapper.querySelector("div");
-                                    if (firstPage) {
-                                        const containerWidth = container.offsetWidth;
-                                        const containerHeight = container.offsetHeight;
-                                        const pageWidth = firstPage.offsetWidth;
-                                        const pageHeight = firstPage.offsetHeight;
-                                        
-                                        // Calculate scale to fit width and height
-                                        const scaleX = (containerWidth - 20) / pageWidth;
-                                        const scaleY = (containerHeight - 20) / pageHeight;
-                                        const scale = Math.min(scaleX, scaleY, 1); 
-                                        
-                                        // Apply transform to show full first page
-                                        firstPage.style.transform = "scale(" + scale + ")";
-                                        firstPage.style.transformOrigin = "top left";
-                                        
-                                        // Hide other pages
-                                        const allPages = wrapper.querySelectorAll("div");
-                                        for (let i = 1; i < allPages.length; i++) {
-                                            allPages[i].style.display = "none";
-                                        }
-                                        
-                                        // Estimate page count from DOCX rendering
-                                        const estimatedPageCount = allPages.length > 0 ? allPages.length : 1;
-                                        const pageCountDiv = document.getElementById(pageCountId);
-                                        if(pageCountDiv) {
-                                            pageCountDiv.textContent = estimatedPageCount;
-                                            pageCountDiv.style.display = "block";
-                                        }
-                                    }
-                                }
-                            } catch(error) {
-                                console.error("Error loading DOCX:", error);
-                                const previewDiv = document.getElementById("' . $preview_id . '");
-                                if(previewDiv) {
-                                    previewDiv.innerHTML = \'<div class="flex items-center justify-center h-full"><i class="fa-regular fa-file fa-4x text-base-content/30"></i></div><div class="page-number" id="' . $page_count_id . '">1</div>\';
-                                }
-                            }
-                        })();
-                        </script>';
-                    } elseif($is_office && !$is_docx) {
-                        // For PPT, PPTX, XLS, XLSX - show page count as 1 for now
-                        echo '<script>
-                        document.getElementById("' . $page_count_id . '").style.display = "block";
-                        </script>';
-                    }
-                }
-            } else {
-                echo '<div class="col-span-full text-center p-10 bg-base-100 rounded-box shadow">No public documents available</div>';
-            }
-            ?>
-            </div>
-        </div>
+                <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-20 bg-base-100 rounded-[3rem] border border-base-200 shadow-inner">
+                    <i class="fa-solid fa-file-circle-question text-6xl text-base-content/10 mb-6"></i>
+                    <h3 class="text-xl font-black opacity-20 uppercase tracking-widest">Không có tài liệu nào công khai</h3>
+                </div>
+            <?php endif; ?>
+        </section>
     </main>
     
     <?php include 'includes/footer.php'; ?>
 </div>
 </div>
+
+<?php 
+// Layout clean up
+?>
 
 <?php 
 // db connection cleaned up by app flow

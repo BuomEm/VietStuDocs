@@ -109,247 +109,261 @@ $current_page = 'dashboard';
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
     
-    <main class="flex-1 p-6">
-        <div class="max-w-2xl mx-auto">
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h1 class="card-title text-2xl flex items-center gap-2">
-                        <i class="fa-solid fa-file-pen text-primary text-2xl"></i>
-                        Chỉnh Sửa Tài Liệu
-                    </h1>
-                    <p class="text-base-content/70">Cập nhật thông tin tài liệu của bạn</p>
-                    
-                    <?php if(isset($error)): ?>
-                        <div class="alert alert-error">
-                            <i class="fa-solid fa-circle-xmark fa-lg"></i>
-                            <span><?= htmlspecialchars($error) ?></span>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'updated'): ?>
-                        <div class="alert alert-success">
-                            <i class="fa-solid fa-circle-check fa-lg"></i>
-                            <span>Tài liệu đã được cập nhật thành công</span>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <form method="POST" action="" id="editForm" class="space-y-4">
-                        <input type="hidden" name="category_data" id="category_data_input" value="">
-                        
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-semibold">Tên Tài Liệu</span>
-                            </label>
-                            <input type="text" value="<?= htmlspecialchars($doc['original_name']) ?>" 
-                                   class="input input-bordered" readonly disabled>
-                            <label class="label">
-                                <span class="label-text-alt">Tên tài liệu không thể thay đổi</span>
-                            </label>
-                        </div>
-                        
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-semibold">Mô Tả</span>
-                            </label>
-                            <textarea name="description" rows="5" 
-                                      class="textarea textarea-bordered"
-                                      placeholder="Nhập mô tả về tài liệu của bạn..."><?= htmlspecialchars($doc['description'] ?? '') ?></textarea>
-                            <label class="label">
-                                <span class="label-text-alt">Mô tả giúp người dùng hiểu rõ hơn về nội dung tài liệu</span>
-                            </label>
-                        </div>
-                        
-                        <!-- Category Cascade Selection -->
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-semibold">📂 Phân loại</span>
-                            </label>
-                            <div class="category-cascade bg-base-200 p-4 rounded-lg" id="category-cascade">
-                                <!-- Cấp học -->
-                                <div class="form-control mb-3">
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Cấp học</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="education_level">
-                                        <option value="">-- Chọn cấp học --</option>
-                                        <?php foreach($education_levels as $level): ?>
-                                            <option value="<?= $level['code'] ?>" <?= ($current_category && $current_category['education_level'] == $level['code']) ? 'selected' : '' ?>><?= $level['name'] ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                
-                                <!-- Lớp (for phổ thông) -->
-                                <div class="form-control mb-3 hidden" id="grade_container">
-                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Lớp</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="grade_id">
-                                        <option value="">-- Chọn lớp --</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Môn học (for phổ thông) -->
-                                <div class="form-control mb-3 hidden" id="subject_container">
-                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Môn học</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="subject_code">
-                                        <option value="">-- Chọn môn học --</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Nhóm ngành (for đại học) -->
-                                <div class="form-control mb-3 hidden" id="major_group_container">
-                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Nhóm ngành</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="major_group_id">
-                                        <option value="">-- Chọn nhóm ngành --</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Ngành học (for đại học) -->
-                                <div class="form-control mb-3 hidden" id="major_container">
-                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Ngành học</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="major_code">
-                                        <option value="">-- Chọn ngành học --</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Loại tài liệu -->
-                                <div class="form-control mb-3 hidden" id="doc_type_container">
-                                    <!-- <div class="text-center text-primary text-xs my-1">↓</div> -->
-                                    <label class="label py-1">
-                                        <span class="label-text text-xs uppercase font-semibold text-primary">Loại tài liệu</span>
-                                    </label>
-                                    <select class="select select-bordered select-sm w-full" id="doc_type_code">
-                                        <option value="">-- Chọn loại tài liệu --</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Summary -->
-                                <div class="mt-3 p-2 bg-base-100 rounded text-xs hidden" id="category-summary"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-semibold">Quyền Riêng Tư</span>
-                            </label>
-                            <div class="space-y-2">
-                                <label class="label cursor-pointer">
-                                    <span class="label-text">
-                                        <div class="font-semibold flex items-center gap-1">
-                                            <i class="fa-solid fa-globe w-4 h-4"></i>
-                                            Công Khai
-                                        </div>
-                                        <div class="text-sm text-base-content/70">Mọi người có thể xem và tìm thấy tài liệu này</div>
-                                    </span>
-                                    <input type="radio" name="is_public" value="1" class="radio radio-primary" <?= $doc['is_public'] == 1 ? 'checked' : '' ?>>
-                                </label>
-                                <label class="label cursor-pointer">
-                                    <span class="label-text">
-                                        <div class="font-semibold flex items-center gap-1">
-                                            <i class="fa-solid fa-lock w-4 h-4"></i>
-                                            Riêng Tư
-                                        </div>
-                                        <div class="text-sm text-base-content/70">Chỉ bạn mới có thể xem tài liệu này</div>
-                                    </span>
-                                    <input type="radio" name="is_public" value="0" class="radio radio-primary" <?= $doc['is_public'] == 0 ? 'checked' : '' ?>>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <?php 
-                        $alert_class = 'alert-info';
-                        $icon_class = 'fa-circle-info';
-                        if ($doc['status'] === 'approved') {
-                            $alert_class = 'alert-success';
-                            $icon_class = 'fa-circle-check';
-                        } elseif ($doc['status'] === 'rejected') {
-                            $alert_class = 'alert-error';
-                            $icon_class = 'fa-circle-xmark';
-                        }
-                        ?>
-                        <div class="alert <?= $alert_class ?> shadow-sm">
-                            <i class="fa-solid <?= $icon_class ?> fa-lg"></i>
-                            <div class="w-full">
-                                <div class="font-bold flex items-center gap-1">
-                                    Thông Tin Bổ Sung
-                                </div>
-                                <div class="text-sm">
-                                    <div class="flex items-center justify-between">
-                                        <span><strong>Trạng thái:</strong> 
-                                            <?php 
-                                            $status_icons = [
-                                                'pending' => '<i class="fa-solid fa-hourglass-half mr-1"></i> Đang Duyệt',
-                                                'approved' => '<i class="fa-solid fa-circle-check mr-1"></i> Đã Duyệt',
-                                                'rejected' => '<i class="fa-solid fa-circle-xmark mr-1"></i> Đã Từ Chối'
-                                            ];
-                                            echo $status_icons[$doc['status']] ?? ucfirst($doc['status']);
-                                            ?>
-                                        </span>
-                                        <?php if($doc['status'] === 'approved' && $doc['admin_points'] > 0): ?>
-                                            <span><strong>Điểm đánh giá:</strong> <span class="badge badge-sm badge-ghost ml-1"><?= number_format($doc['admin_points']) ?></span></span>
-                                        <?php endif; ?>
-                                        <span><strong>Ngày tạo:</strong> <?= date('d/m/Y H:i', strtotime($doc['created_at'])) ?></span>
-                                    </div>
-
-                                    <?php if($doc['status'] === 'rejected' && !empty($doc['rejection_reason'])): ?>
-                                        <div class="mt-2 p-2 bg-white/20 dark:bg-black/20 rounded border border-white/30 dark:border-black/30">
-                                            <div class="font-bold flex items-center gap-1 mb-1">
-                                                <i class="fa-solid fa-comment-dots"></i>
-                                                Lý do từ chối:
-                                            </div>
-                                            <div class="italic"><?= nl2br(htmlspecialchars($doc['rejection_reason'])) ?></div>
-                                        </div>
-                                    <?php endif; ?>
-
-                                    <?php if($doc['status'] === 'approved' && !empty($doc['admin_notes'])): ?>
-                                        <div class="mt-2 p-2 bg-white/20 dark:bg-black/20 rounded border border-white/30 dark:border-black/30">
-                                            <div class="font-bold flex items-center gap-1 mb-1">
-                                                <i class="fa-solid fa-comment-dots"></i>
-                                                Phản hồi từ Admin:
-                                            </div>
-                                            <div class="italic"><?= nl2br(htmlspecialchars($doc['admin_notes'])) ?></div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card-actions justify-between mt-6">
-                            <button type="button" onclick="confirmDelete()" class="btn btn-error btn-outline flex items-center gap-2">
-                                <i class="fa-solid fa-trash-can"></i>
-                                Xóa Tài Liệu
-                            </button>
-                            <div class="flex gap-2">
-                                <a href="dashboard.php" class="btn btn-ghost">Hủy</a>
-                                <button type="submit" class="btn btn-primary flex items-center gap-2">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                    Lưu Thay Đổi
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    
-                    <!-- Delete Confirmation Form -->
-                    <form id="deleteForm" method="POST" class="hidden">
-                        <input type="hidden" name="action" value="delete">
-                    </form>
+    <main class="flex-1 p-4 lg:p-8 bg-base-200/50">
+        <!-- Header Section -->
+        <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div>
+                <h1 class="text-4xl font-extrabold flex items-center gap-4 text-base-content">
+                    <div class="p-3.5 rounded-[1.5rem] bg-primary/10 text-primary shadow-inner border border-primary/10">
+                        <i class="fa-solid fa-file-pen"></i>
+                    </div>
+                    Chỉnh Sửa Tài Liệu
+                </h1>
+                <p class="text-base-content/60 mt-2 font-medium">Cập nhật thông tin chi tiết cho tài liệu của bạn</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <?php 
+                    $status_configs = [
+                        'pending' => ['bg' => 'bg-warning/10', 'text' => 'text-warning', 'label' => 'ĐANG DUYỆT', 'icon' => 'fa-hourglass-half'],
+                        'approved' => ['bg' => 'bg-success/10', 'text' => 'text-success', 'label' => 'ĐÃ DUYỆT', 'icon' => 'fa-circle-check'],
+                        'rejected' => ['bg' => 'bg-error/10', 'text' => 'text-error', 'label' => 'BỊ TỪ CHỐI', 'icon' => 'fa-circle-xmark']
+                    ];
+                    $config = $status_configs[$doc['status']] ?? $status_configs['pending'];
+                ?>
+                <div class="badge badge-lg h-14 px-6 bg-base-100 border-base-200 shadow-sm font-black gap-3 rounded-2xl <?= $config['text'] ?>">
+                    <i class="fa-solid <?= $config['icon'] ?> opacity-70"></i>
+                    <?= $config['label'] ?>
+                </div>
+                <div class="badge badge-lg h-14 px-6 bg-base-100 border-base-200 shadow-sm font-black gap-3 rounded-2xl text-base-content/40">
+                    <i class="fa-solid fa-calendar opacity-50"></i>
+                    <?= date('d/m/Y', strtotime($doc['created_at'])) ?>
                 </div>
             </div>
         </div>
+
+        <?php if(isset($error)): ?>
+            <div class="alert bg-error/10 border-error/20 text-error mb-8 rounded-3xl animate-shake">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span class="font-bold"><?= htmlspecialchars($error) ?></span>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="" id="editForm" class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch pb-20">
+            <input type="hidden" name="category_data" id="category_data_input" value="">
+            
+            <!-- Left Side: Main Info -->
+            <div class="xl:col-span-8 flex flex-col h-full">
+                <div class="bg-base-100 rounded-[3rem] p-8 md:p-12 border border-base-200 shadow-xl shadow-base-200/50 relative overflow-hidden flex-1">
+                    <div class="absolute -right-20 -top-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                    
+                    <div class="relative z-10 space-y-10">
+                        <!-- Name Field (Read Only) -->
+                        <div class="form-control">
+                            <label class="label mb-2">
+                                <span class="text-xs font-black uppercase tracking-widest text-base-content/40">Tên Tài Liệu</span>
+                            </label>
+                            <div class="relative group">
+                                <div class="absolute left-6 top-1/2 -translate-y-1/2 text-primary/40 group-focus-within:text-primary transition-colors">
+                                    <i class="fa-solid fa-file-lines text-xl"></i>
+                                </div>
+                                <input type="text" value="<?= htmlspecialchars($doc['original_name']) ?>" 
+                                       class="input input-lg w-full bg-base-200/50 border-transparent font-bold pl-16 rounded-2xl cursor-not-allowed text-base-content/60" readonly disabled>
+                            </div>
+                        </div>
+
+                        <!-- Description Field -->
+                        <div class="form-control">
+                            <label class="label mb-2">
+                                <span class="text-xs font-black uppercase tracking-widest text-base-content/40">Mô Tả Tóm Tắt</span>
+                            </label>
+                            <textarea name="description" rows="6" 
+                                      class="textarea textarea-lg w-full bg-base-200/30 border-2 border-transparent focus:border-primary/20 focus:bg-base-100 transition-all rounded-3xl p-6 font-medium leading-relaxed"
+                                      placeholder="Hãy mô tả một chút về nội dung tài liệu này..."><?= htmlspecialchars($doc['description'] ?? '') ?></textarea>
+                            <label class="label mt-2">
+                                <span class="text-[10px] font-bold text-base-content/30 italic uppercase tracking-wider">Gợi ý: Mô tả hay giúp tài liệu dễ được tìm thấy hơn</span>
+                            </label>
+                        </div>
+
+                        <!-- Category Cascade -->
+                        <div class="form-control">
+                            <label class="label mb-4">
+                                <span class="text-xs font-black uppercase tracking-widest text-base-content/40">Phân Loại Tài Liệu</span>
+                            </label>
+                            
+                            <div class="bg-base-200/50 p-6 md:p-8 rounded-[2.5rem] border border-base-200/50 space-y-6" id="category-cascade">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Cấp học -->
+                                    <div class="form-control">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">1. Cấp học</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="education_level">
+                                            <option value="">-- Chọn trình độ --</option>
+                                            <?php foreach($education_levels as $level): ?>
+                                                <option value="<?= $level['code'] ?>" <?= ($current_category && $current_category['education_level'] == $level['code']) ? 'selected' : '' ?>><?= $level['name'] ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+
+                                    <!-- Lớp -->
+                                    <div class="form-control hidden" id="grade_container">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">2. Lớp</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="grade_id">
+                                            <option value="">-- Chọn lớp --</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Nhóm ngành -->
+                                    <div class="form-control hidden" id="major_group_container">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">2. Nhóm ngành</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="major_group_id">
+                                            <option value="">-- Chọn nhóm ngành --</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Môn học -->
+                                    <div class="form-control hidden" id="subject_container">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">3. Môn học</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="subject_code">
+                                            <option value="">-- Chọn môn học --</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Ngành học -->
+                                    <div class="form-control hidden" id="major_container">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">3. Ngành học</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="major_code">
+                                            <option value="">-- Chọn ngành học --</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Loại tài liệu -->
+                                    <div class="form-control hidden" id="doc_type_container">
+                                        <label class="label py-1">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">4. Loại tài liệu</span>
+                                        </label>
+                                        <select class="select select-bordered w-full rounded-2xl font-bold h-14" id="doc_type_code">
+                                            <option value="">-- Chọn loại tài liệu --</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Badge -->
+                                <div class="pt-4 border-t border-base-300/30 hidden" id="category-summary">
+                                    <div class="badge badge-lg h-auto py-3 px-6 bg-primary/10 text-primary border-none rounded-2xl gap-3">
+                                        <i class="fa-solid fa-folder-tree opacity-60"></i>
+                                        <span class="font-black text-xs uppercase tracking-wider" id="summary-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Action Center (Mirrored Card) -->
+            <div class="xl:col-span-4 flex flex-col h-full">
+                <div class="bg-base-100 rounded-[3rem] border border-base-200 shadow-xl shadow-base-200/50 overflow-hidden flex flex-col h-full relative">
+                    <!-- Top Section: Preview -->
+                    <div class="p-8 pb-0">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xs font-black uppercase tracking-widest text-base-content/40">Xem trước & Trạng thái</h3>
+                            <div class="badge badge-sm bg-base-200 border-none font-bold text-[10px]"><?= strtoupper($doc['status']) ?></div>
+                        </div>
+                        
+                        <div class="w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-base-200 shadow-inner group relative mb-8">
+                            <?php if($doc['thumbnail']): ?>
+                                <img src="uploads/<?= htmlspecialchars($doc['thumbnail']) ?>" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <div class="w-full h-full flex flex-col items-center justify-center text-primary/10">
+                                    <i class="fa-solid fa-file-pdf text-7xl"></i>
+                                    <span class="text-[10px] font-black mt-2">KHÔNG CÓ ẢNH BÌA</span>
+                                </div>
+                            <?php endif; ?>
+                            <div class="absolute inset-0 bg-primary/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
+                                <span class="bg-white text-primary font-black px-5 py-2 rounded-full text-xs shadow-xl scale-90 group-hover:scale-100 transition-transform">XEM LỚN</span>
+                            </div>
+                        </div>
+
+                        <?php if($doc['status'] === 'rejected' && !empty($doc['rejection_reason'])): ?>
+                            <div class="p-4 bg-error/5 rounded-2xl border border-error/10 mb-6">
+                                <div class="flex items-center gap-2 text-error font-black text-[9px] uppercase tracking-wider mb-2">
+                                    <i class="fa-solid fa-circle-exclamation"></i> Lý do từ chối
+                                </div>
+                                <p class="text-[11px] font-medium opacity-70 leading-relaxed"><?= htmlspecialchars($doc['rejection_reason']) ?></p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Middle Section: Privacy Settings -->
+                    <div class="flex-1 px-8">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-base-content/40 mb-6">Cài đặt hiển thị</h3>
+                        
+                        <div class="grid grid-cols-1 gap-4">
+                            <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 1 ? 'border-primary/20 bg-primary/5' : '' ?>" id="pubLabel">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
+                                        <i class="fa-solid fa-earth-asia"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-black uppercase tracking-tight">Công khai</div>
+                                        <div class="text-[9px] font-bold opacity-30 italic">Ai cũng có thể thấy</div>
+                                    </div>
+                                </div>
+                                <input type="radio" name="is_public" value="1" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 1 ? 'checked' : '' ?> onclick="updatePrivacyUI(true)">
+                            </label>
+
+                            <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 0 ? 'border-primary/20 bg-primary/5' : '' ?>" id="privLabel">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-black uppercase tracking-tight">Riêng tư</div>
+                                        <div class="text-[9px] font-bold opacity-30 italic">Chỉ mình bạn xem</div>
+                                    </div>
+                                </div>
+                                <input type="radio" name="is_public" value="0" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 0 ? 'checked' : '' ?> onclick="updatePrivacyUI(false)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Actions -->
+                    <div class="p-8 space-y-4">
+                        <button type="submit" class="btn btn-primary w-full h-16 rounded-[1.5rem] font-black text-base gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            <i class="fa-solid fa-check-double text-xl"></i>
+                            LƯU THAY ĐỔI
+                        </button>
+                        
+                        <div class="flex items-center gap-2">
+                            <a href="dashboard.php" class="btn btn-ghost flex-1 h-12 rounded-xl font-black text-[10px] text-base-content/40 uppercase tracking-widest">HỦY BỎ</a>
+                            <div class="w-px h-6 bg-base-200"></div>
+                            <button type="button" onclick="confirmDelete()" class="btn btn-ghost text-error/40 hover:text-error hover:bg-error/5 flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest">XÓA TÀI LIỆU</button>
+                        </div>
+
+                        <!-- Mini Danger Note -->
+                        <div class="pt-4 border-t border-base-200 mt-4 text-center">
+                            <p class="text-[9px] font-bold text-base-content/20 uppercase tracking-[0.2em]">Cập nhật lần cuối: <?= date('d/m/Y') ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Delete Confirmation Form -->
+        <form id="deleteForm" method="POST" class="hidden">
+            <input type="hidden" name="action" value="delete">
+        </form>
     </main>
-    
-    <?php include 'includes/footer.php'; ?>
-</div>
 </div>
 
 <script src="js/categories.js"></script>
@@ -380,8 +394,21 @@ const majorSelect = document.getElementById('major_code');
 const docTypeContainer = document.getElementById('doc_type_container');
 const docTypeSelect = document.getElementById('doc_type_code');
 const categorySummary = document.getElementById('category-summary');
+const summaryText = document.getElementById('summary-text');
 const categoryDataInput = document.getElementById('category_data_input');
 const editForm = document.getElementById('editForm');
+
+function updatePrivacyUI(isPublic) {
+    const pub = document.getElementById('pubLabel');
+    const priv = document.getElementById('privLabel');
+    if (isPublic) {
+        pub.classList.add('border-primary/20', 'bg-primary/5');
+        priv.classList.remove('border-primary/20', 'bg-primary/5');
+    } else {
+        priv.classList.add('border-primary/20', 'bg-primary/5');
+        pub.classList.remove('border-primary/20', 'bg-primary/5');
+    }
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -409,79 +436,46 @@ async function loadCascadeFromState() {
     const isPhoThong = ['tieu_hoc', 'thcs', 'thpt'].includes(level);
     
     if (isPhoThong) {
-        // Show grade container and load grades
         showElement('grade_container');
         await loadGrades(level);
-        
         if (categoryData.grade_id) {
             gradeSelect.value = categoryData.grade_id;
             showElement('subject_container');
             await loadSubjects(level, categoryData.grade_id);
-            
-            if (categoryData.subject_code) {
-                subjectSelect.value = categoryData.subject_code;
-            }
+            if (categoryData.subject_code) subjectSelect.value = categoryData.subject_code;
         }
     } else if (level === 'dai_hoc') {
-        // Show major group container and load major groups
         showElement('major_group_container');
         await loadMajorGroups();
-        
         if (categoryData.major_group_id) {
             majorGroupSelect.value = categoryData.major_group_id;
             showElement('major_container');
             await loadMajors(categoryData.major_group_id);
-            
-            if (categoryData.major_code) {
-                majorSelect.value = categoryData.major_code;
-            }
+            if (categoryData.major_code) majorSelect.value = categoryData.major_code;
         }
     }
     
-    // Load doc types
     if (level) {
         showElement('doc_type_container');
         await loadDocTypes(level);
-        
-        if (categoryData.doc_type_code) {
-            docTypeSelect.value = categoryData.doc_type_code;
-        }
+        if (categoryData.doc_type_code) docTypeSelect.value = categoryData.doc_type_code;
     }
-    
     updateSummary();
 }
 
 async function onEducationLevelChange(e) {
     const level = e.target.value;
-    categoryData = {
-        education_level: level,
-        grade_id: null,
-        subject_code: null,
-        major_group_id: null,
-        major_code: null,
-        doc_type_code: ''
-    };
-    
-    // Hide all containers
+    categoryData = { education_level: level, grade_id: null, subject_code: null, major_group_id: null, major_code: null, doc_type_code: '' };
     hideElement('grade_container');
     hideElement('subject_container');
     hideElement('major_group_container');
     hideElement('major_container');
     hideElement('doc_type_container');
     hideElement('category-summary');
-    
     if (!level) return;
-    
     const isPhoThong = ['tieu_hoc', 'thcs', 'thpt'].includes(level);
-    
-    if (isPhoThong) {
-        showElement('grade_container');
-        await loadGrades(level);
-    } else {
-        showElement('major_group_container');
-        await loadMajorGroups();
-    }
-    
+    if (isPhoThong) { showElement('grade_container'); await loadGrades(level); }
+    else { showElement('major_group_container'); await loadMajorGroups(); }
     showElement('doc_type_container');
     await loadDocTypes(level);
 }
@@ -490,171 +484,89 @@ async function onGradeChange(e) {
     const gradeId = e.target.value;
     categoryData.grade_id = gradeId ? parseInt(gradeId) : null;
     categoryData.subject_code = null;
-    
     hideElement('subject_container');
-    
-    if (!gradeId) {
-        updateSummary();
-        return;
-    }
-    
+    if (!gradeId) { updateSummary(); return; }
     showElement('subject_container');
     await loadSubjects(categoryData.education_level, gradeId);
     updateSummary();
 }
 
-function onSubjectChange(e) {
-    categoryData.subject_code = e.target.value || null;
-    updateSummary();
-}
+function onSubjectChange(e) { categoryData.subject_code = e.target.value || null; updateSummary(); }
 
 async function onMajorGroupChange(e) {
     const groupId = e.target.value;
     categoryData.major_group_id = groupId ? parseInt(groupId) : null;
     categoryData.major_code = null;
-    
     hideElement('major_container');
-    
-    if (!groupId) {
-        updateSummary();
-        return;
-    }
-    
+    if (!groupId) { updateSummary(); return; }
     showElement('major_container');
     await loadMajors(groupId);
     updateSummary();
 }
 
-function onMajorChange(e) {
-    categoryData.major_code = e.target.value || null;
-    updateSummary();
-}
+function onMajorChange(e) { categoryData.major_code = e.target.value || null; updateSummary(); }
+function onDocTypeChange(e) { categoryData.doc_type_code = e.target.value || ''; updateSummary(); }
 
-function onDocTypeChange(e) {
-    categoryData.doc_type_code = e.target.value || '';
-    updateSummary();
-}
-
-// API loaders
 async function loadGrades(level) {
     try {
         const response = await fetch(`/handler/categories_api.php?action=grades&level=${level}`);
         const data = await response.json();
-        
-        if (data.success) {
-            gradeSelect.innerHTML = '<option value="">-- Chọn lớp --</option>' + 
-                data.data.map(grade => `<option value="${grade.id}">${grade.name}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading grades:', error);
-    }
+        if (data.success) gradeSelect.innerHTML = '<option value="">-- Chọn lớp --</option>' + data.data.map(grade => `<option value="${grade.id}">${grade.name}</option>`).join('');
+    } catch (error) { console.error('Error loading grades:', error); }
 }
 
 async function loadSubjects(level, gradeId) {
     try {
         const response = await fetch(`/handler/categories_api.php?action=subjects&level=${level}&grade_id=${gradeId}`);
         const data = await response.json();
-        
-        if (data.success) {
-            subjectSelect.innerHTML = '<option value="">-- Chọn môn học --</option>' + 
-                data.data.map(subject => `<option value="${subject.code}">${subject.name}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading subjects:', error);
-    }
+        if (data.success) subjectSelect.innerHTML = '<option value="">-- Chọn môn học --</option>' + data.data.map(subject => `<option value="${subject.code}">${subject.name}</option>`).join('');
+    } catch (error) { console.error('Error loading subjects:', error); }
 }
 
 async function loadMajorGroups() {
     try {
         const response = await fetch(`/handler/categories_api.php?action=major_groups`);
         const data = await response.json();
-        
-        if (data.success) {
-            majorGroupSelect.innerHTML = '<option value="">-- Chọn nhóm ngành --</option>' + 
-                data.data.map(group => `<option value="${group.id}">${group.name}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading major groups:', error);
-    }
+        if (data.success) majorGroupSelect.innerHTML = '<option value="">-- Chọn nhóm ngành --</option>' + data.data.map(group => `<option value="${group.id}">${group.name}</option>`).join('');
+    } catch (error) { console.error('Error loading major groups:', error); }
 }
 
 async function loadMajors(groupId) {
     try {
         const response = await fetch(`/handler/categories_api.php?action=majors&group_id=${groupId}`);
         const data = await response.json();
-        
-        if (data.success) {
-            majorSelect.innerHTML = '<option value="">-- Chọn ngành học --</option>' + 
-                data.data.map(major => `<option value="${major.code}">${major.name}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading majors:', error);
-    }
+        if (data.success) majorSelect.innerHTML = '<option value="">-- Chọn ngành học --</option>' + data.data.map(major => `<option value="${major.code}">${major.name}</option>`).join('');
+    } catch (error) { console.error('Error loading majors:', error); }
 }
 
 async function loadDocTypes(level) {
     try {
         const response = await fetch(`/handler/categories_api.php?action=doc_types&level=${level}`);
         const data = await response.json();
-        
-        if (data.success) {
-            docTypeSelect.innerHTML = '<option value="">-- Chọn loại tài liệu --</option>' + 
-                data.data.map(docType => `<option value="${docType.code}">${docType.name}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading doc types:', error);
-    }
+        if (data.success) docTypeSelect.innerHTML = '<option value="">-- Chọn loại tài liệu --</option>' + data.data.map(docType => `<option value="${docType.code}">${docType.name}</option>`).join('');
+    } catch (error) { console.error('Error loading doc types:', error); }
 }
 
-// Helper functions
-function showElement(id) {
-    document.getElementById(id)?.classList.remove('hidden');
-}
-
-function hideElement(id) {
-    document.getElementById(id)?.classList.add('hidden');
-}
+function showElement(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hideElement(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 function updateSummary() {
     const parts = [];
-    
-    if (categoryData.education_level && educationLevelSelect.selectedOptions[0]) {
-        parts.push(educationLevelSelect.selectedOptions[0].text);
-    }
-    
-    if (categoryData.grade_id && gradeSelect.selectedOptions[0] && gradeSelect.value) {
-        parts.push(gradeSelect.selectedOptions[0].text);
-    }
-    
-    if (categoryData.subject_code && subjectSelect.selectedOptions[0] && subjectSelect.value) {
-        parts.push(subjectSelect.selectedOptions[0].text);
-    }
-    
-    if (categoryData.major_group_id && majorGroupSelect.selectedOptions[0] && majorGroupSelect.value) {
-        parts.push(majorGroupSelect.selectedOptions[0].text);
-    }
-    
-    if (categoryData.major_code && majorSelect.selectedOptions[0] && majorSelect.value) {
-        parts.push(majorSelect.selectedOptions[0].text);
-    }
-    
-    if (categoryData.doc_type_code && docTypeSelect.selectedOptions[0] && docTypeSelect.value) {
-        parts.push(`[${docTypeSelect.selectedOptions[0].text}]`);
-    }
-    
-    if (parts.length > 0) {
-        categorySummary.innerHTML = `<strong>📂 Phân loại:</strong> ${parts.join(' → ')}`;
-        categorySummary.classList.remove('hidden');
-    } else {
-        categorySummary.classList.add('hidden');
-    }
+    if (categoryData.education_level && educationLevelSelect.selectedOptions[0]?.value) parts.push(educationLevelSelect.selectedOptions[0].text);
+    if (categoryData.grade_id && gradeSelect.selectedOptions[0]?.value) parts.push(gradeSelect.selectedOptions[0].text);
+    if (categoryData.subject_code && subjectSelect.selectedOptions[0]?.value) parts.push(subjectSelect.selectedOptions[0].text);
+    if (categoryData.major_group_id && majorGroupSelect.selectedOptions[0]?.value) parts.push(majorGroupSelect.selectedOptions[0].text);
+    if (categoryData.major_code && majorSelect.selectedOptions[0]?.value) parts.push(majorSelect.selectedOptions[0].text);
+    if (categoryData.doc_type_code && docTypeSelect.selectedOptions[0]?.value) parts.push(`[${docTypeSelect.selectedOptions[0].text}]`);
+    if (parts.length > 0) { summaryText.innerText = parts.join(' → '); categorySummary.classList.remove('hidden'); }
+    else { categorySummary.classList.add('hidden'); }
 }
 
 function confirmDelete() {
     vsdConfirm({
-        title: 'Xác nhận xóa tài liệu',
-        message: 'Bạn có chắc chắn muốn xóa tài liệu này không? Hành động này không thể hoàn tác và tất cả tệp tin liên quan sẽ bị xóa vĩnh viễn.',
-        confirmText: 'Xóa vĩnh viễn',
+        title: 'Xóa tài liệu VĨNH VIỄN?',
+        message: 'Tài liệu này sẽ biến mất khỏi hệ thống mãi mãi. Bạn có chắc chắn không?',
+        confirmText: 'XÓA LUÔN!',
         type: 'error',
         onConfirm: () => document.getElementById('deleteForm').submit()
     });

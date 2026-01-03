@@ -85,9 +85,19 @@
             border-bottom: 1px solid oklch(var(--b3));
         }
         
-        /* Ensure sidebar has correct base background */
-        .drawer-side aside {
-            background-color: oklch(var(--b1));
+        /* Ensure sidebar has correct base background and hide scrollbar */
+        .drawer-side, 
+        .drawer-side aside, 
+        .drawer-side .menu {
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important;  /* IE and Edge */
+        }
+
+        .drawer-side::-webkit-scrollbar, 
+        .drawer-side aside::-webkit-scrollbar, 
+        .drawer-side .menu::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
         }
 
         /* Collapsible Sidebar Styles */
@@ -102,14 +112,20 @@
             width: 5rem !important; /* w-20 */
         }
         
-        /* Text Hiding Logic */
+        /* Text Hiding Logic for Collapsed State */
         .is-drawer-close .drawer-side .menu-text,
         .is-drawer-close .drawer-side .logo-text,
         .is-drawer-close .drawer-side .badge,
         .is-drawer-close .drawer-side .stats,
+        .is-drawer-close .drawer-side .points-card,
+        .is-drawer-close .drawer-side li:has(hr),
         .is-drawer-close .drawer-side hr {
             display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             opacity: 0;
+            visibility: hidden;
         }
 
         /* Profile Info Hiding Logic */
@@ -117,17 +133,50 @@
             display: none !important;
         }
 
-        /* Adjust Menu for Collapsed State */
+        .is-drawer-close .drawer-side .menu {
+            padding-left: 0;
+            padding-right: 0;
+            align-items: stretch;
+        }
+
+        .is-drawer-close .drawer-side .menu li {
+            width: 100%;
+            display: block;
+        }
+
         .is-drawer-close .drawer-side .menu li a {
-            justify-content: center;
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            min-height: 3rem;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            width: auto !important;
+            height: auto !important;
+            padding: 0.65rem 1rem !important;
+            margin: 1px 0.75rem !important;
+            border-radius: 1rem;
         }
         
         .is-drawer-close .drawer-side .menu li a i {
-            margin-right: 0;
-            font-size: 1.25rem;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 1.5rem !important;
+            text-align: center !important;
+            font-size: 1.1rem !important;
+        }
+
+        /* Hide active indicator dot when collapsed */
+        .is-drawer-close .drawer-side .menu li a.active::after {
+            display: none !important;
+        }
+
+        /* Logo alignment in collapsed state */
+        .is-drawer-close .drawer-side aside .p-4 {
+            padding: 1rem 0; /* Match standard padding */
+            display: flex;
+            justify-content: center;
+        }
+
+        .is-drawer-close .drawer-side aside .logo-text {
+            display: none !important;
         }
 
         /* Tooltip behavior for collapsed state */
@@ -149,19 +198,113 @@
             pointer-events: none;
         }
 
-        /* Triangle for Tooltip */
-        .is-drawer-close .drawer-side .menu li a:hover::before {
+        /* Sidebar Link Aesthetics */
+        .drawer-side .menu li a {
+            font-weight: 600;
+            color: oklch(var(--bc) / 0.7);
+            padding: 0.65rem 1rem;
+            margin: 1px 0.75rem;
+            border-radius: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .drawer-side .menu li a:hover {
+            background-color: oklch(var(--p) / 0.08);
+            color: oklch(var(--p));
+            border-color: oklch(var(--p) / 0.1);
+        }
+
+        .drawer-side .menu li a.active {
+            background-color: oklch(var(--p));
+            color: oklch(var(--pc));
+            box-shadow: 0 8px 20px -4px oklch(var(--p) / 0.4);
+            border-color: transparent;
+            position: relative;
+        }
+
+        .drawer-side .menu li a i {
+            width: 1.5rem;
+            text-align: center;
+            font-size: 1.1rem;
+            opacity: 0.8;
+            transition: transform 0.2s ease;
+        }
+
+        .drawer-side .menu li a.active i {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .drawer-side .menu li a:hover i {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        /* Active Indicator Dot for Sidebar Items */
+        .drawer-side .menu li a.active::after {
             content: '';
             position: absolute;
-            left: 100%;
+            right: 1.25rem;
             top: 50%;
             transform: translateY(-50%);
-            border-width: 5px;
-            border-style: solid;
-            border-color: transparent oklch(var(--n)) transparent transparent;
-            z-index: 100;
-            margin-left: 0;
-            pointer-events: none;
+            width: 5px;
+            height: 5px;
+            background-color: oklch(var(--pc));
+            border-radius: 50%;
+            box-shadow: 0 0 8px oklch(var(--pc) / 0.8);
+            animation: dot-pulse 2s infinite;
+        }
+
+        @keyframes dot-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Custom Premium Animations */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s ease-in-out infinite;
+        }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: oklch(var(--b2));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: oklch(var(--p) / 0.3);
+            border-radius: 10px;
+            border: 2px solid oklch(var(--b2));
+            transition: all 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: oklch(var(--p) / 0.6);
+        }
+
+        /* Firefox Support */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: oklch(var(--p) / 0.3) oklch(var(--b2));
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/favico.js@0.3.10/favico.min.js"></script>
