@@ -1,5 +1,7 @@
 # Set PHP Timezone to Vietnam (UTC+7)
 php_value date.timezone "Asia/Ho_Chi_Minh"
+php_value session.gc_maxlifetime 604800
+php_value session.cookie_lifetime 604800
 
 RewriteEngine On
 
