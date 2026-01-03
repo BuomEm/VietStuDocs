@@ -61,32 +61,66 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         header("Location: all-documents.php?msg=rejected&id=$document_id");
         exit;
-    } elseif($action === 'delete') {
-        $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$document_id");
-        if($doc) {
-            $file_path = "../uploads/" . $doc['file_name'];
-            if(file_exists($file_path)) {
-                unlink($file_path);
-            }
-            $VSD->remove('documents', "id=$document_id");
-            
-            // Notify user of deletion
-            $VSD->insert('notifications', [
-                'user_id' => $doc['user_id'],
-                'title' => 'Tài liệu bị xóa',
-                'message' => "Tài liệu '{$doc['original_name']}' của bạn đã bị Admin xóa khỏi hệ thống.",
-                'type' => 'document_deleted',
-                'ref_id' => $admin_id
-            ]);
-            sendPushToUser($doc['user_id'], [
-                'title' => 'Tài liệu đã bị xóa 🗑️',
-                'body' => "Tài liệu '{$doc['original_name']}' đã bị Admin gỡ bỏ.",
-                'url' => '/history.php?tab=notifications'
-            ]);
+    } elseif($action === 'delete' || $action === 'delete_bulk') {
+        $ids_to_delete = [];
+        if($action === 'delete') {
+            $ids_to_delete[] = intval($_POST['document_id']);
+        } else {
+            $ids_to_delete = array_map('intval', $_POST['ids'] ?? []);
+        }
 
-            header("Location: all-documents.php?msg=deleted");
+        if(!empty($ids_to_delete)) {
+            $deleted_count = 0;
+            foreach($ids_to_delete as $id) {
+                $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$id");
+                if($doc) {
+                    // 1. Delete main file
+                    $file_path = "../uploads/" . $doc['file_name'];
+                    if(file_exists($file_path)) @unlink($file_path);
+
+                    // 2. Delete converted PDF if exists
+                    if(!empty($doc['converted_pdf_path'])) {
+                        $p_path = "../" . $doc['converted_pdf_path']; 
+                        if(file_exists($p_path)) @unlink($p_path);
+                    }
+
+                    // 3. Delete thumbnail if exists
+                    if(!empty($doc['thumbnail'])) {
+                        $t_path = "../uploads/thumbnails/" . $doc['thumbnail'];
+                        if(file_exists($t_path)) @unlink($t_path);
+                    }
+
+                    // 4. Remove from all related tables to avoid FK issues
+                    $VSD->remove('docs_points', "document_id=$id");
+                    $VSD->remove('admin_approvals', "document_id=$id");
+                    $VSD->remove('document_sales', "document_id=$id");
+                    $VSD->remove('point_transactions', "related_document_id=$id"); // Clean up points history related to this doc
+                    
+                    // 5. Delete associated notifications
+                    $VSD->remove('admin_notifications', "ref_id=$id AND type IN ('document_uploaded', 'document_approved', 'document_rejected', 'document_sold')");
+                    $VSD->remove('notifications', "ref_id=$id AND type IN ('document_approved', 'document_rejected', 'document_status_updated')");
+
+                    // 6. Finally remove the document record
+                    $VSD->remove('documents', "id=$id");
+
+                    // 7. Notify user of deletion
+                    $VSD->insert('notifications', [
+                        'user_id' => $doc['user_id'],
+                        'title' => 'Tài liệu bị xóa',
+                        'message' => "Tài liệu '{$doc['original_name']}' của bạn đã bị Admin gỡ bỏ khỏi hệ thống.",
+                        'type' => 'document_deleted',
+                        'ref_id' => $admin_id
+                    ]);
+                    
+                    $deleted_count++;
+                }
+            }
+            
+            $msg = $deleted_count > 1 ? "deleted_bulk" : "deleted";
+            header("Location: all-documents.php?msg=$msg&count=$deleted_count");
             exit;
         }
+
     } elseif($action === 'change_status') {
         $new_status = $VSD->escape($_POST['new_status']);
         if(in_array($new_status, ['pending', 'approved', 'rejected'])) {
@@ -231,6 +265,7 @@ include __DIR__ . '/../includes/admin-header.php';
                         'approved' => 'Tài liệu đã được duyệt thành công!',
                         'rejected' => 'Tài liệu đã bị từ chối!',
                         'deleted' => 'Tài liệu đã bị xóa!',
+                        'deleted_bulk' => 'Đã xóa thành công ' . ($_GET['count'] ?? '') . ' tài liệu!',
                         'status_changed' => 'Trạng thái tài liệu đã được thay đổi!'
                     ];
                     echo $messages[$_GET['msg']] ?? 'Thao tác thành công!';
@@ -358,7 +393,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
 
             <!-- Table -->
-            <?php 
+            <?php
             // Format file size helper function
             if(!function_exists('formatBytes')) {
                 function formatBytes($bytes) {
@@ -369,12 +404,37 @@ include __DIR__ . '/../includes/admin-header.php';
                     return round($bytes / pow($k, $i), 1) . ' ' . $sizes[$i];
                 }
             }
+            ?>
             
-            if(count($documents) > 0): ?>
+            <!-- Bulk Actions Bar -->
+            <div id="bulkActionsBar" class="hidden sticky top-0 z-20 bg-base-100 border-b border-primary/20 p-4 shadow-lg flex items-center justify-between mb-0 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div class="flex items-center gap-4">
+                    <div class="badge badge-primary badge-lg gap-2">
+                        <span id="selectedCount">0</span> tài liệu đã chọn
+                    </div>
+                    <div class="text-sm text-base-content/70">Các hành động sẽ áp dụng cho tất cả tài liệu đã chọn.</div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-error btn-sm" onclick="deleteSelected()">
+                        <i class="fa-solid fa-trash mr-2"></i>Xóa vĩnh viễn
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('selectAll').click()">
+                        Hủy chọn
+                    </button>
+                </div>
+            </div>
+
+            <?php if(count($documents) > 0): ?>
                 <div class="overflow-x-auto">
+
                     <table class="table">
                         <thead>
                             <tr>
+                                <th class="w-10">
+                                    <label>
+                                        <input type="checkbox" class="checkbox" id="selectAll">
+                                    </label>
+                                </th>
                                 <th>Tài liệu</th>
                                 <th>Chủ sở hữu</th>
                                 <th>Trạng thái</th>
@@ -423,7 +483,12 @@ include __DIR__ . '/../includes/admin-header.php';
                                 $file_path = "../uploads/" . $doc['file_name'];
                                 $file_size = file_exists($file_path) ? filesize($file_path) : 0;
                             ?>
-                                <tr class="hover">
+                                <tr class="hover doc-row" data-id="<?= $doc['id'] ?>">
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" class="checkbox doc-checkbox" value="<?= $doc['id'] ?>">
+                                        </label>
+                                    </td>
                                     <td>
                                         <div class="flex items-center gap-3">
                                             <div class="avatar placeholder">
@@ -835,6 +900,56 @@ include __DIR__ . '/../includes/admin-header.php';
         document.getElementById('changeStatusModal').checked = true;
         }
 
+        // Bulk Selection Logic
+        const selectAll = document.getElementById('selectAll');
+        const docCheckboxes = document.querySelectorAll('.doc-checkbox');
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                docCheckboxes.forEach(cb => cb.checked = this.checked);
+                updateBulkActionsVisibility();
+            });
+        }
+
+        docCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkActionsVisibility);
+        });
+
+        function updateBulkActionsVisibility() {
+            const checkedCount = document.querySelectorAll('.doc-checkbox:checked').length;
+            if (checkedCount > 0) {
+                bulkActionsBar.classList.remove('hidden');
+                selectedCountSpan.textContent = checkedCount;
+            } else {
+                bulkActionsBar.classList.add('hidden');
+                if (selectAll) selectAll.checked = false;
+            }
+        }
+
+        function deleteSelected() {
+            const selectedIds = Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.value);
+            if (selectedIds.length === 0) return;
+
+            vsdConfirm({
+                title: 'Xóa hàng loạt',
+                message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} tài liệu đã chọn?\n\nHành động này không thể hoàn tác!`,
+                confirmText: 'Xóa vĩnh viễn',
+                type: 'error',
+                onConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    let html = `<input type="hidden" name="action" value="delete_bulk">`;
+                    selectedIds.forEach(id => {
+                        html += `<input type="hidden" name="ids[]" value="${id}">`;
+                    });
+                    form.innerHTML = html;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
         function deleteDocument(docId, docTitle) {
             vsdConfirm({
                 title: 'Xác nhận xóa vĩnh viễn',

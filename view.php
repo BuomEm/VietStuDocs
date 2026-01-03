@@ -376,6 +376,20 @@ include 'includes/sidebar.php';
             border-radius: 16px; /* Bo card preview */
         }
 
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .pdf-viewer {
+                height: 250vh; /* Tall height for mobile */
+                padding: 20px 8px; /* Reduce padding to make document larger on small screens */
+                border-radius: 12px;
+            }
+            .pdf-page-container {
+                margin-bottom: 16px;
+                border-radius: 8px;
+            }
+        }
+
+
 
         
         .pdf-page-container {
