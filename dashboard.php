@@ -17,15 +17,29 @@ $premium_info = getPremiumInfo($user_id);
 $page_title = "Dashboard - DocShare";
 $current_page = 'dashboard';
 
-// Fetch user's documents
-$my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar FROM documents d JOIN users u ON d.user_id = u.id WHERE d.user_id=$user_id ORDER BY d.created_at DESC");
+// Pagination settings
+$items_per_page = 10;
+$current_page_num = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$offset = ($current_page_num - 1) * $items_per_page;
 
-// Fetch all public documents from others (only approved)
+// Fetch user's documents with pagination
+$total_my_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents WHERE user_id=$user_id")['total'];
+$total_pages = ceil($total_my_docs / $items_per_page);
+
+$my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar 
+                          FROM documents d 
+                          JOIN users u ON d.user_id = u.id 
+                          WHERE d.user_id=$user_id 
+                          ORDER BY d.created_at DESC 
+                          LIMIT $items_per_page OFFSET $offset");
+
+// Fetch all public documents from others (only approved) - keeping it simple for now or you can paginate this too
 $public_docs = $VSD->get_list("
     SELECT d.*, u.username, u.avatar FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE d.is_public = TRUE AND d.user_id != $user_id AND d.status = 'approved'
     ORDER BY d.created_at DESC
+    LIMIT 12
 ");
 
 // Handle document deletion
@@ -185,6 +199,36 @@ if(isset($_GET['download'])) {
         font-size: 12px;
         color: #6b7280;
     }
+
+    /* Mobile refined grid & cards */
+    @media (max-width: 640px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+        }
+        .document-card-vsd {
+            border-radius: 1.5rem !important;
+        }
+        .document-card-vsd .p-6 {
+            padding: 12px !important;
+        }
+        .document-card-vsd h3 {
+            font-size: 12px !important;
+            min-h-0 !important;
+            height: 2.4rem !important;
+            margin-bottom: 8px !important;
+        }
+        .document-card-vsd .quality-indicator {
+            display: none !important; /* Hide on mobile to save space */
+        }
+        .document-card-vsd .divider {
+            margin: 4px 0 !important;
+        }
+        .document-card-vsd .badge {
+            font-size: 8px !important;
+            padding: 2px 6px !important;
+        }
+    }
 </style>
 
 <div class="drawer-content flex flex-col">
@@ -239,7 +283,7 @@ if(isset($_GET['download'])) {
             </div>
 
             <?php if(count($my_docs) > 0): ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 dashboard-grid">
                 <?php
                 foreach($my_docs as $doc):
                     $doc_id = $doc['id'];
@@ -272,7 +316,7 @@ if(isset($_GET['download'])) {
                     elseif($doc['status'] == 'rejected') $status_badge = '<span class="badge badge-error font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-error/20">Từ chối</span>';
                     elseif($doc['status'] == 'approved') $status_badge = '<span class="badge badge-success font-black text-[9px] py-3 uppercase border-none shadow-sm shadow-success/20">Đã duyệt</span>';
                 ?>
-                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2 document-card-vsd">
                         <!-- Thumbnail Area -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
@@ -316,7 +360,7 @@ if(isset($_GET['download'])) {
                             
                             <div class="mt-4 flex flex-col gap-3">
                                 <!-- Quality Indicator -->
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-3 quality-indicator">
                                     <div class="flex-none flex items-center justify-center w-8 h-8 rounded-full bg-success text-white shadow-lg shadow-success/20">
                                         <i class="fa-solid fa-thumbs-up text-[10px]"></i>
                                     </div>
@@ -347,6 +391,41 @@ if(isset($_GET['download'])) {
                     </div>
                 <?php endforeach; ?>
                 </div>
+
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="mt-12 flex justify-center">
+                    <div class="join bg-base-200/50 p-1 rounded-2xl border border-base-300">
+                        <?php if ($current_page_num > 1): ?>
+                            <a href="?page=<?= $current_page_num - 1 ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                                <i class="fa-solid fa-chevron-left text-xs"></i>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php 
+                        for($i = 1; $i <= $total_pages; $i++): 
+                            if ($i == 1 || $i == $total_pages || ($i >= $current_page_num - 1 && $i <= $current_page_num + 1)):
+                        ?>
+                            <a href="?page=<?= $i ?>" class="join-item btn <?= $i == $current_page_num ? 'btn-primary shadow-lg shadow-primary/20' : 'btn-ghost hover:bg-base-100' ?> rounded-xl min-w-[48px]">
+                                <?= $i ?>
+                            </a>
+                        <?php 
+                            elseif ($i == $current_page_num - 2 || $i == $current_page_num + 2):
+                        ?>
+                            <button class="join-item btn btn-ghost btn-disabled rounded-xl cursor-default">...</button>
+                        <?php 
+                            endif;
+                        endfor; 
+                        ?>
+
+                        <?php if ($current_page_num < $total_pages): ?>
+                            <a href="?page=<?= $current_page_num + 1 ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="relative overflow-hidden rounded-[3rem] bg-base-100 border-2 border-dashed border-base-200 p-20 text-center">
                     <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
@@ -377,7 +456,7 @@ if(isset($_GET['download'])) {
             </div>
 
             <?php if(count($public_docs) > 0): ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 dashboard-grid">
                 <?php
                 foreach($public_docs as $doc):
                     $doc_id = $doc['id'];
@@ -402,7 +481,7 @@ if(isset($_GET['download'])) {
                     elseif(in_array($ext, ['xls', 'xlsx'])) { $icon_class = 'fa-file-excel'; $icon_color = 'text-success'; }
                     elseif(in_array($ext, ['ppt', 'pptx'])) { $icon_class = 'fa-file-powerpoint'; $icon_color = 'text-warning'; }
                 ?>
-                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                    <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2 document-card-vsd">
                         <!-- Thumbnail/Preview -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>

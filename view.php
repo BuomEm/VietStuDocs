@@ -839,6 +839,10 @@ include 'includes/sidebar.php';
         .view-title {
             font-size: 1.5rem;
         }
+        .pdf-viewer {
+            height: 100vh;
+            padding: 15px;
+        }
     }
 </style>
 <div class="drawer-content flex flex-col">
