@@ -591,4 +591,3 @@ function processProfileUpdate($update_id, $status, $note = '') {
         return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
     }
 }
-?>
