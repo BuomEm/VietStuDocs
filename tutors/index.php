@@ -533,12 +533,19 @@ $tutors = getActiveTutors($_GET);
                                         
                                         <!-- Info Column -->
                                         <div class="tutor-info-vsd">
+                                            <?php 
+                                            // Status Check
+                                            $online_status = getOnlineStatusString($tutor['last_activity'] ?? null);
+                                            $dot_color = ($online_status['status'] === 'online') ? 'text-success' : 'text-base-300';
+                                            ?>
                                             <h3 class="tutor-name-vsd">
                                                 <?= htmlspecialchars($tutor['username']) ?>
-                                                <i class="fa-solid fa-circle-check text-blue-500 text-xl" title="Gia sư chính thức"></i>
+                                                <?php if(!empty($tutor['is_verified_tutor'])): ?>
+                                                    <i class="fa-solid fa-circle-check text-blue-500 text-xl" title="Gia sư chính thức"></i>
+                                                <?php endif; ?>
                                             </h3>
                                             <div class="tutor-status-vsd">
-                                                <i class="fa-solid fa-circle"></i> Đang hoạt động • Chuyên gia học thuật
+                                                <i class="fa-solid fa-circle <?= $dot_color ?>"></i> <?= $online_status['text'] ?>
                                             </div>
                                             
                                             <div class="flex flex-wrap gap-2 mb-6">

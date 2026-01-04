@@ -117,4 +117,12 @@ function redirectIfNotAdmin() {
 function hasAdminAccess() {
     return isUserLoggedIn() && isAdmin(getCurrentUserId());
 }
+
+function updateLastActivity() {
+    if (isUserLoggedIn()) {
+        $uid = getCurrentUserId();
+        // Use direct query for performance
+        db_query("UPDATE users SET last_activity = NOW() WHERE id = $uid");
+    }
+}
 ?>

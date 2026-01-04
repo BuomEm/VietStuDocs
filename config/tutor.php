@@ -78,7 +78,7 @@ function registerTutor($user_id, $subjects, $bio, $prices) {
 
 function getActiveTutors($filters = []) {
     $pdo = getTutorDBConnection();
-    $sql = "SELECT t.*, u.username, u.email, u.avatar, 
+    $sql = "SELECT t.*, u.username, u.email, u.avatar, u.last_activity, u.is_verified_tutor, 
             (SELECT COUNT(*) FROM tutor_requests WHERE tutor_id = t.user_id AND status = 'completed') as completed_count
             FROM tutors t 
             JOIN users u ON t.user_id = u.id 
@@ -96,6 +96,31 @@ function getActiveTutors($filters = []) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();
+}
+
+function getOnlineStatusString($last_activity) {
+    if (!$last_activity) return ['status' => 'offline', 'text' => 'Offline', 'label' => 'Offline'];
+    
+    $time = strtotime($last_activity);
+    $now = time();
+    $diff = $now - $time;
+    
+    // Online if active within last 5 minutes
+    if ($diff < 300) {
+        return ['status' => 'online', 'text' => 'Đang hoạt động', 'label' => 'Online'];
+    }
+    
+    // Offline logic
+    if ($diff < 3600) {
+        $mins = floor($diff / 60);
+        return ['status' => 'offline', 'text' => "Offline {$mins} phút trước", 'label' => "{$mins}p trước"];
+    } elseif ($diff < 86400) {
+        $hours = floor($diff / 3600);
+        return ['status' => 'offline', 'text' => "Offline {$hours} giờ trước", 'label' => "{$hours}h trước"];
+    } else {
+        $days = floor($diff / 86400);
+        return ['status' => 'offline', 'text' => "Offline {$days} ngày trước", 'label' => "{$days}d trước"];
+    }
 }
 
 // ============ REQUEST MANAGEMENT ============

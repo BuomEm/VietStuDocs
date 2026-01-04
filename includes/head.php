@@ -3,6 +3,9 @@
 <head>
     <?php
     require_once __DIR__ . '/../config/settings.php';
+    if(function_exists('updateLastActivity')) {
+        updateLastActivity();
+    }
     $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
     $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '/favicon.ico';
     $site_logo = !empty($site_logo) ? $site_logo : '/favicon.ico';

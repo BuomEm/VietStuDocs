@@ -95,6 +95,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_type'] = "error";
         }
     }
+    if ($action === 'toggle_verification') {
+        $tutor_id = $_POST['tutor_id'] ?? 0;
+        $verify_status = intval($_POST['verify_status'] ?? 0);
+        
+        try {
+            // Get user_id first
+            $stmt = $pdo->prepare("SELECT user_id FROM tutors WHERE id = ?");
+            $stmt->execute([$tutor_id]);
+            $uid = $stmt->fetchColumn();
+            
+            if ($uid) {
+                // We need to use main DB connection logic or direct query since users is in main DB
+                // Since this file uses getTutorDBConnection which connects to same DB_NAME, we can query users directly
+                $stmt = $pdo->prepare("UPDATE users SET is_verified_tutor = ? WHERE id = ?");
+                $stmt->execute([$verify_status, $uid]);
+                
+                $_SESSION['flash_message'] = $verify_status ? "Đã cấp tick xanh cho gia sư." : "Đã hủy tick xanh của gia sư.";
+                $_SESSION['flash_type'] = "success";
+            }
+        } catch(Exception $e) {
+            $_SESSION['flash_message'] = "Lỗi: " . $e->getMessage();
+            $_SESSION['flash_type'] = "error";
+        }
+    }
 }
 
 // Get pending registrations
@@ -106,7 +130,7 @@ $pending_registrations = $stmt->fetchAll();
 $pending_updates = getPendingProfileUpdates();
 
 // Get all tutors for the full list
-$stmt = $pdo->prepare("SELECT t.*, u.username, u.email 
+$stmt = $pdo->prepare("SELECT t.*, u.username, u.email, u.is_verified_tutor, u.last_activity 
                       FROM tutors t 
                       JOIN users u ON t.user_id = u.id 
                       ORDER BY CASE t.status 
@@ -220,15 +244,19 @@ include __DIR__ . '/../includes/admin-header.php';
                     <thead>
                         <tr>
                             <th>Gia sư</th>
+                            <th>Trạng thái</th>
                             <th>Môn học</th>
                             <th>Giá (B/S/P)</th>
                             <th>Đánh giá</th>
-                            <th>Trạng thái</th>
+                            <th>Hồ sơ</th>
                             <th class="text-right">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($all_tutors as $tutor): ?>
+                        <?php foreach($all_tutors as $tutor): 
+                            $online_status = getOnlineStatusString($tutor['last_activity'] ?? null);
+                            $status_badge = ($online_status['status'] === 'online') ? 'badge-success' : 'badge-ghost opacity-50';
+                        ?>
                             <tr>
                                 <td>
                                     <div class="flex items-center gap-3">
@@ -238,9 +266,19 @@ include __DIR__ . '/../includes/admin-header.php';
                                             </div>
                                         </div>
                                         <div>
-                                            <div class="font-bold whitespace-nowrap"><?= htmlspecialchars($tutor['username']) ?></div>
+                                            <div class="font-bold whitespace-nowrap flex items-center gap-1">
+                                                <?= htmlspecialchars($tutor['username']) ?>
+                                                <?php if($tutor['is_verified_tutor']): ?>
+                                                    <i class="fa-solid fa-circle-check text-blue-500" title="Đã xác minh"></i>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="text-[10px] opacity-50"><?= htmlspecialchars($tutor['email']) ?></div>
                                         </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="badge <?= $status_badge ?> badge-xs gap-1 py-2 px-2 whitespace-nowrap" title="<?= $online_status['text'] ?>">
+                                        <?= $online_status['label'] ?>
                                     </div>
                                 </td>
                                 <td class="max-w-[150px] truncate"><?= htmlspecialchars($tutor['subjects']) ?></td>
@@ -281,13 +319,26 @@ include __DIR__ . '/../includes/admin-header.php';
                                 <td class="text-right">
                                     <div class="dropdown dropdown-bottom dropdown-end dropdown-hover">
                                         <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square"><i class="fa-solid fa-ellipsis-vertical"></i></div>
-                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40 border border-base-200">
+                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-200">
+                                            <!-- Verified Toggle -->
+                                            <li>
+                                                <form method="POST">
+                                                    <input type="hidden" name="action" value="toggle_verification">
+                                                    <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
+                                                    <?php if($tutor['is_verified_tutor']): ?>
+                                                        <button name="verify_status" value="0" class="text-error py-2 text-xs"><i class="fa-solid fa-ban"></i> Hủy Verified</button>
+                                                    <?php else: ?>
+                                                        <button name="verify_status" value="1" class="text-primary py-2 text-xs"><i class="fa-solid fa-circle-check"></i> Cấp Verified</button>
+                                                    <?php endif; ?>
+                                                </form>
+                                            </li>
+                                            
                                             <?php if($tutor['status'] !== 'active'): ?>
                                                 <li>
                                                     <form method="POST">
                                                         <input type="hidden" name="action" value="process_registration">
                                                         <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
-                                                        <button name="status" value="active" class="text-success py-2"><i class="fa-solid fa-check"></i> Kích hoạt</button>
+                                                        <button name="status" value="active" class="text-success py-2 text-xs"><i class="fa-solid fa-check"></i> Kích hoạt Hồ Sơ</button>
                                                     </form>
                                                 </li>
                                             <?php endif; ?>
@@ -296,7 +347,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                                     <form method="POST">
                                                         <input type="hidden" name="action" value="process_registration">
                                                         <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
-                                                        <button name="status" value="banned" class="text-error py-2"><i class="fa-solid fa-ban"></i> Khóa hồ sơ</button>
+                                                        <button name="status" value="banned" class="text-warning py-2 text-xs"><i class="fa-solid fa-lock"></i> Khóa Hồ Sơ</button>
                                                     </form>
                                                 </li>
                                             <?php endif; ?>
@@ -305,7 +356,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                                     <form method="POST">
                                                         <input type="hidden" name="action" value="process_registration">
                                                         <input type="hidden" name="tutor_id" value="<?= $tutor['id'] ?>">
-                                                        <button name="status" value="rejected" class="text-warning py-2"><i class="fa-solid fa-xmark"></i> Hủy duyệt</button>
+                                                        <button name="status" value="rejected" class="opacity-50 py-2 text-xs"><i class="fa-solid fa-xmark"></i> Hủy duyệt</button>
                                                     </form>
                                                 </li>
                                             <?php endif; ?>
