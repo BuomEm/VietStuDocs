@@ -604,9 +604,11 @@ include 'includes/sidebar.php';
         justify-content: center;
     }
 
-    .pdf-page-container:hover {
-        transform: scale(1.01);
-    }
+    /* @media (hover: hover) {
+        .pdf-page-container:hover {
+            transform: scale(1.01);
+        }
+    } */
 
     .pdf-page-counter {
         position: absolute;
