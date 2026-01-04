@@ -124,5 +124,5 @@ function updateLastActivity() {
         // Use direct query for performance
         db_query("UPDATE users SET last_activity = NOW() WHERE id = $uid");
     }
-    }
 }
+?>
