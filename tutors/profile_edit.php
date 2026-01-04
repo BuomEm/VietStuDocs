@@ -228,21 +228,21 @@ require_once __DIR__ . '/../includes/head.php';
                                         <label class="text-[9px] font-black uppercase opacity-40 mb-3 text-center">Gói Basic</label>
                                         <div class="relative">
                                             <input type="number" name="price_basic" value="<?= $tutor['price_basic'] ?>" min="10" class="input vsd-input h-14 w-full text-center pr-12" required />
-                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">PTS</span>
+                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">VSD</span>
                                         </div>
                                     </div>
                                     <div class="form-control">
                                         <label class="text-[9px] font-black uppercase opacity-40 mb-3 text-center">Standard</label>
                                         <div class="relative">
                                             <input type="number" name="price_standard" value="<?= $tutor['price_standard'] ?>" min="20" class="input vsd-input h-14 w-full text-center pr-12" required />
-                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">PTS</span>
+                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">VSD</span>
                                         </div>
                                     </div>
                                     <div class="form-control">
                                         <label class="text-[9px] font-black uppercase opacity-40 mb-3 text-center">Premium</label>
                                         <div class="relative">
                                             <input type="number" name="price_premium" value="<?= $tutor['price_premium'] ?>" min="50" class="input vsd-input h-14 w-full text-center pr-12" required />
-                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">PTS</span>
+                                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-30">VSD</span>
                                         </div>
                                     </div>
                                 </div>

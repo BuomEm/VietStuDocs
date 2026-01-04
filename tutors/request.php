@@ -422,7 +422,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                 </div>
                                 <div class="meta-item-vsd pt-4">
                                     <span class="meta-label-vsd">Phí dịch vụ</span>
-                                    <div class="font-black text-xs uppercase tracking-widest text-error"><?= $request['points_used'] ?> pts</div>
+                                    <div class="font-black text-xs uppercase tracking-widest text-error"><?= $request['points_used'] ?> VSD</div>
                                 </div>
                             </div>
                         </div>

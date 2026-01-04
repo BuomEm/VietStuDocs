@@ -1045,7 +1045,8 @@ include 'includes/sidebar.php';
                 case 'docx':
                 case 'doc':
                     // Check if converted PDF exists - use it for preview instead of DOCX
-                    if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
+                    $converted_path = $doc['converted_pdf_path'] ?? '';
+                    if (!empty($converted_path) && file_exists($converted_path)) {
                         // Use PDF preview from converted PDF
                         echo '<div class="pdf-viewer-wrapper relative">
                                 <div class="pdf-viewer" id="pdfViewer"></div>
@@ -1054,9 +1055,9 @@ include 'includes/sidebar.php';
                                 </div>
                               </div>';
                         // Store converted PDF path for JavaScript
-                        $pdf_path_for_preview = $doc['converted_pdf_path'];
+                        $pdf_path_for_preview = $converted_path;
                     } else {
-                        // Fallback to DOCX preview
+                        // Fallback to DOCX viewer if PDF conversion failed or pending
                         $file_url = 'uploads/' . $doc['file_name'];
                         echo '<div class="docx-viewer" id="docxViewer"></div>';
                         $pdf_path_for_preview = null;
@@ -1396,9 +1397,9 @@ include 'includes/sidebar.php';
                 
                 this.pdfDoc = null;
                 this.numPages = 0;
-                this.renderObserver = null;
                 this.trackObserver = null;
                 this.activePages = new Map(); // pageNum -> { renderTask, canvas }
+                this.renderingPages = new Set(); // Fix: Track pages currently rendering to prevent race conditions
                 this.pageCounter = document.getElementById('pdfPageCounter');
                 this.currentPageNumDisplay = document.getElementById('currentPageNum');
                 this.totalPagesNumDisplay = document.getElementById('totalPagesNum');
@@ -1411,7 +1412,7 @@ include 'includes/sidebar.php';
                     // Set worker properly
                     const loadingTask = pdfjsLib.getDocument({
                         url: this.pdfPath,
-                        enableWebGL: true, // Use WebGL for better performance
+                        enableWebGL: false, // Fix: Disable WebGL to prevent texture inversion issues
                         disableAutoFetch: true, // Lazy loading
                         disableStream: false
                     });
@@ -1455,7 +1456,7 @@ include 'includes/sidebar.php';
                     // Maintain aspect ratio exactly
                     container.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
                     container.style.width = '100%';
-                    container.style.maxWidth = (viewport.width * 1.4) + 'px'; // Increased size by 40%
+                    container.style.maxWidth = (viewport.width * 1.5) + 'px'; // Increased size
 
                     // Loader element
                     const loader = document.createElement('div');
@@ -1518,19 +1519,29 @@ include 'includes/sidebar.php';
             }
 
             async renderPage(pageNum, container) {
-                if (this.activePages.has(pageNum)) return; 
+                // Fix: Check both active AND rendering states
+                if (this.activePages.has(pageNum) || this.renderingPages.has(pageNum)) return; 
                 if (!this.options.hasPurchased && pageNum > this.options.maxPreviewPages) return;
+
+                // Fix: Lock the page immediately
+                this.renderingPages.add(pageNum);
 
                 try {
                     const page = await this.pdfDoc.getPage(pageNum);
+                    
+                    // Fix: Update container dimensions to match the ACTUAL page dimensions
+                    const naturalViewport = page.getViewport({ scale: 1 });
+                    container.style.aspectRatio = `${naturalViewport.width} / ${naturalViewport.height}`;
+                    container.style.maxWidth = (naturalViewport.width * 1.5) + 'px';
+
                     const dpr = Math.min(window.devicePixelRatio || 1, this.options.dprLimit);
-                    const viewport = page.getViewport({ scale: 1 });
+                    const viewport = page.getViewport({ scale: dpr });
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d', { alpha: false });
                     
-                    canvas.width = viewport.width * dpr;
-                    canvas.height = viewport.height * dpr;
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
                     canvas.style.width = '100%';
                     canvas.style.height = 'auto';
                     canvas.style.opacity = '0';
@@ -1538,19 +1549,23 @@ include 'includes/sidebar.php';
 
                     const renderContext = {
                         canvasContext: context,
-                        viewport: page.getViewport({ scale: dpr })
+                        viewport: viewport
                     };
 
                     const renderTask = page.render(renderContext);
+                    
+                    // Store task immediately
                     this.activePages.set(pageNum, { renderTask, canvas });
 
                     await renderTask.promise;
                     
-                    // Show canvas
+                    // Fix: Ensure no duplicate canvases exist before appending
+                    const existingCanvas = container.querySelector('canvas');
+                    if (existingCanvas) existingCanvas.remove();
+
                     container.appendChild(canvas);
                     requestAnimationFrame(() => {
                         canvas.style.opacity = '1';
-                        // Fade out loader
                         const loader = container.querySelector('.page-loader');
                         if (loader) {
                             loader.style.opacity = '0';
@@ -1561,6 +1576,10 @@ include 'includes/sidebar.php';
                 } catch (err) {
                     if (err.name === 'RenderingCancelledException') return;
                     console.warn(`Render error page ${pageNum}:`, err);
+                    this.activePages.delete(pageNum); // Clean up if failed
+                } finally {
+                    // Fix: Release the lock
+                    this.renderingPages.delete(pageNum);
                 }
             }
 
@@ -1589,8 +1608,13 @@ include 'includes/sidebar.php';
         // Set pdfPath based on file type
         if ($file_ext === 'pdf') {
             $pdf_path_js = "uploads/" . $doc['file_name'];
-        } elseif (($file_ext === 'docx' || $file_ext === 'doc') && !empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
-            $pdf_path_js = $doc['converted_pdf_path'];
+        } elseif (($file_ext === 'docx' || $file_ext === 'doc')) {
+            // For DOCX, prioritize converted PDF if available
+            if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
+                $pdf_path_js = $doc['converted_pdf_path'];
+            } else {
+                $pdf_path_js = null;
+            }
         } else {
             $pdf_path_js = null;
         }
@@ -1677,45 +1701,51 @@ include 'includes/sidebar.php';
 
         // Load PDF if applicable (for PDF files or DOCX files with converted PDF)
         <?php if($file_ext === 'pdf' || (($file_ext === 'docx' || $file_ext === 'doc') && isset($pdf_path_for_preview) && $pdf_path_for_preview)): ?>
-        (async () => {
-            try {
-                if (pdfPath) {
-                    new VsdPdfViewer('pdfViewer', pdfPath, {
-                        maxPreviewPages: maxPreviewPages,
-                        hasPurchased: hasPurchased
-                    });
-                    
-                    // Lazy generation: If document is missing page count or thumbnail, generate them now
-                    const docId = <?= $doc_id ?>;
-                    const totalPages = <?= $doc['total_pages'] ?? 0 ?>;
-                    const hasThumbnail = <?= !empty($doc['thumbnail']) ? 'true' : 'false' ?>;
-                    
-                    if (totalPages === 0 || !hasThumbnail) {
-                        console.log('Lazy generating missing data: pages=' + totalPages + ', hasThumbnail=' + hasThumbnail);
-                        try {
-                            await processPdfDocument(pdfPath, docId, {
-                                countPages: totalPages === 0,
-                                generateThumbnail: !hasThumbnail,
-                                thumbnailWidth: 400
-                            });
-                            console.log('Lazy generation completed successfully');
-                        } catch(error) {
-                            console.warn('Lazy generation failed:', error);
+        if (!window.pdfViewerInitialized) {
+            window.pdfViewerInitialized = true;
+            (async () => {
+                try {
+                    if (pdfPath) {
+                        new VsdPdfViewer('pdfViewer', pdfPath, {
+                            maxPreviewPages: maxPreviewPages,
+                            hasPurchased: hasPurchased
+                        });
+                        
+                        // Lazy generation logic...
+                        const docId = <?= $doc_id ?>;
+                        const totalPages = <?= $doc['total_pages'] ?? 0 ?>;
+                        const hasThumbnail = <?= !empty($doc['thumbnail']) ? 'true' : 'false' ?>;
+                        
+                        if (totalPages === 0 || !hasThumbnail) {
+                            try {
+                                await processPdfDocument(pdfPath, docId, {
+                                    countPages: totalPages === 0,
+                                    generateThumbnail: !hasThumbnail,
+                                    thumbnailWidth: 400
+                                });
+                            } catch(error) {
+                                console.warn('Lazy generation failed:', error);
+                            }
                         }
+                    } else {
+                        const viewer = document.getElementById("pdfViewer");
+                        if(viewer) viewer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">PDF path not available</div>';
                     }
-                } else {
-                    document.getElementById("pdfViewer").innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">PDF path not available</div>';
+                } catch(error) {
+                    const viewer = document.getElementById("pdfViewer");
+                    if(viewer) viewer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">Error loading PDF: ' + error.message + '</div>';
                 }
-            } catch(error) {
-                document.getElementById("pdfViewer").innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">Error loading PDF: ' + error.message + '</div>';
-            }
-        })();
-        
+            })();
+        }
         <?php endif; ?>
         
         // Load DOCX or converted PDF if applicable
         <?php if($file_ext === 'docx' || $file_ext === 'doc'): ?>
         (async () => {
+            // Check if already initialized (e.g. by PDF viewer above)
+            if (window.pdfViewerInitialized) return;
+            window.pdfViewerInitialized = true;
+
             try {
                 <?php if(isset($pdf_path_for_preview) && $pdf_path_for_preview): ?>
                 // Use converted PDF for preview
@@ -1724,25 +1754,7 @@ include 'includes/sidebar.php';
                     maxPreviewPages: maxPreviewPages,
                     hasPurchased: hasPurchased
                 });
-                
-                // Lazy generation: If document is missing page count or thumbnail, generate them now
-                const docId = <?= $doc_id ?>;
-                const totalPages = <?= $doc['total_pages'] ?? 0 ?>;
-                const hasThumbnail = <?= !empty($doc['thumbnail']) ? 'true' : 'false' ?>;
-                
-                if (totalPages === 0 || !hasThumbnail) {
-                    console.log('DOCX lazy generating missing data: pages=' + totalPages + ', hasThumbnail=' + hasThumbnail);
-                    try {
-                        await processPdfDocument(pdfPath, docId, {
-                            countPages: totalPages === 0,
-                            generateThumbnail: !hasThumbnail,
-                            thumbnailWidth: 400
-                        });
-                        console.log('DOCX lazy generation completed successfully');
-                    } catch(error) {
-                        console.warn('DOCX lazy generation failed:', error);
-                    }
-                }
+                // ... (Lazy generation logic omitted for brevity as it's duplicate of above but inside DOCX block) ...
                 <?php else: ?>
                 // Fallback to DOCX preview
                 // Wait for JSZip and docx library to load

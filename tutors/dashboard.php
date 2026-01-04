@@ -394,7 +394,7 @@ $my_requests = $stmt->fetchAll();
                                     
                                     <div class="req-meta-vsd">
                                         <span><i class="fa-regular fa-clock"></i> <?= date('d/m/Y H:i', strtotime($req['created_at'])) ?></span>
-                                        <span class="text-error font-black">+<?= $req['points_used'] ?> PTS</span>
+                                        <span class="text-error font-black">+<?= $req['points_used'] ?> VSD</span>
                                     </div>
                                     
                                     <div class="req-user-box-vsd">
@@ -481,7 +481,7 @@ $my_requests = $stmt->fetchAll();
                                         </td>
                                         <td>
                                             <div class="text-[10px] font-black uppercase opacity-30 mb-1"><?= $req['package_type'] ?></div>
-                                            <div class="text-xs font-black text-red-500">-<?= $req['points_used'] ?> PTS</div>
+                                            <div class="text-xs font-black text-red-500">-<?= $req['points_used'] ?> VSD</div>
                                         </td>
                                         <td>
                                             <div class="text-xs font-black opacity-40"><?= date('d/m/Y', strtotime($req['created_at'])) ?></div>

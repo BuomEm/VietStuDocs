@@ -289,7 +289,7 @@ $page_title = "Đăng ký làm Gia Sư - VietStuDocs";
                                         <div class="relative">
                                             <input type="number" name="price_basic" value="20" min="10" 
                                                    class="input vsd-input !h-12 w-full text-center pr-10" />
-                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">PTS</span>
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">VSD</span>
                                         </div>
                                     </div>
                                     <div class="price-box-vsd">
@@ -297,7 +297,7 @@ $page_title = "Đăng ký làm Gia Sư - VietStuDocs";
                                         <div class="relative">
                                             <input type="number" name="price_standard" value="50" min="20" 
                                                    class="input vsd-input !h-12 w-full text-center pr-10" />
-                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">PTS</span>
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">VSD</span>
                                         </div>
                                     </div>
                                     <div class="price-box-vsd">
@@ -305,7 +305,7 @@ $page_title = "Đăng ký làm Gia Sư - VietStuDocs";
                                         <div class="relative">
                                             <input type="number" name="price_premium" value="100" min="50" 
                                                    class="input vsd-input !h-12 w-full text-center pr-10" />
-                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">PTS</span>
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black opacity-20">VSD</span>
                                         </div>
                                     </div>
                                 </div>

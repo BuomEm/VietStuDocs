@@ -32,14 +32,14 @@ $tutors = getActiveTutors($_GET);
     /* Hero Section */
     .tutors-hero {
         position: relative;
-        padding: 80px 40px;
-        border-radius: 4rem;
+        padding: 40px 24px;
+        border-radius: 2.5rem;
         background: var(--red-gradient);
         color: white;
         overflow: hidden;
-        margin-bottom: 60px;
+        margin-bottom: 40px;
         text-align: center;
-        box-shadow: 0 40px 100px -20px rgba(153, 27, 27, 0.3);
+        box-shadow: 0 20px 50px -15px rgba(153, 27, 27, 0.3);
     }
 
     .tutors-hero::before {
@@ -54,18 +54,18 @@ $tutors = getActiveTutors($_GET);
     }
 
     .tutors-hero h1 {
-        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-size: clamp(2rem, 4vw, 3rem);
         font-weight: 1000;
         letter-spacing: -0.05em;
         line-height: 1;
-        margin-bottom: 24px;
+        margin-bottom: 12px;
         position: relative;
     }
 
     .tutors-hero p {
-        font-size: 1.25rem;
+        font-size: 1rem;
         opacity: 0.9;
-        max-width: 700px;
+        max-width: 600px;
         margin: 0 auto;
         font-weight: 600;
         position: relative;
@@ -74,7 +74,7 @@ $tutors = getActiveTutors($_GET);
     /* Layout */
     .tutors-layout {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: 300px 1fr;
         gap: 40px;
         align-items: start;
     }
@@ -91,8 +91,8 @@ $tutors = getActiveTutors($_GET);
         backdrop-filter: blur(30px);
         -webkit-backdrop-filter: blur(30px);
         border: 1px solid var(--glass-border);
-        border-radius: 2.5rem;
-        padding: 40px;
+        border-radius: 2rem;
+        padding: 30px;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
     }
 
@@ -129,6 +129,22 @@ $tutors = getActiveTutors($_GET);
     }
 
     .vsd-input:focus {
+        border-color: var(--vsd-red) !important;
+        box-shadow: 0 0 0 4px rgba(153, 27, 27, 0.1) !important;
+    }
+
+    /* Compact Input for Modal */
+    .vsd-input-compact {
+        background: oklch(var(--b2) / 0.5) !important;
+        border: 1px solid oklch(var(--bc) / 0.05) !important;
+        border-radius: 1rem !important;
+        height: 44px !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .vsd-input-compact:focus {
         border-color: var(--vsd-red) !important;
         box-shadow: 0 0 0 4px rgba(153, 27, 27, 0.1) !important;
     }
@@ -349,12 +365,12 @@ $tutors = getActiveTutors($_GET);
     }
 
     .modal-header-vsd {
-        padding: 48px 48px 24px;
+        padding: 25px 30px 15px;
         text-align: center;
     }
 
     .modal-body-vsd {
-        padding: 0 48px 48px;
+        padding: 0 30px 30px;
     }
 
     .form-label-vsd {
@@ -369,8 +385,8 @@ $tutors = getActiveTutors($_GET);
 
     .package-option {
         cursor: pointer;
-        padding: 20px;
-        border-radius: 1.5rem;
+        padding: 12px 8px;
+        border-radius: 1rem;
         border: 2px solid oklch(var(--bc) / 0.05);
         transition: all 0.3s ease;
         text-align: center;
@@ -387,26 +403,54 @@ $tutors = getActiveTutors($_GET);
     }
 
     @media (max-width: 768px) {
+        .tutors-container {
+            padding: 20px 16px;
+        }
+        .filter-sidebar {
+            position: relative;
+            top: 0;
+            z-index: 1;
+            margin-bottom: 30px;
+        }
         .tutor-card-vsd {
             flex-direction: column;
             gap: 24px;
-            padding: 30px;
+            padding: 24px;
         }
         .tutor-avatar-vsd {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             margin: 0 auto;
         }
         .tutor-name-vsd {
             text-align: center;
             justify-content: center;
-            font-size: 1.75rem;
+            font-size: 1.5rem;
         }
         .tutor-status-vsd {
             justify-content: center;
         }
         .vsd-btn-ask {
             width: 100%;
+        }
+        
+        /* Modal Mobile Fixes */
+        .modal-box-vsd {
+            width: 95% !important;
+            max-width: 95% !important;
+        }
+        .modal-header-vsd {
+            padding: 20px 20px 10px;
+        }
+        .modal-body-vsd {
+            padding: 0 20px 20px;
+        }
+        .package-option .font-black.text-sm {
+            font-size: 0.7rem;
+        }
+        .package-option .text-[9px] {
+            font-size: 0.55rem;
+            margin-top: 2px;
         }
     }
 </style>
@@ -511,19 +555,19 @@ $tutors = getActiveTutors($_GET);
                                             <div class="tutor-pricing-grid">
                                                 <div class="pricing-item-vsd">
                                                     <div class="pricing-label-vsd">Cơ bản</div>
-                                                    <div class="pricing-value-vsd text-success"><?= $tutor['price_basic'] ?> pts</div>
+                                                    <div class="pricing-value-vsd text-success"><?= $tutor['price_basic'] ?> VSD</div>
                                                 </div>
                                                 <div class="pricing-item-vsd border-x border-base-content/5">
                                                     <div class="pricing-label-vsd">Tiêu chuẩn</div>
-                                                    <div class="pricing-value-vsd text-info"><?= $tutor['price_standard'] ?> pts</div>
+                                                    <div class="pricing-value-vsd text-info"><?= $tutor['price_standard'] ?> VSD</div>
                                                 </div>
                                                 <div class="pricing-item-vsd">
                                                     <div class="pricing-label-vsd">Cao cấp</div>
-                                                    <div class="pricing-value-vsd text-warning"><?= $tutor['price_premium'] ?> pts</div>
+                                                    <div class="pricing-value-vsd text-warning"><?= $tutor['price_premium'] ?> VSD</div>
                                                 </div>
                                             </div>
                                             
-                                            <button onclick="openRequestModal(<?= $tutor['user_id'] ?>, '<?= htmlspecialchars($tutor['username']) ?>')" class="vsd-btn-ask">
+                                            <button onclick="openRequestModal(<?= $tutor['user_id'] ?>, '<?= htmlspecialchars($tutor['username']) ?>', <?= $tutor['price_basic'] ?>, <?= $tutor['price_standard'] ?>, <?= $tutor['price_premium'] ?>)" class="vsd-btn-ask">
                                                 Đặt câu hỏi <i class="fa-solid fa-arrow-right"></i>
                                             </button>
                                         </div>
@@ -541,64 +585,71 @@ $tutors = getActiveTutors($_GET);
 
     <!-- Request Modal -->
     <dialog id="request_modal" class="modal">
-        <div class="modal-box modal-box-vsd max-w-2xl">
-            <div class="modal-header-vsd">
-                <h3 class="font-black text-3xl uppercase tracking-tighter gradient-text-red">Đặt câu hỏi</h3>
-                <p class="text-[10px] opacity-40 font-black uppercase tracking-widest mt-2">Dành cho gia sư: <span id="modal_tutor_name" class="text-primary"></span></p>
+        <div class="modal-box modal-box-vsd max-w-2xl flex flex-col max-h-[90vh]">
+            <div class="modal-header-vsd shrink-0">
+                <h3 class="font-black text-2xl uppercase tracking-tighter gradient-text-red">Đặt câu hỏi</h3>
+                <p class="text-[10px] opacity-40 font-black uppercase tracking-widest mt-1">Dành cho gia sư: <span id="modal_tutor_name" class="text-primary"></span></p>
             </div>
             
-            <form id="requestForm" class="modal-body-vsd space-y-6" enctype="multipart/form-data">
+            <form id="requestForm" class="modal-body-vsd space-y-3 overflow-y-auto flex-1 min-h-0" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="create_request">
                 <input type="hidden" name="tutor_id" id="modal_tutor_id">
                 
                 <div class="form-control">
-                    <label class="form-label-vsd">Tiêu đề câu hỏi</label>
-                    <input type="text" name="title" required class="input vsd-input w-full" placeholder="Ví dụ: Giúp em giải bài toán tích phân lớp 12">
+                    <label class="form-label-vsd !mb-1">Tiêu đề câu hỏi</label>
+                    <input type="text" name="title" required class="input vsd-input-compact w-full" placeholder="Ví dụ: Giúp em giải bài toán tích phân lớp 12">
                 </div>
                 
                 <div class="form-control">
-                    <label class="form-label-vsd">Nội dung chi tiết</label>
-                    <textarea name="content" required class="textarea vsd-input h-32 py-4" placeholder="Mô tả chi tiết câu hỏi của bạn, càng chi tiết càng tốt..."></textarea>
+                    <label class="form-label-vsd !mb-1">Nội dung chi tiết</label>
+                    <textarea name="content" required class="textarea vsd-input-compact h-24 py-2 !leading-tight text-sm" placeholder="Mô tả chi tiết câu hỏi của bạn, càng chi tiết càng tốt..."></textarea>
                 </div>
                 
                 <div class="form-control">
-                    <label class="form-label-vsd mb-4">Gói câu hỏi</label>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <label class="cursor-pointer">
+                    <label class="form-label-vsd !mb-1">Gói câu hỏi</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="package_type" value="basic" class="hidden" checked />
-                            <div class="package-option">
+                            <div class="package-option h-full flex flex-col justify-center">
                                 <div class="font-black text-sm text-success">BASIC</div>
-                                <div class="text-[9px] font-bold opacity-40 mt-1">TRẢ LỜI NGẮN</div>
+                                <div id="modal_price_basic" class="text-xs font-bold my-1">0 VSD</div>
+                                <div class="text-[9px] font-bold opacity-40">TRẢ LỜI NGẮN</div>
                             </div>
                         </label>
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="package_type" value="standard" class="hidden" />
-                            <div class="package-option">
+                            <div class="package-option h-full flex flex-col justify-center">
                                 <div class="font-black text-sm text-info">STANDARD</div>
-                                <div class="text-[9px] font-bold opacity-40 mt-1">GIẢI CHI TIẾT</div>
+                                <div id="modal_price_standard" class="text-xs font-bold my-1">0 VSD</div>
+                                <div class="text-[9px] font-bold opacity-40">GIẢI CHI TIẾT</div>
                             </div>
                         </label>
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer group">
                             <input type="radio" name="package_type" value="premium" class="hidden" />
-                            <div class="package-option">
+                            <div class="package-option h-full flex flex-col justify-center">
                                 <div class="font-black text-sm text-warning">PREMIUM</div>
-                                <div class="text-[9px] font-bold opacity-40 mt-1">GIẢI + FILE</div>
+                                <div id="modal_price_premium" class="text-xs font-bold my-1">0 VSD</div>
+                                <div class="text-[9px] font-bold opacity-40">GIẢI + FILE</div>
                             </div>
                         </label>
                     </div>
                 </div>
 
                 <div class="form-control hidden" id="file_upload_div">
-                    <label class="form-label-vsd">Đính kèm tài liệu (Ảnh/PDF/Word)</label>
-                    <input type="file" name="attachment" class="file-input file-input-bordered w-full vsd-input !p-0" />
-                    <p class="text-[9px] font-bold opacity-40 mt-2 uppercase tracking-tight">Tối đa 5MB. Chỉ dành cho gói Premium.</p>
-                </div>
-
-                <div class="flex gap-4 pt-4">
-                    <button type="button" class="btn btn-ghost rounded-2xl flex-1 font-black text-xs uppercase tracking-widest opacity-30" onclick="request_modal.close()">Hủy</button>
-                    <button type="submit" class="vsd-btn-ask flex-1 justify-center">Gửi yêu cầu</button>
+                    <label class="form-label-vsd !mb-1 flex justify-between items-center">
+                        <span>Đính kèm tài liệu</span>
+                        <span class="text-[9px] opacity-40 font-normal normal-case tracking-normal">Tối đa 5MB</span>
+                    </label>
+                    <input type="file" name="attachment" class="file-input file-input-bordered w-full vsd-input-compact !p-0 !h-[40px] !leading-[40px] text-xs" />
                 </div>
             </form>
+
+            <div class="modal-action-vsd p-5 shrink-0 mt-auto">
+                <div class="flex gap-3">
+                    <button type="button" class="btn btn-ghost rounded-2xl flex-1 font-black text-xs uppercase tracking-widest opacity-30 h-11 min-h-0" onclick="request_modal.close()">Hủy</button>
+                    <button type="submit" form="requestForm" class="vsd-btn-ask flex-1 justify-center h-11 min-h-0">Gửi yêu cầu</button>
+                </div>
+            </div>
         </div>
         <form method="dialog" class="modal-backdrop">
             <button>close</button>
@@ -606,9 +657,15 @@ $tutors = getActiveTutors($_GET);
     </dialog>
 
     <script>
-    function openRequestModal(tutorId, tutorName) {
+    function openRequestModal(tutorId, tutorName, pBasic, pStandard, pPremium) {
         document.getElementById('modal_tutor_name').innerText = tutorName;
         document.getElementById('modal_tutor_id').value = tutorId;
+        
+        // Update prices
+        document.getElementById('modal_price_basic').innerText = pBasic + ' VSD';
+        document.getElementById('modal_price_standard').innerText = pStandard + ' VSD';
+        document.getElementById('modal_price_premium').innerText = pPremium + ' VSD';
+        
         document.getElementById('request_modal').showModal();
     }
 
