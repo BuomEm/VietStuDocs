@@ -99,7 +99,10 @@ function getActiveTutors($filters = []) {
 }
 
 function getOnlineStatusString($last_activity) {
-    if (!$last_activity) return ['status' => 'offline', 'text' => 'Offline', 'label' => 'Offline'];
+    if (!$last_activity) return ['status' => 'offline', 'text' => 'Không hoạt động', 'label' => 'Offline'];
+    
+    // Ensure PHP uses same timezone as DB (+07:00)
+    date_default_timezone_set('Asia/Ho_Chi_Minh');
     
     $time = strtotime($last_activity);
     $now = time();
@@ -113,13 +116,14 @@ function getOnlineStatusString($last_activity) {
     // Offline logic
     if ($diff < 3600) {
         $mins = floor($diff / 60);
-        return ['status' => 'offline', 'text' => "Offline {$mins} phút trước", 'label' => "{$mins}p trước"];
+        $mins = $mins > 0 ? $mins : 1;
+        return ['status' => 'offline', 'text' => "Không hoạt động • {$mins} phút trước", 'label' => "{$mins}p trước"];
     } elseif ($diff < 86400) {
         $hours = floor($diff / 3600);
-        return ['status' => 'offline', 'text' => "Offline {$hours} giờ trước", 'label' => "{$hours}h trước"];
+        return ['status' => 'offline', 'text' => "Không hoạt động • {$hours} giờ trước", 'label' => "{$hours}h trước"];
     } else {
         $days = floor($diff / 86400);
-        return ['status' => 'offline', 'text' => "Offline {$days} ngày trước", 'label' => "{$days}d trước"];
+        return ['status' => 'offline', 'text' => "Không hoạt động • {$days} ngày trước", 'label' => "{$days}d trước"];
     }
 }
 
