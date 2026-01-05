@@ -23,8 +23,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($display_title) ?></title>
-    <link rel="icon" href="<?= htmlspecialchars($site_logo) ?>">
-    <link rel="shortcut icon" href="<?= htmlspecialchars($site_logo) ?>">
+    <?php 
+    $favicon_path = $site_logo;
+    $favicon_version = file_exists($_SERVER['DOCUMENT_ROOT'] . $favicon_path) ? filemtime($_SERVER['DOCUMENT_ROOT'] . $favicon_path) : time();
+    $favicon_ext = strtolower(pathinfo($favicon_path, PATHINFO_EXTENSION));
+    $favicon_type = 'image/x-icon';
+    if ($favicon_ext === 'png') $favicon_type = 'image/png';
+    elseif ($favicon_ext === 'jpg' || $favicon_ext === 'jpeg') $favicon_type = 'image/jpeg';
+    elseif ($favicon_ext === 'svg') $favicon_type = 'image/svg+xml';
+    elseif ($favicon_ext === 'gif') $favicon_type = 'image/gif';
+    ?>
+    <link rel="icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
+    <link rel="shortcut icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- DaisyUI -->

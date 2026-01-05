@@ -320,7 +320,7 @@ if(isset($_GET['download'])) {
                         <!-- Thumbnail Area -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110">
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -354,7 +354,7 @@ if(isset($_GET['download'])) {
 
                         <!-- Card Content -->
                         <div class="p-6">
-                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
                                 <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
                             </h3>
                             
@@ -485,7 +485,7 @@ if(isset($_GET['download'])) {
                         <!-- Thumbnail/Preview -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110">
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -512,7 +512,7 @@ if(isset($_GET['download'])) {
 
                         <!-- Card Content -->
                         <div class="p-6">
-                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
                                 <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
                             </h3>
                             
@@ -520,7 +520,7 @@ if(isset($_GET['download'])) {
 
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-primary/5 overflow-hidden border border-primary/10">
+                                    <div class="w-8 h-8 rounded-xl bg-primary/5 overflow-hidden border border-primary/10">
                                         <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
                                             <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                                         <?php else: ?>
