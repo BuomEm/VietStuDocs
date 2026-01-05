@@ -24,6 +24,7 @@ $site_desc = getSetting('site_description', 'Nền tảng chia sẻ tài liệu 
 
 <?php renderGlobalModal(); ?>
 <?php require_once __DIR__ . '/chat_bubble.php'; ?>
+<?php require_once __DIR__ . '/bottom_nav.php'; ?>
 
 </body>
 </html>

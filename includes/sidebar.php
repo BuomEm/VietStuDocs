@@ -56,17 +56,17 @@ if(isset($_SESSION['user_id'])) {
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <!-- Dashboard -->
                     <li>
-                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Dashboard">
+                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Trang chủ">
                             <i class="fa-solid fa-house w-5 h-5"></i>
-                            <span class="menu-text">Dashboard</span>
+                            <span class="menu-text">Trang chủ</span>
                         </a>
                     </li>
                     
                     <!-- Upload -->
                     <li>
-                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>" data-tip="Upload">
+                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>" data-tip="Đăng tài liệu">
                             <i class="fa-solid fa-cloud-arrow-up w-5 h-5"></i>
-                            <span class="menu-text">Upload</span>
+                            <span class="menu-text">Đăng tài liệu</span>
                         </a>
                     </li>
 
@@ -80,9 +80,9 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Saved -->
                     <li>
-                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>" data-tip="Saved">
+                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>" data-tip="Đã lưu">
                             <i class="fa-solid fa-bookmark w-5 h-5"></i>
-                            <span class="menu-text">Saved</span>
+                            <span class="menu-text">Đã lưu</span>
                         </a>
                     </li>
                     
@@ -109,18 +109,18 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Profile -->
                     <li>
-                        <a href="/profile.php" class="<?= $current_page === 'profile' ? 'active' : '' ?>" data-tip="Profile">
+                        <a href="/user_profile?id=<?= getCurrentUserId() ?>" class="<?= $current_page === 'profile' ? 'active' : '' ?>" data-tip="Hồ sơ cá nhân">
                             <i class="fa-solid fa-user w-5 h-5"></i>
-                            <span class="menu-text">Profile</span>
+                            <span class="menu-text">Hồ sơ cá nhân</span>
                         </a>
                     </li>
                     
                     <!-- Admin -->
                     <?php if($has_admin): ?>
                         <li>
-                            <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>" data-tip="Admin">
+                            <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>" data-tip="Quản trị">
                                 <i class="fa-solid fa-user-shield w-5 h-5"></i>
-                                <span class="menu-text">Admin</span>
+                                <span class="menu-text">Quản trị</span>
                             </a>
                         </li>
                     <?php endif; ?>
@@ -171,9 +171,9 @@ if(isset($_SESSION['user_id'])) {
                     </li> -->
                 <?php else: ?>
                     <li>
-                        <a href="/index.php" data-tip="Login">
+                        <a href="/index.php" data-tip="Đăng nhập">
                             <i class="fa-solid fa-right-to-bracket w-5 h-5"></i>
-                            <span class="menu-text">Login</span>
+                            <span class="menu-text">Đăng nhập</span>
                         </a>
                     </li>
                 <?php endif; ?>

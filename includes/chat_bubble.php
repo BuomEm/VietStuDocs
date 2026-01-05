@@ -6,7 +6,7 @@ $is_tutor_user = isTutor(getCurrentUserId());
 ?>
 
 <!-- Tutor Chat Bubble Premium -->
-<div id="tutor-chat-container" class="fixed bottom-6 right-6 z-[1000] flex flex-col items-end">
+<div id="tutor-chat-container" class="fixed bottom-24 lg:bottom-6 right-6 z-[1000] flex flex-col items-end">
     <!-- Chat Window Premium -->
     <div id="tutor-chat-window" class="hidden mb-6 w-[350px] max-w-[90vw] h-[580px] max-h-[70vh] bg-base-100/80 backdrop-blur-[40px] rounded-[2.5rem] shadow-[0_30px_100px_-20px_rgba(0,0,0,0.3)] border border-white/10 flex flex-col overflow-hidden transition-all duration-500 scale-90 opacity-0 origin-bottom-right">
         

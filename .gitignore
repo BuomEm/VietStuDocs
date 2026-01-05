@@ -17,3 +17,4 @@ apply_patch.php
 # Vendor patches (auto-generated)
 vendor/minishlink/web-push/src/Encryption.php.patched.backup
 uploads/settings/*.png
+testpdf.php

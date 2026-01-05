@@ -20,13 +20,27 @@ if(isset($_SESSION['user_id'])) {
     $user_info = getUserInfo($user_id);
     $is_premium = isPremium($user_id);
 }
+$site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+$site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 ?>
 
 <div class="navbar bg-base-100/80 backdrop-blur border-b border-base-300 shadow-sm transition-all duration-300">
-    <div class="flex-none">
+    <div class="flex-none hidden lg:block">
         <label for="drawer-toggle" class="btn btn-square btn-ghost text-base-content">
             <i class="fa-regular fa-bars text-xl"></i>
         </label>
+    </div>
+
+    <!-- Mobile Logo -->
+    <div class="flex-none lg:hidden mr-2">
+        <a href="/dashboard.php" class="flex items-center gap-2">
+            <?php if (!empty($site_logo)): ?>
+                <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="h-8 w-8 object-contain">
+            <?php else: ?>
+                <i class="fa-solid fa-file-contract text-primary text-xl"></i>
+            <?php endif; ?>
+            <span class="font-bold text-lg text-primary truncate max-w-[120px]"><?= htmlspecialchars($site_name) ?></span>
+        </a>
     </div>
     
     <!-- Search Box -->
