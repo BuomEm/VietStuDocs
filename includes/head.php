@@ -24,8 +24,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($display_title) ?></title>
     <?php 
+    // Validate and normalize favicon path for security
     $favicon_path = $site_logo;
-    $favicon_version = file_exists($_SERVER['DOCUMENT_ROOT'] . $favicon_path) ? filemtime($_SERVER['DOCUMENT_ROOT'] . $favicon_path) : time();
+    $favicon_valid = false;
+    $safe_default_path = '/favicon.ico';
+    
+    // Validation: path must be a non-empty string
+    if (is_string($favicon_path) && strlen($favicon_path) > 0) {
+        // Check for null bytes (potential null byte injection)
+        if (strpos($favicon_path, "\0") === false) {
+            // Ensure path starts with '/'
+            if ($favicon_path[0] !== '/') {
+                $favicon_path = '/' . $favicon_path;
+            }
+            
+            // Normalize the path and check for directory traversal
+            $normalized_path = str_replace(['\\', '//'], '/', $favicon_path);
+            
+            // Check for '..' sequences which indicate directory traversal
+            if (strpos($normalized_path, '..') === false) {
+                // Additional check: ensure the resolved path stays within document root
+                $full_path = $_SERVER['DOCUMENT_ROOT'] . $normalized_path;
+                $real_document_root = realpath($_SERVER['DOCUMENT_ROOT']);
+                $real_full_path = realpath(dirname($full_path)) . DIRECTORY_SEPARATOR . basename($full_path);
+                
+                // Only proceed if realpath succeeds and path is within document root
+                if ($real_document_root !== false && 
+                    strpos($real_full_path, $real_document_root) === 0) {
+                    $favicon_path = $normalized_path;
+                    $favicon_valid = true;
+                }
+            }
+        }
+    }
+    
+    // Determine favicon version: use filemtime if valid and file exists, otherwise use time()
+    if ($favicon_valid) {
+        $full_favicon_path = $_SERVER['DOCUMENT_ROOT'] . $favicon_path;
+        if (file_exists($full_favicon_path) && is_file($full_favicon_path)) {
+            $favicon_version = filemtime($full_favicon_path);
+        } else {
+            // File doesn't exist, use current time
+            $favicon_version = time();
+        }
+    } else {
+        // Validation failed: fallback to safe default or treat as missing
+        $favicon_path = $safe_default_path;
+        $full_favicon_path = $_SERVER['DOCUMENT_ROOT'] . $favicon_path;
+        if (file_exists($full_favicon_path) && is_file($full_favicon_path)) {
+            $favicon_version = filemtime($full_favicon_path);
+        } else {
+            $favicon_version = time();
+        }
+    }
+    
     $favicon_ext = strtolower(pathinfo($favicon_path, PATHINFO_EXTENSION));
     $favicon_type = 'image/x-icon';
     if ($favicon_ext === 'png') $favicon_type = 'image/png';

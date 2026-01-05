@@ -320,7 +320,8 @@ if(isset($_GET['download'])) {
                         <!-- Thumbnail Area -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                                <!-- Using object-contain to preserve entire document preview without cropping text/diagrams -->
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain bg-base-200 transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -485,7 +486,8 @@ if(isset($_GET['download'])) {
                         <!-- Thumbnail/Preview -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                                <!-- Using object-contain to preserve entire document preview without cropping text/diagrams -->
+                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-contain bg-base-200 transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
