@@ -141,7 +141,22 @@ function buildRichTelegramMessage($type, $default_message, $document_id, $extra_
         $data = array_merge($data, $extra_data);
     }
     
-    return ['data' => $data, 'buttons' => $buttons];
+    
+    // KIỂM TRA LOCALHOST: Nếu đang ở localhost, gỡ bỏ tất cả buttons callback_data
+    // vì Telegram không thể gửi callback về localhost.
+    $is_localhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
+    if ($is_localhost) {
+        $buttons = array_filter($buttons, function($btn) {
+            return isset($btn['url']); // Chỉ giữ lại các nút mở link (URL)
+        });
+        
+        // Có thể thêm 1 nút cảnh báo Localhost
+        if (empty($buttons)) {
+            $buttons[] = ['text' => '⚠️ Localhost - No Actions', 'url' => getBaseUrl()];
+        }
+    }
+
+    return ['data' => $data, 'buttons' => array_values($buttons)];
 }
 
 /**

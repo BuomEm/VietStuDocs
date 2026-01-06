@@ -86,10 +86,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Handle Telegram Test
 if (isset($_POST['test_telegram'])) {
     require_once __DIR__ . '/../config/telegram_notifications.php';
-    $result = sendTelegramNotification("🔔 <b>TEST NOTIFICATION</b>\n\nThis is a test message from your DocShare Admin Panel.", 'system_alert');
+    require_once __DIR__ . '/../config/notifications.php'; // For getBaseUrl()
+    
+    $buttons = [
+        ['text' => '🌐 Truy cập Website', 'url' => getBaseUrl()],
+        ['text' => '⚙️ Cài đặt', 'url' => getBaseUrl() . '/admin/settings.php'],
+        ['text' => '🔔 Thông báo', 'url' => getBaseUrl() . '/admin/notifications.php']
+    ];
+    
+    $result = sendTelegramNotification("🔔 <b>TEST KẾT NỐI</b>\n\nChúc mừng! Hệ thống của bạn đã kết nối thành công với Telegram Bot.\n\nCác nút bấm bên dưới là minh họa cho tính năng <b>Inline Keyboard</b>.", 'system_alert', $buttons);
     
     header('Content-Type: application/json');
-    echo json_encode(['success' => $result, 'message' => $result ? 'Gửi tin nhắn test thành công!' : 'Gửi thất bại. Vui lòng kiểm tra Token và Chat ID.']);
+    echo json_encode(['success' => $result['success'], 'message' => $result['success'] ? 'Gửi tin nhắn test thành công kèm nút bấm!' : 'Gửi thất bại. ' . ($result['message'] ?? '')]);
     exit;
 }
 
@@ -184,7 +192,18 @@ require_once __DIR__ . '/../includes/admin-header.php';
             <div id="tab-notifications" class="settings-tab hidden">
                 <div class="card bg-base-100 shadow-lg mb-6">
                     <div class="card-body">
-                        <h2 class="card-title mb-4"><i class="fa-brands fa-telegram text-info mr-2"></i>Cấu hình Telegram</h2>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="card-title"><i class="fa-brands fa-telegram text-info mr-2"></i>Cấu hình Telegram</h2>
+                            <?php 
+                            $is_localhost_notif = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
+                            if ($is_localhost_notif): 
+                            ?>
+                                <div class="badge badge-warning gap-2 p-3">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    Localhost (No Webhook)
+                                </div>
+                            <?php endif; ?>
+                        </div>
                         
                         <div class="form-control mb-4">
                             <label class="label cursor-pointer justify-start gap-4">
@@ -209,20 +228,19 @@ require_once __DIR__ . '/../includes/admin-header.php';
                             </div>
                         </div>
                         
-                            <div class="form-control mb-4">
-                                <label class="label"><span class="label-text font-bold">Admin Telegram IDs (Whitelist)</span></label>
-                                <input type="text" id="telegram_admin_ids" class="input input-bordered w-full" 
-                                       value="<?= htmlspecialchars(getSetting('telegram_admin_ids', '')) ?>"
-                                       placeholder="12345678, 98765432">
-                                <label class="label">
-                                    <span class="label-text-alt text-base-content/60">ID của các Admin được phép thực hiện hành động Duyệt/Từ chối qua Telegram. Ngăn cách bằng dấu phẩy.</span>
-                                </label>
-                            </div>
+                        <div class="form-control mb-4">
+                            <label class="label"><span class="label-text font-bold">Admin Telegram IDs (Whitelist)</span></label>
+                            <input type="text" id="telegram_admin_ids" class="input input-bordered w-full" 
+                                   value="<?= htmlspecialchars(getSetting('telegram_admin_ids', '')) ?>"
+                                   placeholder="12345678, 98765432">
+                            <label class="label">
+                                <span class="label-text-alt text-base-content/60">ID của các Admin được phép thực hiện hành động Duyệt/Từ chối qua Telegram. Ngăn cách bằng dấu phẩy.</span>
+                            </label>
                         </div>
                         
-                        <div class="flex justify-between items-center mt-4">
+                        <div class="flex justify-between items-center mt-4 border-t border-base-300 pt-4">
                             <a href="../setup_telegram_webhook.php" target="_blank" class="btn btn-outline btn-sm">
-                                <i class="fa-solid fa-link mr-2"></i> Thiết lập Webhook
+                                <i class="fa-solid fa-link mr-2"></i> Webhook Setup
                             </a>
                             <button onclick="testTelegram()" class="btn btn-info btn-sm">
                                 <i class="fa-solid fa-paper-plane mr-2"></i> Test Kết Nối
@@ -258,16 +276,16 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                 <tbody>
                                     <?php 
                                     $types = [
-                                        'new_document' => 'Tài liệu mới chờ duyệt',
-                                        'new_tutor' => 'Gia sư mới đăng ký',
-                                        'document_sold' => 'Tài liệu được mua',
-                                        'system_alert' => 'Cảnh báo hệ thống',
-                                        'report' => 'Báo cáo vi phạm'
+                                        'new_document' => ['label' => 'Tài liệu mới', 'icon' => 'fa-file-circle-plus'],
+                                        'new_tutor' => ['label' => 'Gia sư mới đăng ký', 'icon' => 'fa-user-graduate'],
+                                        'document_sold' => ['label' => 'Tài liệu đã bán', 'icon' => 'fa-cart-shopping'],
+                                        'system_alert' => ['label' => 'Cảnh báo hệ thống', 'icon' => 'fa-circle-exclamation'],
+                                        'report' => ['label' => 'Báo cáo mới', 'icon' => 'fa-flag']
                                     ];
-                                    foreach($types as $key => $label): 
+                                    foreach($types as $key => $data): 
                                     ?>
                                     <tr>
-                                        <td><?= $label ?></td>
+                                        <td><i class="fa-solid <?= $data['icon'] ?> mr-2"></i><?= $data['label'] ?></td>
                                         <td class="text-center">
                                             <input type="checkbox" class="checkbox checkbox-success" id="notify_<?= $key ?>_browser"
                                                    <?= isSettingEnabled("notify_{$key}_browser") ? 'checked' : '' ?>>
@@ -421,7 +439,7 @@ function saveSettings() {
     const formData = new FormData();
     
     // Collect Input fields
-    const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"], textarea');
+    const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"], textarea, input[type="password"]');
     inputs.forEach(input => {
         if(input.id) formData.append(input.id, input.value);
     });

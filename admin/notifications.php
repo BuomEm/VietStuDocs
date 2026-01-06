@@ -67,26 +67,57 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_notification'])) {
     require_once __DIR__ . '/../config/notifications.php';
     
     $test_messages = [
-        ['type' => 'new_document', 'msg' => 'Test: Tài liệu mới "Sample Document.pdf" được upload bởi user John Doe'],
-        ['type' => 'document_sold', 'msg' => 'Test: Tài liệu "Research Paper.docx" đã được mua với 150 điểm'],
-        ['type' => 'system_alert', 'msg' => 'Test: Thông báo hệ thống - Đây là thông báo test'],
+        [
+            'type' => 'new_document', 
+            'msg' => 'Test: Tài liệu mới "Báo cáo thực tập.pdf" được upload bởi user John Doe',
+            'doc_id' => 1, // Dùng ID ảo để test nút
+            'buttons' => [
+                ['text' => '✅ Duyệt Test', 'callback_data' => 'approve_doc:1'],
+                ['text' => '❌ Từ chối Test', 'callback_data' => 'reject_doc:1'],
+                ['text' => '🌐 Website', 'url' => getBaseUrl()]
+            ]
+        ],
+        [
+            'type' => 'new_tutor', 
+            'msg' => 'Test: Hồ sơ Gia sư mới từ user "Alice Smith" đang chờ duyệt.',
+            'doc_id' => 1, // Tutor ID ảo
+            'buttons' => [
+                ['text' => '✅ Kích hoạt Test', 'callback_data' => 'approve_tutor:1'],
+                ['text' => '❌ Từ chối Test', 'callback_data' => 'reject_tutor:1'],
+                ['text' => '🎓 Xem Gia sư', 'url' => getBaseUrl() . '/admin/tutors.php']
+            ]
+        ],
+        [
+            'type' => 'document_sold', 
+            'msg' => 'Test: Tài liệu "Research Paper.docx" đã được mua với 150 điểm',
+            'doc_id' => null,
+            'buttons' => [['text' => '💰 Xem doanh thu', 'url' => getBaseUrl() . '/admin/transactions.php']]
+        ],
+        [
+            'type' => 'system_alert', 
+            'msg' => 'Test: Thông báo hệ thống - Đây là thông báo test',
+            'doc_id' => null,
+            'buttons' => [['text' => '🛠️ Cài đặt', 'url' => getBaseUrl() . '/admin/settings.php']]
+        ],
     ];
     
     $random_test = $test_messages[array_rand($test_messages)];
     $message = $random_test['msg'];
     $type = $random_test['type'];
+    $doc_id = $random_test['doc_id'];
+    $buttons = $random_test['buttons'];
     
     // Use unified notification sender which will send to Telegram if enabled
-    $result = sendAdminNotification($admin_id, $type, $message, null);
+    $result = sendAdminNotification($admin_id, $type, $message, $doc_id, null, $buttons);
     
     if($result['success']) {
         $response = ['success' => true, 'message' => 'Test notification created successfully!'];
         if($result['telegram_sent']) {
             $response['telegram_sent'] = true;
-            $response['message'] = 'Test notification đã được tạo và gửi đến Telegram thành công!';
+            $response['message'] = '🔔 Test notification đã được gửi đến Telegram kèm nút bấm!';
         } else {
             $response['telegram_sent'] = false;
-            $response['message'] = 'Test notification đã được tạo. Telegram chưa được gửi (có thể chưa bật hoặc chưa cấu hình).';
+            $response['message'] = 'Test notification đã được tạo. Telegram chưa được gửi.';
         }
         echo json_encode($response);
     } else {
@@ -475,6 +506,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             <?php 
                             $notification_types = [
                                 'new_document' => ['label' => 'Tài liệu mới', 'icon' => 'fa-file-circle-plus'],
+                                'new_tutor' => ['label' => 'Gia sư mới đăng ký', 'icon' => 'fa-user-graduate'],
                                 'document_sold' => ['label' => 'Tài liệu đã bán', 'icon' => 'fa-cart-shopping'],
                                 'system_alert' => ['label' => 'Cảnh báo hệ thống', 'icon' => 'fa-circle-exclamation'],
                                 'report' => ['label' => 'Báo cáo mới', 'icon' => 'fa-flag']
@@ -866,9 +898,11 @@ include __DIR__ . '/../includes/admin-header.php';
         settings['telegram_enabled'] = document.getElementById('telegram_enabled').checked ? 'on' : 'off';
         
         // Notification type settings
-        ['new_document', 'document_sold', 'system_alert', 'report'].forEach(type => {
-            settings['notify_' + type + '_browser'] = document.getElementById('notify_' + type + '_browser').checked ? 'on' : 'off';
-            settings['notify_' + type + '_telegram'] = document.getElementById('notify_' + type + '_telegram').checked ? 'on' : 'off';
+        ['new_document', 'new_tutor', 'document_sold', 'system_alert', 'report'].forEach(type => {
+            const browserBox = document.getElementById('notify_' + type + '_browser');
+            const telegramBox = document.getElementById('notify_' + type + '_telegram');
+            if(browserBox) settings['notify_' + type + '_browser'] = browserBox.checked ? 'on' : 'off';
+            if(telegramBox) settings['notify_' + type + '_telegram'] = telegramBox.checked ? 'on' : 'off';
         });
         
         // Site settings
