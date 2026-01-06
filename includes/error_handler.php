@@ -25,14 +25,17 @@ if (!defined('ERROR_HANDLER_REGISTERED')) {
             if (file_exists(__DIR__ . '/../config/telegram_notifications.php')) {
                 require_once __DIR__ . '/../config/telegram_notifications.php';
                 
-                $errorMsg = "🚨 <b>SYSTEM ERROR</b>\n\n";
-                $errorMsg .= "<b>Message:</b> " . htmlspecialchars($key->getMessage()) . "\n";
-                $errorMsg .= "<b>File:</b> " . $key->getFile() . "\n";
-                $errorMsg .= "<b>Line:</b> " . $key->getLine() . "\n";
-                $errorMsg .= "<b>URL:</b> " . ($_SERVER['REQUEST_URI'] ?? 'Unknown');
+                $errorData = [
+                    'title' => 'SYSTEM ALERT',
+                    'message' => $key->getMessage(),
+                    'file' => $key->getFile(),
+                    'line' => $key->getLine(),
+                    'url' => ($_SERVER['REQUEST_URI'] ?? 'Unknown'),
+                    'footer' => 'Vui lòng kiểm tra log hệ thống để biết thêm chi tiết.'
+                ];
 
                 // Send notification system_alert
-                sendTelegramNotification($errorMsg, 'system_alert');
+                sendTelegramNotification($errorData, 'system_alert');
             }
         } catch (Exception $e) {
             // If notification fails, just log it

@@ -371,8 +371,14 @@ function purchaseDocument($buyer_id, $document_id) {
     try {
         if(file_exists(__DIR__ . '/notifications.php')) {
             require_once __DIR__ . '/notifications.php';
+            
+            $buyer_info = db_get_row("SELECT username FROM users WHERE id=$buyer_id");
+            $buyer_name = $buyer_info['username'] ?? "Người dùng #$buyer_id";
+            
             $message = "Tài liệu đã được bán với giá $points_to_pay điểm";
-            sendNotificationToAllAdmins('document_sold', $message, $document_id);
+            $extra_data = ['buyer_name' => $buyer_name];
+            
+            sendNotificationToAllAdmins('document_sold', $message, $document_id, $extra_data);
         }
     } catch(Exception $e) {
         error_log("Purchase warning: " . $e->getMessage());

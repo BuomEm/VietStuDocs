@@ -209,7 +209,21 @@ require_once __DIR__ . '/../includes/admin-header.php';
                             </div>
                         </div>
                         
-                        <div class="flex justify-end">
+                            <div class="form-control mb-4">
+                                <label class="label"><span class="label-text font-bold">Admin Telegram IDs (Whitelist)</span></label>
+                                <input type="text" id="telegram_admin_ids" class="input input-bordered w-full" 
+                                       value="<?= htmlspecialchars(getSetting('telegram_admin_ids', '')) ?>"
+                                       placeholder="12345678, 98765432">
+                                <label class="label">
+                                    <span class="label-text-alt text-base-content/60">ID của các Admin được phép thực hiện hành động Duyệt/Từ chối qua Telegram. Ngăn cách bằng dấu phẩy.</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mt-4">
+                            <a href="../setup_telegram_webhook.php" target="_blank" class="btn btn-outline btn-sm">
+                                <i class="fa-solid fa-link mr-2"></i> Thiết lập Webhook
+                            </a>
                             <button onclick="testTelegram()" class="btn btn-info btn-sm">
                                 <i class="fa-solid fa-paper-plane mr-2"></i> Test Kết Nối
                             </button>
@@ -245,6 +259,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                     <?php 
                                     $types = [
                                         'new_document' => 'Tài liệu mới chờ duyệt',
+                                        'new_tutor' => 'Gia sư mới đăng ký',
                                         'document_sold' => 'Tài liệu được mua',
                                         'system_alert' => 'Cảnh báo hệ thống',
                                         'report' => 'Báo cáo vi phạm'

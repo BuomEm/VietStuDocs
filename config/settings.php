@@ -60,7 +60,7 @@ function getSettingsByCategory($category) {
     // Map category to name patterns
     $patterns = [
         'site' => ['site_name', 'site_logo', 'site_description', 'site_keywords', 'site_author'],
-        'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled'],
+        'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_admin_ids'],
         'apis' => ['cloudconvert_api_key'],
         'notifications' => [
             'notify_browser_push_enabled', 'notify_telegram_enabled',

@@ -8,11 +8,12 @@ require_once __DIR__ . '/settings.php';
 
 /**
  * Gửi thông báo đến Telegram
- * @param string $message Nội dung thông báo
+ * @param string|array $message Nội dung thông báo (có thể là chuỗi hoặc mảng dữ liệu)
  * @param string|null $notification_type Loại thông báo (new_document, document_sold, system_alert, report)
+ * @param array|null $buttons Mảng các nút [['text' => 'Duyệt', 'url' => '...'] hoặc ['text' => 'Duyệt', 'callback_data' => '...']]
  * @return array ['success' => bool, 'message' => string]
  */
-function sendTelegramNotification($message, $notification_type = null) {
+function sendTelegramNotification($message, $notification_type = null, $buttons = null) {
     // Kiểm tra Telegram có được bật không
     if (!isSettingEnabled('telegram_enabled')) {
         return ['success' => false, 'message' => 'Telegram notifications are disabled'];
@@ -54,6 +55,46 @@ function sendTelegramNotification($message, $notification_type = null) {
         'parse_mode' => 'HTML',
         'disable_web_page_preview' => false
     ];
+
+    // Thêm Inline Keyboard nếu có buttons
+    if ($buttons && is_array($buttons) && count($buttons) > 0) {
+        $keyboard = [];
+        $row = [];
+                
+        foreach ($buttons as $button) {
+            $btn = [];
+                        
+            // URL Button - mở link trực tiếp
+            if (isset($button['url'])) {
+                $btn['text'] = $button['text'];
+                $btn['url'] = $button['url'];
+            }
+            // Callback Button - gửi callback_data
+            elseif (isset($button['callback_data'])) {
+                $btn['text'] = $button['text'];
+                $btn['callback_data'] = $button['callback_data'];
+            }
+                        
+            if (!empty($btn)) {
+                $row[] = $btn;
+                                
+                // Mỗi hàng tối đa 2 nút
+                if (count($row) >= 2) {
+                    $keyboard[] = $row;
+                    $row = [];
+                }
+            }
+        }
+                
+        // Thêm hàng cuối nếu còn
+        if (count($row) > 0) {
+            $keyboard[] = $row;
+        }
+                
+        $data['reply_markup'] = json_encode([
+            'inline_keyboard' => $keyboard
+        ]);
+    }
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $api_url);
@@ -91,7 +132,7 @@ function sendTelegramNotification($message, $notification_type = null) {
 
 /**
  * Format message cho Telegram với emoji và HTML
- * @param string $message Nội dung thông báo
+ * @param string|array $message Nội dung thông báo
  * @param string|null $notification_type Loại thông báo
  * @return string Message đã được format
  */
@@ -117,7 +158,41 @@ function formatTelegramMessage($message, $notification_type = null) {
     $timestamp = date('d/m/Y H:i:s');
     
     $formatted = "<b>{$emoji} {$label} - {$site_name}</b>\n\n";
-    $formatted .= htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    
+    if (is_array($message)) {
+        // Nếu là mảng, format theo key-value
+        if (isset($message['title'])) {
+            $formatted .= "<b>" . htmlspecialchars($message['title']) . "</b>\n\n";
+        }
+        
+        foreach ($message as $key => $value) {
+            if (in_array($key, ['title', 'footer', 'url'])) continue;
+            
+            // Format key: capitalize and replace underscrore
+            $display_key = ucwords(str_replace('_', ' ', $key));
+            $formatted .= "• <b>{$display_key}:</b> " . htmlspecialchars($value) . "\n";
+        }
+        
+        if (isset($message['footer'])) {
+            $formatted .= "\n<i>" . htmlspecialchars($message['footer']) . "</i>";
+        }
+        
+        if (isset($message['url'])) {
+            // Đảm bảo URL bắt đầu bằng http hoặc /
+            $url = $message['url'];
+            if (strpos($url, 'http') !== 0) {
+                // Lấy base URL từ settings hoặc server
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'] ?? 'yourdomain.com';
+                $url = $protocol . "://" . $host . $url;
+            }
+            $formatted .= "\n\n🔗 <a href='{$url}'>Xem chi tiết</a>";
+        }
+    } else {
+        // Nếu là chuỗi
+        $formatted .= htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    }
+    
     $formatted .= "\n\n<code>⏰ {$timestamp}</code>";
     
     return $formatted;

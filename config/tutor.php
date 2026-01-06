@@ -69,6 +69,21 @@ function registerTutor($user_id, $subjects, $bio, $prices) {
             $prices['standard'] ?? 50,
             $prices['premium'] ?? 100
         ]);
+        
+        $tutor_record_id = $pdo->lastInsertId();
+        
+        // Notify Admin of New Tutor Registration
+        try {
+            if (file_exists(__DIR__ . '/notifications.php')) {
+                require_once __DIR__ . '/notifications.php';
+                $username = getCurrentUsername(); // Helper from auth.php
+                $notif_message = "Hồ sơ đăng ký Gia sư mới: " . $username;
+                sendNotificationToAllAdmins('new_tutor', $notif_message, $tutor_record_id);
+            }
+        } catch (Exception $e) {
+            error_log("Tutor Admin Notif Error: " . $e->getMessage());
+        }
+
         return ['success' => true, 'message' => 'Đăng ký thành công! Vui lòng chờ Admin phê duyệt.'];
     } catch (Exception $e) {
         error_log("Register Tutor Error: " . $e->getMessage());
