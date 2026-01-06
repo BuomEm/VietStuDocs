@@ -25,9 +25,9 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 ?>
 
 <div class="navbar bg-base-100/80 backdrop-blur border-b border-base-300 shadow-sm transition-all duration-300">
-    <div class="flex-none hidden lg:block">
+    <div class="flex-none">
         <label for="drawer-toggle" class="btn btn-square btn-ghost text-base-content">
-            <i class="fa-regular fa-bars text-xl"></i>
+            <i class="fa-solid fa-bars text-xl"></i>
         </label>
     </div>
 

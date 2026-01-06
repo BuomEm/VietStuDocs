@@ -23,6 +23,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($display_title) ?></title>
+    <!-- DNS Preconnect -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <?php 
     // Validate and normalize favicon path for security
     $favicon_path = $site_logo;
@@ -88,13 +95,44 @@
     <link rel="icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
     <link rel="shortcut icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "oklch(40% 0.18 29)",
+                        secondary: "oklch(80% 0.12 45)",
+                        accent: "oklch(85% 0.18 90)",
+                        neutral: "oklch(25% 0.02 30)",
+                    }
+                }
+            },
+            daisyui: {
+                themes: [
+                    {
+                        vietstudocs: {
+                            "primary": "#800000", /* Deep Red Marble */
+                            "secondary": "#FFB88C", /* Soft Peach */
+                            "accent": "#FFD700", /* Golden */
+                            "neutral": "#2B2B2B",
+                            "base-100": "#FFFBFA", /* Creamy White */
+                            "info": "#3ABFF8",
+                            "success": "#36D399",
+                            "warning": "#FBBD23",
+                            "error": "#F87272",
+                        },
+                    },
+                ],
+            },
+        }
+    </script>
     <!-- DaisyUI -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <!-- Font Awesome 7.0.1 -->
-    <link rel="stylesheet" href="/css/fontawesome/all.css" />
-    <script src="/css/fontawesome/all.js"></script>
+    <!-- Font Awesome 7.1.0 (Local) -->
+    <link rel="stylesheet" href="/css/fontawesome/all.css?v=7.1.0" />
+    <script src="/css/fontawesome/all.js?v=7.1.0" defer></script>
     
     <style>
         /* Define vietstudocs theme using OKLCH (Standard for DaisyUI 4) */

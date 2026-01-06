@@ -8,7 +8,7 @@ $admin_username = getCurrentUsername();
 ?>
 
 <div class="navbar bg-base-100 border-b border-base-300 px-4 sticky top-0 z-30 shadow-sm backdrop-blur bg-base-100/80">
-    <div class="flex-none lg:hidden">
+    <div class="flex-none">
         <label for="drawer-toggle" class="btn btn-square btn-ghost">
             <i class="fa-solid fa-bars text-xl"></i>
         </label>
@@ -55,7 +55,7 @@ $admin_username = getCurrentUsername();
         <div class="dropdown dropdown-end">
             <div tabindex="0" role="button" class="btn btn-ghost btn-circle">
                 <div class="indicator">
-                    <i class="fa-regular fa-bell text-xl text-base-content/80"></i>
+                    <i class="fa-solid fa-bell text-xl text-base-content/80"></i>
                     <?php if($unread_notifications_count > 0): ?>
                         <span class="badge badge-error badge-xs indicator-item pulse"></span>
                     <?php endif; ?>
@@ -87,7 +87,7 @@ $admin_username = getCurrentUsername();
                             </ul>
                         <?php else: ?>
                             <div class="flex flex-col items-center justify-center py-6 text-base-content/50">
-                                <i class="fa-regular fa-bell-slash text-2xl mb-2"></i>
+                                <i class="fa-solid fa-bell-slash text-2xl mb-2"></i>
                                 <span class="text-sm italic">Chưa có thông báo quan trọng...</span>
                             </div>
                         <?php endif; ?>
