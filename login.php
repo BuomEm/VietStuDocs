@@ -17,20 +17,6 @@ $site_desc = getSetting('site_description', 'Chia sẻ tri thức, kết nối c
 $error = '';
 $success = '';
 
-// Handle Registration
-if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
-    if($_POST['password'] !== $_POST['password_confirm']) {
-        $error = "Mật khẩu xác nhận không khớp!";
-    } else {
-        $result = registerUser($_POST['username'], $_POST['email'], $_POST['password']);
-        if($result['success']) {
-            $success = "Đăng ký thành công! Hãy đăng nhập.";
-        } else {
-            $error = $result['message'];
-        }
-    }
-}
-
 // Handle Login
 if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
     $email = $_POST['email'];
@@ -122,9 +108,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .hidden-form {
-            display: none;
-        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center relative p-4">
@@ -163,7 +146,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             <?php endif; ?>
 
             <!-- Login Form -->
-            <div id="login-section" class="form-fade">
+            <div class="form-fade">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">Chào mừng trở lại!</h2>
                 <form method="POST" action="login" class="space-y-5">
                     <div class="form-control">
@@ -205,61 +188,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
 
                 <p class="text-center text-gray-500 text-sm font-medium">
                     Chưa có tài khoản? 
-                    <button onclick="toggleAuth()" class="text-[#800000] font-extrabold hover:underline ml-1">Đăng ký miễn phí</button>
-                </p>
-            </div>
-
-            <!-- Register Form -->
-            <div id="register-section" class="form-fade hidden-form">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">Tạo tài khoản mới</h2>
-                <form method="POST" action="login" class="space-y-4">
-                    <div class="form-control">
-                        <label class="label px-1">
-                            <span class="label-text font-bold text-gray-600">Tên người dùng</span>
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
-                                <i class="fa-solid fa-user"></i>
-                            </span>
-                            <input type="text" name="username" placeholder="Nguyễn Văn A" class="input input-bordered w-full pl-11 rounded-xl input-premium" required>
-                        </div>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label px-1">
-                            <span class="label-text font-bold text-gray-600">Email</span>
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
-                                <i class="fa-solid fa-envelope"></i>
-                            </span>
-                            <input type="email" name="email" placeholder="email@example.com" class="input input-bordered w-full pl-11 rounded-xl input-premium" required>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="form-control">
-                            <label class="label px-1">
-                                <span class="label-text font-bold text-gray-600">Mật khẩu</span>
-                            </label>
-                            <input type="password" name="password" placeholder="••••••••" class="input input-bordered w-full rounded-xl input-premium" required>
-                        </div>
-                        <div class="form-control">
-                            <label class="label px-1">
-                                <span class="label-text font-bold text-gray-600">Xác nhận</span>
-                            </label>
-                            <input type="password" name="password_confirm" placeholder="••••••••" class="input input-bordered w-full rounded-xl input-premium" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" name="register" class="btn btn-premium w-full h-12 rounded-xl text-base font-bold mt-6">
-                        Tham gia ngay
-                    </button>
-                </form>
-
-                <p class="text-center text-gray-500 text-sm font-medium mt-8">
-                    Đã có tài khoản? 
-                    <button onclick="toggleAuth()" class="text-[#800000] font-extrabold hover:underline ml-1">Đăng nhập</button>
+                    <a href="/signup" class="text-[#800000] font-extrabold hover:underline ml-1">Đăng ký miễn phí</a>
                 </p>
             </div>
         </div>
@@ -270,19 +199,5 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         </p>
     </div>
 
-    <script>
-        function toggleAuth() {
-            const loginSection = document.getElementById('login-section');
-            const registerSection = document.getElementById('register-section');
-            
-            if (loginSection.classList.contains('hidden-form')) {
-                loginSection.classList.remove('hidden-form');
-                registerSection.classList.add('hidden-form');
-            } else {
-                loginSection.classList.add('hidden-form');
-                registerSection.classList.remove('hidden-form');
-            }
-        }
-    </script>
 </body>
 </html>

@@ -121,11 +121,9 @@ $has_purchased = false;
 if($user_id) {
     $has_purchased = canUserDownloadDocument($user_id, $doc_id);
 } else {
-    // Free documents (no price set) can be viewed fully
-    $doc_points = getDocumentPoints($doc_id);
-    if($doc_points && ($doc_points['user_price'] == 0 || $doc_points['admin_points'] == 0)) {
-        $has_purchased = true; // Free document
-    }
+    // Non-logged in users can only view preview (limited pages)
+    // They must login and purchase to view full content
+    $has_purchased = false;
 }
 
 if(!file_exists($file_path)) {
@@ -266,7 +264,7 @@ $similar_docs = $VSD->get_list("
 ");
 
 // Function to download file with speed limit
-function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100) {
+function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100, $original_name = null) {
     // Open file
     $file = fopen($file_path, 'rb');
     if (!$file) {
@@ -284,9 +282,12 @@ function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100) {
     // Time per chunk = (chunk_size / 1024) / speed_limit_kbps seconds
     $delay_microseconds = (($chunk_size / 1024) / $speed_limit_kbps) * 1000000;
     
+    // Use original_name if provided, otherwise fallback to basename
+    $download_filename = $original_name ? $original_name : basename($file_path);
+    
     // Send headers
     header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="' . basename($file_path) . '"');
+    header('Content-Disposition: attachment; filename="' . htmlspecialchars($download_filename, ENT_QUOTES, 'UTF-8') . '"');
     header('Content-Length: ' . $file_size);
     header('Cache-Control: must-revalidate');
     header('Pragma: public');
@@ -351,7 +352,7 @@ if(isset($_GET['download'])) {
         $download_speed_kbps = (int)getSetting('limit_download_speed_premium', 500);
     }
     
-    downloadFileWithSpeedLimit($file_path, $download_speed_kbps);
+    downloadFileWithSpeedLimit($file_path, $download_speed_kbps, $doc['original_name']);
     exit;
 }
 ?>
@@ -948,7 +949,7 @@ include 'includes/sidebar.php';
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </button>
                     <?php else: ?>
-                        <a href="index.php" class="btn-vsd btn-vsd-secondary">ĐĂNG NHẬP ĐỂ TƯƠNG TÁC</a>
+                        <a href="/login" class="btn-vsd btn-vsd-secondary">ĐĂNG NHẬP ĐỂ TƯƠNG TÁC</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1023,7 +1024,7 @@ include 'includes/sidebar.php';
                             <?php if($is_logged_in): ?>
                                 <button class="btn btn-primary btn-sm" onclick="openPurchaseModal(<?= $doc_id ?>, <?= $price ?>)">Mua Ngay</button>
                             <?php else: ?>
-                                <a href="index.php" class="btn btn-primary btn-sm">Đăng Nhập Để Mua</a>
+                                <a href="/login" class="btn btn-primary btn-sm">Đăng Nhập Để Mua</a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2130,7 +2131,7 @@ include 'includes/sidebar.php';
             <?php if(!$is_logged_in): ?>
                 showAlert('Vui lòng đăng nhập để tải xuống tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
                 setTimeout(() => {
-                    window.location.href = '/index.php';
+                    window.location.href = '/login';
                 }, 2000);
                 return;
             <?php endif; ?>

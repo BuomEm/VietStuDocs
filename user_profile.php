@@ -10,7 +10,7 @@ require_once 'config/categories.php';
 $profile_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($profile_id === 0) {
-    header("Location: index.php");
+    header("Location: dashboard.php");
     exit;
 }
 
@@ -20,7 +20,7 @@ $profile_user = $VSD->get_row("SELECT id, username, email, avatar, created_at FR
 if (!$profile_user) {
     include 'includes/head.php';
     include 'includes/navbar.php';
-    echo '<div class="container mx-auto p-10 text-center"><h1 class="text-2xl font-bold mb-4">Người dùng không tồn tại</h1><a href="index.php" class="btn btn-primary">Về trang chủ</a></div>';
+    echo '<div class="container mx-auto p-10 text-center"><h1 class="text-2xl font-bold mb-4">Người dùng không tồn tại</h1><a href="dashboard.php" class="btn btn-primary">Về trang chủ</a></div>';
     include 'includes/footer.php';
     exit;
 }

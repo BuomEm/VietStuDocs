@@ -5,8 +5,7 @@ $is_dashboard = strpos($current_uri, 'dashboard.php') !== false || $current_uri 
 $is_tutor = strpos($current_uri, 'tutor') !== false;
 $is_upload = strpos($current_uri, 'upload') !== false;
 $is_profile = strpos($current_uri, 'profile') !== false;
-// For "More", we can check if it's none of the above, or specific pages?
-// Actually if active it usually highlights. For "More" dropdown, we don't necessarily highlight the trigger if a sub-page is active, or we can.
+$is_logged_in_nav = isset($_SESSION['user_id']);
 ?>
 
 <!-- Bottom Navigation for Mobile -->
@@ -25,7 +24,8 @@ $is_profile = strpos($current_uri, 'profile') !== false;
             <span class="text-[10px] font-medium">Gia Sư</span>
         </a>
 
-        <!-- Upload (Center) -->
+        <?php if($is_logged_in_nav): ?>
+        <!-- Upload (Center) - Chỉ hiện khi đã đăng nhập -->
         <div class="w-[20%] flex justify-center relative">
             <!-- Glow Effect -->
             <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-gradient-to-tr from-red-600 via-orange-500 to-yellow-400 rounded-full blur-2xl opacity-60 animate-pulse-slow pointer-events-none"></div>
@@ -36,7 +36,7 @@ $is_profile = strpos($current_uri, 'profile') !== false;
         </div>
 
         <!-- Points Display -->
-         <a href="/history.php" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors group">
+        <a href="/history.php" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors group">
             <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-content transition-colors">
                 <i class="fa-solid fa-coins text-xs"></i>
             </div>
@@ -62,6 +62,38 @@ $is_profile = strpos($current_uri, 'profile') !== false;
                 <li><a href="/logout.php" class="py-3 font-semibold text-error"><i class="fa-solid fa-power-off w-6 text-center"></i> Đăng xuất</a></li>
             </ul>
         </div>
+        <?php else: ?>
+        <!-- Login Button (Center) - Hiện khi chưa đăng nhập -->
+        <div class="w-[20%] flex justify-center relative">
+            <!-- Glow Effect -->
+            <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-400 rounded-full blur-2xl opacity-60 animate-pulse-slow pointer-events-none"></div>
+            
+            <a href="/login" class="absolute -top-8 flex items-center justify-center w-14 h-14 rounded-full bg-white text-primary shadow-lg shadow-primary/40 hover:scale-110 active:scale-95 transition-all outline outline-4 outline-base-100/50 z-10">
+                <i class="fa-solid fa-right-to-bracket text-2xl"></i>
+            </a>
+        </div>
+
+        <!-- Search -->
+        <a href="/search.php" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors">
+            <i class="fa-solid fa-magnifying-glass text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Tìm kiếm</span>
+        </a>
+
+        <!-- More (Guest) -->
+        <div class="dropdown dropdown-top dropdown-end w-[20%] flex justify-center">
+            <div tabindex="0" role="button" class="flex flex-col items-center gap-1 p-2 text-base-content/50 hover:text-base-content transition-colors">
+                <i class="fa-solid fa-grip text-base mb-0.5"></i>
+                <span class="text-[10px] font-medium">Thêm</span>
+            </div>
+            <!-- Dropdown Menu for Guest -->
+            <ul tabindex="0" class="dropdown-content menu p-2 shadow-2xl bg-base-100/70 backdrop-blur-xl rounded-2xl w-56 mb-4 border border-base-content/10 text-base-content z-50 bottom-full right-0 animate-bounce-slow origin-bottom-right">
+                <li><a href="/login" class="py-3 font-semibold"><i class="fa-solid fa-right-to-bracket w-6 text-center text-primary"></i> Đăng nhập</a></li>
+                <li><a href="/signup" class="py-3 font-semibold"><i class="fa-solid fa-user-plus w-6 text-center text-success"></i> Đăng ký</a></li>
+                <div class="divider my-1"></div>
+                <li><a href="/premium.php" class="py-3 font-semibold"><i class="fa-solid fa-crown w-6 text-center text-warning"></i> Premium</a></li>
+            </ul>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

@@ -1,8 +1,5 @@
 <?php
 session_start();
-if(!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
-}
 
 require_once 'config/db.php';
 require_once 'config/function.php';
@@ -11,9 +8,11 @@ require_once 'config/premium.php';
 require_once 'config/points.php';
 require_once 'config/categories.php';
 
-$user_id = getCurrentUserId();
-$is_premium = isPremium($user_id);
-$premium_info = getPremiumInfo($user_id);
+// Cho phép xem dashboard khi chưa đăng nhập
+$is_logged_in = isset($_SESSION['user_id']);
+$user_id = $is_logged_in ? getCurrentUserId() : 0;
+$is_premium = $is_logged_in ? isPremium($user_id) : false;
+$premium_info = $is_logged_in ? getPremiumInfo($user_id) : null;
 $page_title = "Dashboard - DocShare";
 $current_page = 'dashboard';
 
@@ -22,28 +21,37 @@ $items_per_page = 10;
 $current_page_num = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($current_page_num - 1) * $items_per_page;
 
-// Fetch user's documents with pagination
-$total_my_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents WHERE user_id=$user_id")['total'];
-$total_pages = ceil($total_my_docs / $items_per_page);
+// Fetch user's documents with pagination (chỉ khi đã đăng nhập)
+$total_my_docs = 0;
+$total_pages = 0;
+$my_docs = [];
+if($is_logged_in) {
+    $total_my_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents WHERE user_id=$user_id")['total'];
+    $total_pages = ceil($total_my_docs / $items_per_page);
 
-$my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar 
-                          FROM documents d 
-                          JOIN users u ON d.user_id = u.id 
-                          WHERE d.user_id=$user_id 
-                          ORDER BY d.created_at DESC 
-                          LIMIT $items_per_page OFFSET $offset");
+    $my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar 
+                              FROM documents d 
+                              JOIN users u ON d.user_id = u.id 
+                              WHERE d.user_id=$user_id 
+                              ORDER BY d.created_at DESC 
+                              LIMIT $items_per_page OFFSET $offset");
+}
 
-// Fetch all public documents from others (only approved) - keeping it simple for now or you can paginate this too
+// Fetch all public documents (only approved)
+$public_docs_where = "d.is_public = TRUE AND d.status = 'approved'";
+if($is_logged_in) {
+    $public_docs_where .= " AND d.user_id != $user_id";
+}
 $public_docs = $VSD->get_list("
     SELECT d.*, u.username, u.avatar FROM documents d 
     JOIN users u ON d.user_id = u.id 
-    WHERE d.is_public = TRUE AND d.user_id != $user_id AND d.status = 'approved'
+    WHERE $public_docs_where
     ORDER BY d.created_at DESC
     LIMIT 12
 ");
 
-// Handle document deletion
-if(isset($_GET['delete'])) {
+// Handle document deletion (yêu cầu đăng nhập)
+if(isset($_GET['delete']) && $is_logged_in) {
     $doc_id = intval($_GET['delete']);
     $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
     
@@ -57,8 +65,8 @@ if(isset($_GET['delete'])) {
     }
 }
 
-// Handle document download
-if(isset($_GET['download'])) {
+// Handle document download (yêu cầu đăng nhập)
+if(isset($_GET['download']) && $is_logged_in) {
     $doc_id = intval($_GET['download']);
     $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
     
@@ -242,20 +250,24 @@ if(isset($_GET['download'])) {
                     <div class="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                         <i class="fa-solid fa-gauge-high"></i>
                     </div>
-                    Bảng Điều Khiển
+                    <?= $is_logged_in ? 'Bảng Điều Khiển' : 'Khám Phá Tài Liệu' ?>
                 </h1>
-                <p class="text-base-content/60 mt-2 font-medium">Chào mừng trở lại! Xem tổng quan tài liệu của bạn.</p>
+                <p class="text-base-content/60 mt-2 font-medium">
+                    <?= $is_logged_in ? 'Chào mừng trở lại! Xem tổng quan tài liệu của bạn.' : 'Chào mừng bạn đến với DocShare! Khám phá kho tài liệu phong phú.' ?>
+                </p>
             </div>
             
+            <?php if($is_logged_in): ?>
             <div class="flex gap-2">
                 <div class="badge badge-lg py-5 px-6 bg-base-100 border-base-300 shadow-sm font-bold gap-2">
                     <i class="fa-solid fa-file-invoice text-primary/60"></i>
                     Tài liệu của tôi: <span class="text-primary ml-1"><?= count($my_docs) ?></span>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
 
-        <?php if(isset($_GET['msg'])): ?>
+        <?php if(isset($_GET['msg']) && $is_logged_in): ?>
             <?php if($_GET['msg'] == 'deleted'): ?>
                 <div class="alert bg-error/10 border-error/20 text-error mb-8 rounded-2xl animate-bounce-slow">
                     <i class="fa-solid fa-trash-can"></i>
@@ -269,6 +281,7 @@ if(isset($_GET['download'])) {
             <?php endif; ?>
         <?php endif; ?>
 
+        <?php if($is_logged_in): ?>
         <!-- My Documents Section -->
         <section class="mb-16">
             <div class="flex items-center justify-between mb-8">
@@ -442,6 +455,7 @@ if(isset($_GET['download'])) {
                 </div>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
 
         <!-- Public Documents Section -->
         <section>

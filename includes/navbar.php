@@ -164,7 +164,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                 </ul>
             </div>
         <?php else: ?>
-            <a href="/index.php" class="btn btn-primary btn-sm rounded-btn px-4">
+            <a href="/login" class="btn btn-primary btn-sm rounded-btn px-4">
                 <i class="fa-solid fa-right-to-bracket"></i>
                 Đăng nhập
             </a>

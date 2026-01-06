@@ -171,7 +171,7 @@ if(isset($_SESSION['user_id'])) {
                     </li> -->
                 <?php else: ?>
                     <li>
-                        <a href="/index.php" data-tip="Đăng nhập">
+                        <a href="/login" data-tip="Đăng nhập">
                             <i class="fa-solid fa-right-to-bracket w-5 h-5"></i>
                             <span class="menu-text">Đăng nhập</span>
                         </a>
