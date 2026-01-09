@@ -12,16 +12,20 @@ require_once __DIR__ . '/function.php';
  * @param mixed $default Giá trị mặc định nếu không tìm thấy
  * @return mixed Giá trị setting hoặc default
  */
-function getSetting($name, $default = null) {
-    global $VSD;
-    $name = $VSD->escape($name);
-    $row = $VSD->get_row("SELECT value FROM settings WHERE name='$name' LIMIT 1");
-    
-    if ($row) {
-        return $row['value'];
+if (!function_exists('getSetting')) {
+    function getSetting($name, $default = null) {
+        global $VSD;
+        if (!isset($VSD)) return $default;
+        
+        $name = $VSD->escape($name);
+        $row = $VSD->get_row("SELECT value FROM settings WHERE name='$name' LIMIT 1");
+        
+        if ($row) {
+            return $row['value'];
+        }
+        
+        return $default;
     }
-    
-    return $default;
 }
 
 /**
@@ -32,20 +36,24 @@ function getSetting($name, $default = null) {
  * @param string $category Phân loại (deprecated, không sử dụng)
  * @return bool Thành công hay không
  */
-function setSetting($name, $value, $description = null, $category = 'general') {
-    global $VSD;
-    $name = $VSD->escape($name);
-    $value = $VSD->escape($value);
-    
-    // Check if setting exists
-    $count = $VSD->num_rows("SELECT id FROM settings WHERE name='$name' LIMIT 1");
-    
-    if ($count > 0) {
-        // Update existing
-        return $VSD->update('settings', ['value' => $value], "name='$name'");
-    } else {
-        // Insert new
-        return $VSD->insert('settings', ['name' => $name, 'value' => $value]);
+if (!function_exists('setSetting')) {
+    function setSetting($name, $value, $description = null, $category = 'general') {
+        global $VSD;
+        if (!isset($VSD)) return false;
+        
+        $name = $VSD->escape($name);
+        $value = $VSD->escape($value);
+        
+        // Check if setting exists
+        $count = $VSD->num_rows("SELECT id FROM settings WHERE name='$name' LIMIT 1");
+        
+        if ($count > 0) {
+            // Update existing
+            return $VSD->update('settings', ['value' => $value], "name='$name'");
+        } else {
+            // Insert new
+            return $VSD->insert('settings', ['name' => $name, 'value' => $value]);
+        }
     }
 }
 
@@ -54,40 +62,43 @@ function setSetting($name, $value, $description = null, $category = 'general') {
  * @param string $category Phân loại (site, telegram, notifications)
  * @return array Mảng các settings
  */
-function getSettingsByCategory($category) {
-    global $VSD;
-    
-    // Map category to name patterns
-    $patterns = [
-        'site' => ['site_name', 'site_logo', 'site_description', 'site_keywords', 'site_author'],
-        'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_admin_ids'],
-        'apis' => ['cloudconvert_api_key'],
-        'notifications' => [
-            'notify_browser_push_enabled', 'notify_telegram_enabled',
-            'notify_new_document_browser', 'notify_new_document_telegram',
-            'notify_document_sold_browser', 'notify_document_sold_telegram',
-            'notify_system_alert_browser', 'notify_system_alert_telegram',
-            'notify_report_browser', 'notify_report_telegram'
-        ]
-    ];
-    
-    $settings = [];
-    
-    if (isset($patterns[$category])) {
-        $name_list = "'" . implode("','", array_map(function($name) use ($VSD) {
-            return $VSD->escape($name);
-        }, $patterns[$category])) . "'";
+if (!function_exists('getSettingsByCategory')) {
+    function getSettingsByCategory($category) {
+        global $VSD;
+        if (!isset($VSD)) return [];
         
-        $rows = $VSD->get_list("SELECT name, value FROM settings WHERE name IN ($name_list) ORDER BY name");
+        // Map category to name patterns
+        $patterns = [
+            'site' => ['site_name', 'site_logo', 'site_description', 'site_keywords', 'site_author'],
+            'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_admin_ids'],
+            'apis' => ['cloudconvert_api_key'],
+            'notifications' => [
+                'notify_browser_push_enabled', 'notify_telegram_enabled',
+                'notify_new_document_browser', 'notify_new_document_telegram',
+                'notify_document_sold_browser', 'notify_document_sold_telegram',
+                'notify_system_alert_browser', 'notify_system_alert_telegram',
+                'notify_report_browser', 'notify_report_telegram'
+            ]
+        ];
         
-        foreach ($rows as $row) {
-            $settings[$row['name']] = [
-                'value' => $row['value']
-            ];
+        $settings = [];
+        
+        if (isset($patterns[$category])) {
+            $name_list = "'" . implode("','", array_map(function($name) use ($VSD) {
+                return $VSD->escape($name);
+            }, $patterns[$category])) . "'";
+            
+            $rows = $VSD->get_list("SELECT name, value FROM settings WHERE name IN ($name_list) ORDER BY name");
+            
+            foreach ($rows as $row) {
+                $settings[$row['name']] = [
+                    'value' => $row['value']
+                ];
+            }
         }
+        
+        return $settings;
     }
-    
-    return $settings;
 }
 
 /**
@@ -95,72 +106,87 @@ function getSettingsByCategory($category) {
  * @param string $name Tên setting
  * @return bool True nếu là "on", false nếu không
  */
-function isSettingEnabled($name) {
-    $value = getSetting($name, 'off');
-    return strtolower($value) === 'on';
+if (!function_exists('isSettingEnabled')) {
+    function isSettingEnabled($name) {
+        $value = getSetting($name, 'off');
+        return strtolower($value) === 'on';
+    }
 }
 
 /**
  * Lấy tên website
  * @return string
  */
-function getSiteName() {
-    return getSetting('site_name', 'DocShare');
+if (!function_exists('getSiteName')) {
+    function getSiteName() {
+        return getSetting('site_name', 'DocShare');
+    }
 }
 
 /**
  * Lấy logo website
  * @return string
  */
-function getSiteLogo() {
-    return getSetting('site_logo', '');
+if (!function_exists('getSiteLogo')) {
+    function getSiteLogo() {
+        return getSetting('site_logo', '');
+    }
 }
 
 /**
  * Lấy mô tả website
  * @return string
  */
-function getSiteDescription() {
-    return getSetting('site_description', 'Platform chia sẻ tài liệu học tập');
+if (!function_exists('getSiteDescription')) {
+    function getSiteDescription() {
+        return getSetting('site_description', 'Platform chia sẻ tài liệu học tập');
+    }
 }
 
 /**
  * Lấy từ khóa website
  * @return string
  */
-function getSiteKeywords() {
-    return getSetting('site_keywords', '');
+if (!function_exists('getSiteKeywords')) {
+    function getSiteKeywords() {
+        return getSetting('site_keywords', '');
+    }
 }
 
 /**
  * Lấy tác giả website
  * @return string
  */
-function getSiteAuthor() {
-    return getSetting('site_author', '');
+if (!function_exists('getSiteAuthor')) {
+    function getSiteAuthor() {
+        return getSetting('site_author', '');
+    }
 }
 
 /**
  * Lấy Telegram Bot Token (ưu tiên settings, fallback .env)
  * @return string
  */
-function getTelegramBotToken() {
-    $token = getSetting('telegram_bot_token', '');
-    if (empty($token) && isset($_ENV['TELEGRAM_BOT_TOKEN'])) {
-        $token = $_ENV['TELEGRAM_BOT_TOKEN'];
+if (!function_exists('getTelegramBotToken')) {
+    function getTelegramBotToken() {
+        $token = getSetting('telegram_bot_token', '');
+        if (empty($token) && isset($_ENV['TELEGRAM_BOT_TOKEN'])) {
+            $token = $_ENV['TELEGRAM_BOT_TOKEN'];
+        }
+        return $token;
     }
-    return $token;
 }
 
 /**
  * Lấy Telegram Chat ID (ưu tiên settings, fallback .env)
  * @return string
  */
-function getTelegramChatId() {
-    $chat_id = getSetting('telegram_chat_id', '');
-    if (empty($chat_id) && isset($_ENV['TELEGRAM_CHAT_ID'])) {
-        $chat_id = $_ENV['TELEGRAM_CHAT_ID'];
+if (!function_exists('getTelegramChatId')) {
+    function getTelegramChatId() {
+        $chat_id = getSetting('telegram_chat_id', '');
+        if (empty($chat_id) && isset($_ENV['TELEGRAM_CHAT_ID'])) {
+            $chat_id = $_ENV['TELEGRAM_CHAT_ID'];
+        }
+        return $chat_id;
     }
-    return $chat_id;
 }
-

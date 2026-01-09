@@ -1,0 +1,1563 @@
+{
+    "metadata": {
+        "generated_at": "2026-01-09 07:19:15",
+        "root_directory": "D:\\laragon\\www",
+        "total_files": 177,
+        "total_directories": 28,
+        "excluded_patterns": [
+            "node_modules/*",
+            ".git/*",
+            ".gitignore",
+            ".env",
+            "vendor/*",
+            "*.log",
+            "*.cache",
+            "*.tmp",
+            ".DS_Store",
+            "Thumbs.db",
+            "uploads/*",
+            "cache/*",
+            "temp/*",
+            "tmp/*"
+        ]
+    },
+    "structure": {
+        ".env.example": {
+            "type": "file",
+            "path": ".env.example",
+            "size": 482,
+            "extension": "example",
+            "modified": "2026-01-09 06:41:09"
+        },
+        ".git": {
+            "type": "directory",
+            "path": ".git",
+            "children": []
+        },
+        ".htaccess": {
+            "type": "file",
+            "path": ".htaccess",
+            "size": 4804,
+            "extension": "htaccess",
+            "modified": "2026-01-09 07:05:50",
+            "lines": 127
+        },
+        ".vscode": {
+            "type": "directory",
+            "path": ".vscode",
+            "children": {
+                "settings.json": {
+                    "type": "file",
+                    "path": ".vscode/settings.json",
+                    "size": 2,
+                    "extension": "json",
+                    "modified": "2026-01-05 13:19:00",
+                    "lines": 1
+                }
+            }
+        },
+        "AAA": {
+            "type": "directory",
+            "path": "AAA",
+            "children": {
+                "DATABASE_MIGRATION.sql": {
+                    "type": "file",
+                    "path": "AAA/DATABASE_MIGRATION.sql",
+                    "size": 5009,
+                    "extension": "sql",
+                    "modified": "2025-12-16 12:48:18",
+                    "lines": 112
+                },
+                "api.php": {
+                    "type": "file",
+                    "path": "AAA/api.php",
+                    "size": 10643,
+                    "extension": "php",
+                    "modified": "2025-12-21 16:27:24",
+                    "lines": 256
+                },
+                "dctopd.php": {
+                    "type": "file",
+                    "path": "AAA/dctopd.php",
+                    "size": 10516,
+                    "extension": "php",
+                    "modified": "2025-12-24 08:35:54",
+                    "lines": 264
+                },
+                "document.pdf": {
+                    "type": "file",
+                    "path": "AAA/document.pdf",
+                    "size": 9179329,
+                    "extension": "pdf",
+                    "modified": "2025-12-15 07:28:37"
+                },
+                "docxtest.docx": {
+                    "type": "file",
+                    "path": "AAA/docxtest.docx",
+                    "size": 32880,
+                    "extension": "docx",
+                    "modified": "2025-10-18 10:28:51"
+                },
+                "first_page.png": {
+                    "type": "file",
+                    "path": "AAA/first_page.png",
+                    "size": 678426,
+                    "extension": "png",
+                    "modified": "2025-12-22 05:33:53"
+                },
+                "mon-hoc.json": {
+                    "type": "file",
+                    "path": "AAA/mon-hoc.json",
+                    "size": 22264,
+                    "extension": "json",
+                    "modified": "2025-12-27 08:43:11",
+                    "lines": 794
+                },
+                "nganh-hoc.json": {
+                    "type": "file",
+                    "path": "AAA/nganh-hoc.json",
+                    "size": 36478,
+                    "extension": "json",
+                    "modified": "2025-12-27 08:37:51",
+                    "lines": 1438
+                },
+                "note.txt": {
+                    "type": "file",
+                    "path": "AAA/note.txt",
+                    "size": 7581,
+                    "extension": "txt",
+                    "modified": "2025-12-21 15:53:49",
+                    "lines": 213
+                },
+                "pdfservices-api-credentials.json": {
+                    "type": "file",
+                    "path": "AAA/pdfservices-api-credentials.json",
+                    "size": 237,
+                    "extension": "json",
+                    "modified": "2025-12-24 01:08:40",
+                    "lines": 9
+                },
+                "pdftest.pdf": {
+                    "type": "file",
+                    "path": "AAA/pdftest.pdf",
+                    "size": 19258093,
+                    "extension": "pdf",
+                    "modified": "2025-12-15 07:23:56"
+                },
+                "preview.html": {
+                    "type": "file",
+                    "path": "AAA/preview.html",
+                    "size": 72753,
+                    "extension": "html",
+                    "modified": "2025-12-22 07:52:59",
+                    "lines": 881
+                },
+                "result1.pdf": {
+                    "type": "file",
+                    "path": "AAA/result1.pdf",
+                    "size": 370369,
+                    "extension": "pdf",
+                    "modified": "2025-12-24 08:36:05"
+                },
+                "v0.0.1.zip": {
+                    "type": "file",
+                    "path": "AAA/v0.0.1.zip",
+                    "size": 91550932,
+                    "extension": "zip",
+                    "modified": "2025-12-15 08:08:20"
+                },
+                "vatly.pdf": {
+                    "type": "file",
+                    "path": "AAA/vatly.pdf",
+                    "size": 682694,
+                    "extension": "pdf",
+                    "modified": "2025-12-21 16:11:50"
+                }
+            }
+        },
+        "API": {
+            "type": "directory",
+            "path": "API",
+            "children": {
+                "README.md": {
+                    "type": "file",
+                    "path": "API/README.md",
+                    "size": 10571,
+                    "extension": "md",
+                    "modified": "2026-01-09 06:32:11",
+                    "lines": 495
+                },
+                "VSD": {
+                    "type": "directory",
+                    "path": "API/VSD",
+                    "children": {
+                        "README.md": {
+                            "type": "file",
+                            "path": "API/VSD/README.md",
+                            "size": 1168,
+                            "extension": "md",
+                            "modified": "2026-01-09 06:57:55",
+                            "lines": 37
+                        }
+                    }
+                },
+                "core": {
+                    "type": "directory",
+                    "path": "API/core",
+                    "children": {
+                        "ApiKeyGenerator.php": {
+                            "type": "file",
+                            "path": "API/core/ApiKeyGenerator.php",
+                            "size": 5343,
+                            "extension": "php",
+                            "modified": "2026-01-09 06:44:36",
+                            "lines": 159
+                        },
+                        "BaseAPI.php": {
+                            "type": "file",
+                            "path": "API/core/BaseAPI.php",
+                            "size": 21597,
+                            "extension": "php",
+                            "modified": "2026-01-09 07:09:10",
+                            "lines": 596
+                        },
+                        "RateLimiter.php": {
+                            "type": "file",
+                            "path": "API/core/RateLimiter.php",
+                            "size": 4099,
+                            "extension": "php",
+                            "modified": "2026-01-09 06:26:27",
+                            "lines": 129
+                        },
+                        "Router.php": {
+                            "type": "file",
+                            "path": "API/core/Router.php",
+                            "size": 4930,
+                            "extension": "php",
+                            "modified": "2026-01-09 06:26:32",
+                            "lines": 161
+                        }
+                    }
+                },
+                "database_schema.sql": {
+                    "type": "file",
+                    "path": "API/database_schema.sql",
+                    "size": 3006,
+                    "extension": "sql",
+                    "modified": "2026-01-09 06:30:31",
+                    "lines": 69
+                },
+                "index.php": {
+                    "type": "file",
+                    "path": "API/index.php",
+                    "size": 19821,
+                    "extension": "php",
+                    "modified": "2026-01-08 07:33:23",
+                    "lines": 396
+                },
+                "loai-tai-lieu.json": {
+                    "type": "file",
+                    "path": "API/loai-tai-lieu.json",
+                    "size": 968,
+                    "extension": "json",
+                    "modified": "2025-12-28 10:58:45",
+                    "lines": 27
+                },
+                "mark_read.php": {
+                    "type": "file",
+                    "path": "API/mark_read.php",
+                    "size": 529,
+                    "extension": "php",
+                    "modified": "2026-01-01 15:22:10",
+                    "lines": 22
+                },
+                "middleware": {
+                    "type": "directory",
+                    "path": "API/middleware",
+                    "children": {
+                        "cors.php": {
+                            "type": "file",
+                            "path": "API/middleware/cors.php",
+                            "size": 7189,
+                            "extension": "php",
+                            "modified": "2026-01-09 07:07:43",
+                            "lines": 176
+                        }
+                    }
+                },
+                "mon-hoc.json": {
+                    "type": "file",
+                    "path": "API/mon-hoc.json",
+                    "size": 22264,
+                    "extension": "json",
+                    "modified": "2025-12-27 08:43:11",
+                    "lines": 794
+                },
+                "nganh-hoc.json": {
+                    "type": "file",
+                    "path": "API/nganh-hoc.json",
+                    "size": 36478,
+                    "extension": "json",
+                    "modified": "2025-12-27 08:37:51",
+                    "lines": 1438
+                },
+                "pdfservices-api-credentials.json": {
+                    "type": "file",
+                    "path": "API/pdfservices-api-credentials.json",
+                    "size": 266,
+                    "extension": "json",
+                    "modified": "2025-12-29 06:13:29",
+                    "lines": 9
+                },
+                "pdfservices-api-credentials.json.example": {
+                    "type": "file",
+                    "path": "API/pdfservices-api-credentials.json.example",
+                    "size": 155,
+                    "extension": "example",
+                    "modified": "2025-12-29 14:00:35"
+                },
+                "ping.php": {
+                    "type": "file",
+                    "path": "API/ping.php",
+                    "size": 262,
+                    "extension": "php",
+                    "modified": "2026-01-01 15:21:51",
+                    "lines": 12
+                },
+                "playground.php": {
+                    "type": "file",
+                    "path": "API/playground.php",
+                    "size": 23924,
+                    "extension": "php",
+                    "modified": "2026-01-09 07:05:41",
+                    "lines": 517
+                },
+                "save_subscription.php": {
+                    "type": "file",
+                    "path": "API/save_subscription.php",
+                    "size": 654,
+                    "extension": "php",
+                    "modified": "2026-01-01 15:22:04",
+                    "lines": 28
+                },
+                "telegram_webhook.php": {
+                    "type": "file",
+                    "path": "API/telegram_webhook.php",
+                    "size": 12085,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:28:45",
+                    "lines": 268
+                },
+                "tutor_chat.php": {
+                    "type": "file",
+                    "path": "API/tutor_chat.php",
+                    "size": 4131,
+                    "extension": "php",
+                    "modified": "2026-01-01 21:05:15",
+                    "lines": 113
+                },
+                "unread.php": {
+                    "type": "file",
+                    "path": "API/unread.php",
+                    "size": 1010,
+                    "extension": "php",
+                    "modified": "2026-01-01 17:19:50",
+                    "lines": 33
+                },
+                "unsubscribe.php": {
+                    "type": "file",
+                    "path": "API/unsubscribe.php",
+                    "size": 680,
+                    "extension": "php",
+                    "modified": "2026-01-01 16:12:20",
+                    "lines": 23
+                },
+                "upload_handler.php": {
+                    "type": "file",
+                    "path": "API/upload_handler.php",
+                    "size": 1753,
+                    "extension": "php",
+                    "modified": "2026-01-08 07:01:36",
+                    "lines": 48
+                },
+                "v1": {
+                    "type": "directory",
+                    "path": "API/v1",
+                    "children": {
+                        "api": {
+                            "type": "directory",
+                            "path": "API/v1/api",
+                            "children": {
+                                "documents.php": {
+                                    "type": "file",
+                                    "path": "API/v1/api/documents.php",
+                                    "size": 14780,
+                                    "extension": "php",
+                                    "modified": "2026-01-09 07:10:26",
+                                    "lines": 408
+                                }
+                            }
+                        },
+                        "auth": {
+                            "type": "directory",
+                            "path": "API/v1/auth",
+                            "children": {
+                                "login.php": {
+                                    "type": "file",
+                                    "path": "API/v1/auth/login.php",
+                                    "size": 4441,
+                                    "extension": "php",
+                                    "modified": "2026-01-09 07:13:16",
+                                    "lines": 122
+                                },
+                                "logout.php": {
+                                    "type": "file",
+                                    "path": "API/v1/auth/logout.php",
+                                    "size": 594,
+                                    "extension": "php",
+                                    "modified": "2026-01-09 06:31:58",
+                                    "lines": 28
+                                },
+                                "profile.php": {
+                                    "type": "file",
+                                    "path": "API/v1/auth/profile.php",
+                                    "size": 6028,
+                                    "extension": "php",
+                                    "modified": "2026-01-09 07:14:40",
+                                    "lines": 153
+                                }
+                            }
+                        },
+                        "index.php": {
+                            "type": "file",
+                            "path": "API/v1/index.php",
+                            "size": 8731,
+                            "extension": "php",
+                            "modified": "2026-01-09 07:05:41",
+                            "lines": 267
+                        }
+                    }
+                }
+            }
+        },
+        "NOTIFICATION_SYSTEM.md": {
+            "type": "file",
+            "path": "NOTIFICATION_SYSTEM.md",
+            "size": 7606,
+            "extension": "md",
+            "modified": "2026-01-01 19:33:45",
+            "lines": 250
+        },
+        "README.md": {
+            "type": "file",
+            "path": "README.md",
+            "size": 33878,
+            "extension": "md",
+            "modified": "2025-12-31 17:47:19",
+            "lines": 611
+        },
+        "admin": {
+            "type": "directory",
+            "path": "admin",
+            "children": {
+                "all-documents.php": {
+                    "type": "file",
+                    "path": "admin/all-documents.php",
+                    "size": 64891,
+                    "extension": "php",
+                    "modified": "2026-01-03 04:59:35",
+                    "lines": 1180
+                },
+                "api-keys.php": {
+                    "type": "file",
+                    "path": "admin/api-keys.php",
+                    "size": 19739,
+                    "extension": "php",
+                    "modified": "2026-01-09 06:47:19",
+                    "lines": 429
+                },
+                "categories.php": {
+                    "type": "file",
+                    "path": "admin/categories.php",
+                    "size": 14680,
+                    "extension": "php",
+                    "modified": "2026-01-01 15:04:51",
+                    "lines": 300
+                },
+                "index.php": {
+                    "type": "file",
+                    "path": "admin/index.php",
+                    "size": 16163,
+                    "extension": "php",
+                    "modified": "2026-01-01 15:04:26",
+                    "lines": 353
+                },
+                "notifications.php": {
+                    "type": "file",
+                    "path": "admin/notifications.php",
+                    "size": 49773,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:48:36",
+                    "lines": 1020
+                },
+                "pending-docs.php": {
+                    "type": "file",
+                    "path": "admin/pending-docs.php",
+                    "size": 16989,
+                    "extension": "php",
+                    "modified": "2026-01-01 18:34:29",
+                    "lines": 368
+                },
+                "reports.php": {
+                    "type": "file",
+                    "path": "admin/reports.php",
+                    "size": 28075,
+                    "extension": "php",
+                    "modified": "2025-12-29 06:03:57",
+                    "lines": 572
+                },
+                "settings.php": {
+                    "type": "file",
+                    "path": "admin/settings.php",
+                    "size": 27991,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:48:13",
+                    "lines": 518
+                },
+                "transactions.php": {
+                    "type": "file",
+                    "path": "admin/transactions.php",
+                    "size": 16563,
+                    "extension": "php",
+                    "modified": "2025-12-29 14:18:50",
+                    "lines": 297
+                },
+                "tutor_requests.php": {
+                    "type": "file",
+                    "path": "admin/tutor_requests.php",
+                    "size": 31828,
+                    "extension": "php",
+                    "modified": "2026-01-02 04:31:23",
+                    "lines": 532
+                },
+                "tutors.php": {
+                    "type": "file",
+                    "path": "admin/tutors.php",
+                    "size": 23357,
+                    "extension": "php",
+                    "modified": "2026-01-04 03:42:25",
+                    "lines": 375
+                },
+                "users.php": {
+                    "type": "file",
+                    "path": "admin/users.php",
+                    "size": 25711,
+                    "extension": "php",
+                    "modified": "2026-01-02 06:23:02",
+                    "lines": 501
+                },
+                "view-document.php": {
+                    "type": "file",
+                    "path": "admin/view-document.php",
+                    "size": 27487,
+                    "extension": "php",
+                    "modified": "2025-12-29 14:07:22",
+                    "lines": 581
+                }
+            }
+        },
+        "apply_patch.php": {
+            "type": "file",
+            "path": "apply_patch.php",
+            "size": 1338,
+            "extension": "php",
+            "modified": "2026-01-01 19:27:14",
+            "lines": 40
+        },
+        "assets": {
+            "type": "directory",
+            "path": "assets",
+            "children": {
+                "js": {
+                    "type": "directory",
+                    "path": "assets/js",
+                    "children": {
+                        "notifications.js": {
+                            "type": "file",
+                            "path": "assets/js/notifications.js",
+                            "size": 7059,
+                            "extension": "js",
+                            "modified": "2026-01-01 17:43:19",
+                            "lines": 192
+                        }
+                    }
+                },
+                "sound": {
+                    "type": "directory",
+                    "path": "assets/sound",
+                    "children": {
+                        "noti.mp3": {
+                            "type": "file",
+                            "path": "assets/sound/noti.mp3",
+                            "size": 16128,
+                            "extension": "mp3",
+                            "modified": "2026-01-01 17:38:36"
+                        }
+                    }
+                }
+            }
+        },
+        "composer.json": {
+            "type": "file",
+            "path": "composer.json",
+            "size": 429,
+            "extension": "json",
+            "modified": "2026-01-01 19:47:50",
+            "lines": 17
+        },
+        "composer.lock": {
+            "type": "file",
+            "path": "composer.lock",
+            "size": 62501,
+            "extension": "lock",
+            "modified": "2026-01-01 15:42:17"
+        },
+        "config": {
+            "type": "directory",
+            "path": "config",
+            "children": {
+                "auth.php": {
+                    "type": "file",
+                    "path": "config/auth.php",
+                    "size": 3668,
+                    "extension": "php",
+                    "modified": "2026-01-04 04:28:46",
+                    "lines": 128
+                },
+                "categories.php": {
+                    "type": "file",
+                    "path": "config/categories.php",
+                    "size": 14294,
+                    "extension": "php",
+                    "modified": "2026-01-01 10:30:47",
+                    "lines": 533
+                },
+                "db.php": {
+                    "type": "file",
+                    "path": "config/db.php",
+                    "size": 1920,
+                    "extension": "php",
+                    "modified": "2025-12-29 15:11:13",
+                    "lines": 60
+                },
+                "document_stats.php": {
+                    "type": "file",
+                    "path": "config/document_stats.php",
+                    "size": 5229,
+                    "extension": "php",
+                    "modified": "2025-12-18 14:51:31",
+                    "lines": 211
+                },
+                "file.php": {
+                    "type": "file",
+                    "path": "config/file.php",
+                    "size": 39076,
+                    "extension": "php",
+                    "modified": "2025-12-31 04:26:46",
+                    "lines": 953
+                },
+                "function.php": {
+                    "type": "file",
+                    "path": "config/function.php",
+                    "size": 12052,
+                    "extension": "php",
+                    "modified": "2026-01-09 07:10:17",
+                    "lines": 355
+                },
+                "helper.php": {
+                    "type": "file",
+                    "path": "config/helper.php",
+                    "size": 3840,
+                    "extension": "php",
+                    "modified": "2026-01-02 04:30:46",
+                    "lines": 99
+                },
+                "notifications.php": {
+                    "type": "file",
+                    "path": "config/notifications.php",
+                    "size": 9428,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:43:52",
+                    "lines": 205
+                },
+                "points.php": {
+                    "type": "file",
+                    "path": "config/points.php",
+                    "size": 15200,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:16:21",
+                    "lines": 412
+                },
+                "premium.php": {
+                    "type": "file",
+                    "path": "config/premium.php",
+                    "size": 3476,
+                    "extension": "php",
+                    "modified": "2026-01-04 04:26:45",
+                    "lines": 110
+                },
+                "search.php": {
+                    "type": "file",
+                    "path": "config/search.php",
+                    "size": 8735,
+                    "extension": "php",
+                    "modified": "2026-01-02 04:49:39",
+                    "lines": 269
+                },
+                "settings.php": {
+                    "type": "file",
+                    "path": "config/settings.php",
+                    "size": 4684,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:27:10",
+                    "lines": 166
+                },
+                "telegram_notifications.php": {
+                    "type": "file",
+                    "path": "config/telegram_notifications.php",
+                    "size": 8188,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:25:53",
+                    "lines": 222
+                },
+                "timezone.php": {
+                    "type": "file",
+                    "path": "config/timezone.php",
+                    "size": 303,
+                    "extension": "php",
+                    "modified": "2026-01-01 19:57:44",
+                    "lines": 11
+                },
+                "tutor.php": {
+                    "type": "file",
+                    "path": "config/tutor.php",
+                    "size": 25081,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:27:03",
+                    "lines": 608
+                }
+            }
+        },
+        "css": {
+            "type": "directory",
+            "path": "css",
+            "children": {
+                "fontawesome": {
+                    "type": "directory",
+                    "path": "css/fontawesome",
+                    "children": {
+                        "all.css": {
+                            "type": "file",
+                            "path": "css/fontawesome/all.css",
+                            "size": 156584,
+                            "extension": "css",
+                            "modified": "2026-01-06 19:37:09",
+                            "lines": 9
+                        },
+                        "all.js": {
+                            "type": "file",
+                            "path": "css/fontawesome/all.js",
+                            "size": 1501598,
+                            "extension": "js",
+                            "modified": "2026-01-06 20:02:21",
+                            "lines": 6
+                        }
+                    }
+                },
+                "webfonts": {
+                    "type": "directory",
+                    "path": "css/webfonts",
+                    "children": {
+                        "fa-brands-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-brands-400.woff2",
+                            "size": 101468,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-chisel-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-chisel-regular-400.woff2",
+                            "size": 27092,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-duotone-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-duotone-900.woff2",
+                            "size": 318648,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-duotone-light-300.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-duotone-light-300.woff2",
+                            "size": 504012,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-duotone-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-duotone-regular-400.woff2",
+                            "size": 468972,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-duotone-thin-100.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-duotone-thin-100.woff2",
+                            "size": 563944,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-etch-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-etch-solid-900.woff2",
+                            "size": 14512,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-jelly-duo-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-jelly-duo-regular-400.woff2",
+                            "size": 47884,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-jelly-fill-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-jelly-fill-regular-400.woff2",
+                            "size": 29000,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-jelly-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-jelly-regular-400.woff2",
+                            "size": 37524,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-light-300.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-light-300.woff2",
+                            "size": 357168,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-notdog-duo-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-notdog-duo-solid-900.woff2",
+                            "size": 41112,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-notdog-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-notdog-solid-900.woff2",
+                            "size": 30696,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-regular-400.woff2",
+                            "size": 333068,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-duotone-light-300.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-duotone-light-300.woff2",
+                            "size": 418624,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-duotone-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-duotone-regular-400.woff2",
+                            "size": 389184,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-duotone-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-duotone-solid-900.woff2",
+                            "size": 263968,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-duotone-thin-100.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-duotone-thin-100.woff2",
+                            "size": 447692,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-light-300.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-light-300.woff2",
+                            "size": 295952,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-regular-400.woff2",
+                            "size": 275860,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-solid-900.woff2",
+                            "size": 209804,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-sharp-thin-100.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-sharp-thin-100.woff2",
+                            "size": 312212,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-slab-press-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-slab-press-regular-400.woff2",
+                            "size": 28148,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-slab-regular-400.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-slab-regular-400.woff2",
+                            "size": 28992,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-solid-900.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-solid-900.woff2",
+                            "size": 259372,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-thin-100.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-thin-100.woff2",
+                            "size": 387012,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-thumbprint-light-300.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-thumbprint-light-300.woff2",
+                            "size": 26236,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-utility-duo-semibold-600.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-utility-duo-semibold-600.woff2",
+                            "size": 36892,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-utility-fill-semibold-600.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-utility-fill-semibold-600.woff2",
+                            "size": 21696,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-utility-semibold-600.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-utility-semibold-600.woff2",
+                            "size": 26124,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-v4compatibility.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-v4compatibility.woff2",
+                            "size": 4016,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        },
+                        "fa-whiteboard-semibold-600.woff2": {
+                            "type": "file",
+                            "path": "css/webfonts/fa-whiteboard-semibold-600.woff2",
+                            "size": 59100,
+                            "extension": "woff2",
+                            "modified": "2025-09-30 17:42:56"
+                        }
+                    }
+                }
+            }
+        },
+        "dashboard.php": {
+            "type": "file",
+            "path": "dashboard.php",
+            "size": 30571,
+            "extension": "php",
+            "modified": "2026-01-08 06:27:04",
+            "lines": 576
+        },
+        "database": {
+            "type": "directory",
+            "path": "database",
+            "children": {
+                "docshare (1).sql": {
+                    "type": "file",
+                    "path": "database/docshare (1).sql",
+                    "size": 41246,
+                    "extension": "sql",
+                    "modified": "2025-12-29 05:35:11",
+                    "lines": 986
+                }
+            }
+        },
+        "db_dump.txt": {
+            "type": "file",
+            "path": "db_dump.txt",
+            "size": 789,
+            "extension": "txt",
+            "modified": "2026-01-01 20:41:29",
+            "lines": 39
+        },
+        "desktop-app-config": {
+            "type": "directory",
+            "path": "desktop-app-config",
+            "children": {
+                "README_DESKTOP.md": {
+                    "type": "file",
+                    "path": "desktop-app-config/README_DESKTOP.md",
+                    "size": 2168,
+                    "extension": "md",
+                    "modified": "2026-01-08 06:05:33",
+                    "lines": 36
+                },
+                "check_db.php": {
+                    "type": "file",
+                    "path": "desktop-app-config/check_db.php",
+                    "size": 921,
+                    "extension": "php",
+                    "modified": "2026-01-08 06:05:52",
+                    "lines": 33
+                },
+                "electron-main.js": {
+                    "type": "file",
+                    "path": "desktop-app-config/electron-main.js",
+                    "size": 1106,
+                    "extension": "js",
+                    "modified": "2026-01-08 06:05:45",
+                    "lines": 38
+                },
+                "settings.json": {
+                    "type": "file",
+                    "path": "desktop-app-config/settings.json",
+                    "size": 1715,
+                    "extension": "json",
+                    "modified": "2026-01-08 06:27:37",
+                    "lines": 53
+                }
+            }
+        },
+        "edit-document.php": {
+            "type": "file",
+            "path": "edit-document.php",
+            "size": 32456,
+            "extension": "php",
+            "modified": "2026-01-06 11:52:52",
+            "lines": 576
+        },
+        "error.php": {
+            "type": "file",
+            "path": "error.php",
+            "size": 10287,
+            "extension": "php",
+            "modified": "2026-01-02 12:40:33",
+            "lines": 210
+        },
+        "generate_file_structure.php": {
+            "type": "file",
+            "path": "generate_file_structure.php",
+            "size": 4032,
+            "extension": "php",
+            "modified": "2026-01-09 07:18:44",
+            "lines": 136
+        },
+        "handler": {
+            "type": "directory",
+            "path": "handler",
+            "children": {
+                "batch_generate_thumbnails.php": {
+                    "type": "file",
+                    "path": "handler/batch_generate_thumbnails.php",
+                    "size": 15083,
+                    "extension": "php",
+                    "modified": "2025-12-31 04:25:14",
+                    "lines": 357
+                },
+                "categories_api.php": {
+                    "type": "file",
+                    "path": "handler/categories_api.php",
+                    "size": 5834,
+                    "extension": "php",
+                    "modified": "2025-12-28 11:01:31",
+                    "lines": 172
+                },
+                "delete_temp_pdf.php": {
+                    "type": "file",
+                    "path": "handler/delete_temp_pdf.php",
+                    "size": 1707,
+                    "extension": "php",
+                    "modified": "2025-12-22 05:17:44",
+                    "lines": 61
+                },
+                "pdf_functions.php": {
+                    "type": "file",
+                    "path": "handler/pdf_functions.php",
+                    "size": 7879,
+                    "extension": "php",
+                    "modified": "2025-12-26 13:32:45",
+                    "lines": 246
+                },
+                "purchase_handler.php": {
+                    "type": "file",
+                    "path": "handler/purchase_handler.php",
+                    "size": 2098,
+                    "extension": "php",
+                    "modified": "2025-12-30 17:24:22",
+                    "lines": 58
+                },
+                "report_handler.php": {
+                    "type": "file",
+                    "path": "handler/report_handler.php",
+                    "size": 3463,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:27:39",
+                    "lines": 88
+                },
+                "save_thumbnail.php": {
+                    "type": "file",
+                    "path": "handler/save_thumbnail.php",
+                    "size": 3807,
+                    "extension": "php",
+                    "modified": "2025-12-22 05:17:58",
+                    "lines": 120
+                },
+                "search_suggestions.php": {
+                    "type": "file",
+                    "path": "handler/search_suggestions.php",
+                    "size": 715,
+                    "extension": "php",
+                    "modified": "2025-12-18 14:39:40",
+                    "lines": 28
+                },
+                "tutor_handler.php": {
+                    "type": "file",
+                    "path": "handler/tutor_handler.php",
+                    "size": 7137,
+                    "extension": "php",
+                    "modified": "2026-01-01 20:28:08",
+                    "lines": 180
+                },
+                "upload_handler.php": {
+                    "type": "file",
+                    "path": "handler/upload_handler.php",
+                    "size": 10535,
+                    "extension": "php",
+                    "modified": "2026-01-01 10:34:24",
+                    "lines": 263
+                }
+            }
+        },
+        "history.php": {
+            "type": "file",
+            "path": "history.php",
+            "size": 36870,
+            "extension": "php",
+            "modified": "2026-01-03 14:41:46",
+            "lines": 522
+        },
+        "includes": {
+            "type": "directory",
+            "path": "includes",
+            "children": {
+                "admin-footer.php": {
+                    "type": "file",
+                    "path": "includes/admin-footer.php",
+                    "size": 1103,
+                    "extension": "php",
+                    "modified": "2026-01-03 04:55:54",
+                    "lines": 21
+                },
+                "admin-header.php": {
+                    "type": "file",
+                    "path": "includes/admin-header.php",
+                    "size": 9502,
+                    "extension": "php",
+                    "modified": "2026-01-02 13:04:32",
+                    "lines": 245
+                },
+                "admin-navbar.php": {
+                    "type": "file",
+                    "path": "includes/admin-navbar.php",
+                    "size": 7097,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:05:29",
+                    "lines": 124
+                },
+                "admin-sidebar.php": {
+                    "type": "file",
+                    "path": "includes/admin-sidebar.php",
+                    "size": 10730,
+                    "extension": "php",
+                    "modified": "2026-01-02 12:58:14",
+                    "lines": 226
+                },
+                "bottom_nav.php": {
+                    "type": "file",
+                    "path": "includes/bottom_nav.php",
+                    "size": 7344,
+                    "extension": "php",
+                    "modified": "2026-01-06 12:03:15",
+                    "lines": 101
+                },
+                "chat_bubble.php": {
+                    "type": "file",
+                    "path": "includes/chat_bubble.php",
+                    "size": 29360,
+                    "extension": "php",
+                    "modified": "2026-01-05 04:09:38",
+                    "lines": 600
+                },
+                "error_handler.php": {
+                    "type": "file",
+                    "path": "includes/error_handler.php",
+                    "size": 3267,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:16:35",
+                    "lines": 78
+                },
+                "footer.php": {
+                    "type": "file",
+                    "path": "includes/footer.php",
+                    "size": 1344,
+                    "extension": "php",
+                    "modified": "2026-01-05 04:01:11",
+                    "lines": 30
+                },
+                "head.php": {
+                    "type": "file",
+                    "path": "includes/head.php",
+                    "size": 17971,
+                    "extension": "php",
+                    "modified": "2026-01-08 06:27:04",
+                    "lines": 475
+                },
+                "navbar.php": {
+                    "type": "file",
+                    "path": "includes/navbar.php",
+                    "size": 13271,
+                    "extension": "php",
+                    "modified": "2026-01-06 20:04:46",
+                    "lines": 233
+                },
+                "sidebar.php": {
+                    "type": "file",
+                    "path": "includes/sidebar.php",
+                    "size": 11143,
+                    "extension": "php",
+                    "modified": "2026-01-06 11:52:39",
+                    "lines": 209
+                }
+            }
+        },
+        "index.php": {
+            "type": "file",
+            "path": "index.php",
+            "size": 204,
+            "extension": "php",
+            "modified": "2026-01-06 11:48:40",
+            "lines": 8
+        },
+        "js": {
+            "type": "directory",
+            "path": "js",
+            "children": {
+                "categories.js": {
+                    "type": "file",
+                    "path": "js/categories.js",
+                    "size": 17233,
+                    "extension": "js",
+                    "modified": "2025-12-28 11:02:26",
+                    "lines": 500
+                },
+                "pdf-functions.js": {
+                    "type": "file",
+                    "path": "js/pdf-functions.js",
+                    "size": 7260,
+                    "extension": "js",
+                    "modified": "2025-12-30 17:33:01",
+                    "lines": 221
+                }
+            }
+        },
+        "login.php": {
+            "type": "file",
+            "path": "login.php",
+            "size": 8799,
+            "extension": "php",
+            "modified": "2026-01-06 12:03:28",
+            "lines": 203
+        },
+        "logout.php": {
+            "type": "file",
+            "path": "logout.php",
+            "size": 75,
+            "extension": "php",
+            "modified": "2026-01-06 11:52:57",
+            "lines": 5
+        },
+        "premium.php": {
+            "type": "file",
+            "path": "premium.php",
+            "size": 28191,
+            "extension": "php",
+            "modified": "2026-01-03 16:16:37",
+            "lines": 679
+        },
+        "privacy.php": {
+            "type": "file",
+            "path": "privacy.php",
+            "size": 12091,
+            "extension": "php",
+            "modified": "2026-01-06 12:38:35",
+            "lines": 252
+        },
+        "profile.php": {
+            "type": "file",
+            "path": "profile.php",
+            "size": 20931,
+            "extension": "php",
+            "modified": "2026-01-03 16:00:01",
+            "lines": 527
+        },
+        "push": {
+            "type": "directory",
+            "path": "push",
+            "children": {
+                "send_push.php": {
+                    "type": "file",
+                    "path": "push/send_push.php",
+                    "size": 2644,
+                    "extension": "php",
+                    "modified": "2026-01-01 18:44:44",
+                    "lines": 79
+                }
+            }
+        },
+        "saved.php": {
+            "type": "file",
+            "path": "saved.php",
+            "size": 10601,
+            "extension": "php",
+            "modified": "2026-01-06 11:52:45",
+            "lines": 172
+        },
+        "scripts": {
+            "type": "directory",
+            "path": "scripts",
+            "children": {
+                ".gitkeep": {
+                    "type": "file",
+                    "path": "scripts/.gitkeep",
+                    "size": 57,
+                    "extension": "gitkeep",
+                    "modified": "2026-01-01 19:48:43"
+                },
+                "post-install.php": {
+                    "type": "file",
+                    "path": "scripts/post-install.php",
+                    "size": 5156,
+                    "extension": "php",
+                    "modified": "2026-01-01 19:50:18",
+                    "lines": 138
+                }
+            }
+        },
+        "search.php": {
+            "type": "file",
+            "path": "search.php",
+            "size": 39081,
+            "extension": "php",
+            "modified": "2026-01-03 15:14:04",
+            "lines": 1018
+        },
+        "setup_telegram_webhook.php": {
+            "type": "file",
+            "path": "setup_telegram_webhook.php",
+            "size": 3381,
+            "extension": "php",
+            "modified": "2026-01-06 20:39:11",
+            "lines": 74
+        },
+        "signup.php": {
+            "type": "file",
+            "path": "signup.php",
+            "size": 21812,
+            "extension": "php",
+            "modified": "2026-01-06 12:31:49",
+            "lines": 470
+        },
+        "sw.js": {
+            "type": "file",
+            "path": "sw.js",
+            "size": 2992,
+            "extension": "js",
+            "modified": "2026-01-06 19:47:24",
+            "lines": 97
+        },
+        "terms.php": {
+            "type": "file",
+            "path": "terms.php",
+            "size": 9953,
+            "extension": "php",
+            "modified": "2026-01-06 12:38:35",
+            "lines": 209
+        },
+        "test_notify.php": {
+            "type": "file",
+            "path": "test_notify.php",
+            "size": 10442,
+            "extension": "php",
+            "modified": "2026-01-01 18:49:36",
+            "lines": 214
+        },
+        "test_push_web.php": {
+            "type": "file",
+            "path": "test_push_web.php",
+            "size": 4563,
+            "extension": "php",
+            "modified": "2026-01-01 19:29:01",
+            "lines": 92
+        },
+        "testapi.php": {
+            "type": "file",
+            "path": "testapi.php",
+            "size": 5620,
+            "extension": "php",
+            "modified": "2025-12-16 12:23:31",
+            "lines": 177
+        },
+        "testpdf.php": {
+            "type": "file",
+            "path": "testpdf.php",
+            "size": 3211,
+            "extension": "php",
+            "modified": "2026-01-04 07:39:47",
+            "lines": 77
+        },
+        "transaction-details.php": {
+            "type": "file",
+            "path": "transaction-details.php",
+            "size": 24053,
+            "extension": "php",
+            "modified": "2026-01-03 15:03:25",
+            "lines": 397
+        },
+        "tutors": {
+            "type": "directory",
+            "path": "tutors",
+            "children": {
+                "apply.php": {
+                    "type": "file",
+                    "path": "tutors/apply.php",
+                    "size": 14216,
+                    "extension": "php",
+                    "modified": "2026-01-04 03:30:20",
+                    "lines": 373
+                },
+                "dashboard.php": {
+                    "type": "file",
+                    "path": "tutors/dashboard.php",
+                    "size": 22451,
+                    "extension": "php",
+                    "modified": "2026-01-04 03:30:49",
+                    "lines": 520
+                },
+                "index.php": {
+                    "type": "file",
+                    "path": "tutors/index.php",
+                    "size": 28325,
+                    "extension": "php",
+                    "modified": "2026-01-04 04:14:13",
+                    "lines": 715
+                },
+                "profile_edit.php": {
+                    "type": "file",
+                    "path": "tutors/profile_edit.php",
+                    "size": 11151,
+                    "extension": "php",
+                    "modified": "2026-01-04 03:30:46",
+                    "lines": 264
+                },
+                "request.php": {
+                    "type": "file",
+                    "path": "tutors/request.php",
+                    "size": 37859,
+                    "extension": "php",
+                    "modified": "2026-01-04 03:30:54",
+                    "lines": 782
+                }
+            }
+        },
+        "upload.php": {
+            "type": "file",
+            "path": "upload.php",
+            "size": 52578,
+            "extension": "php",
+            "modified": "2026-01-03 12:46:35",
+            "lines": 1041
+        },
+        "uploads": {
+            "type": "directory",
+            "path": "uploads",
+            "children": []
+        },
+        "user_profile.php": {
+            "type": "file",
+            "path": "user_profile.php",
+            "size": 15002,
+            "extension": "php",
+            "modified": "2026-01-06 11:53:11",
+            "lines": 429
+        },
+        "vendor": {
+            "type": "directory",
+            "path": "vendor",
+            "children": []
+        },
+        "view.php": {
+            "type": "file",
+            "path": "view.php",
+            "size": 107214,
+            "extension": "php",
+            "modified": "2026-01-06 12:09:17",
+            "lines": 2417
+        }
+    }
+}

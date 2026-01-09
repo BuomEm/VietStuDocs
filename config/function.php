@@ -162,6 +162,115 @@ class DB
         $this->connect();
         return mysqli_error($this->ketnoi);
     }
+    
+    /**
+     * Prepared Statements Support (for secure API)
+     */
+    public function prepare($sql) {
+        $this->connect();
+        $stmt = mysqli_prepare($this->ketnoi, $sql);
+        if (!$stmt) {
+            error_log("Prepare failed: " . mysqli_error($this->ketnoi));
+            return false;
+        }
+        return new VSDStmt($stmt, $this->ketnoi);
+    }
+}
+
+/**
+ * Prepared Statement Wrapper
+ */
+class VSDStmt {
+    private $stmt;
+    private $conn;
+    private $closed = false;
+    
+    public function __construct($stmt, $conn) {
+        $this->stmt = $stmt;
+        $this->conn = $conn;
+    }
+    
+    public function execute($params = []) {
+        if (!empty($params)) {
+            $types = '';
+            $bind_params = [];
+            
+            foreach ($params as $param) {
+                if ($param === null) {
+                    // NULL values: use 's' type, MySQLi will handle NULL correctly
+                    $types .= 's';
+                    $bind_params[] = null;
+                } elseif (is_int($param)) {
+                    $types .= 'i';
+                    $bind_params[] = $param;
+                } elseif (is_float($param)) {
+                    $types .= 'd';
+                    $bind_params[] = $param;
+                } else {
+                    $types .= 's';
+                    $bind_params[] = $param;
+                }
+            }
+            
+            // Bind params with references (required for mysqli_stmt_bind_param)
+            $refs = [];
+            foreach ($bind_params as $key => $value) {
+                $refs[$key] = &$bind_params[$key];
+            }
+            mysqli_stmt_bind_param($this->stmt, $types, ...$refs);
+        }
+        
+        $result = mysqli_stmt_execute($this->stmt);
+        if (!$result) {
+            error_log("Execute failed: " . mysqli_stmt_error($this->stmt));
+            return false;
+        }
+        
+        return $this;
+    }
+    
+    public function fetch_assoc() {
+        $result = mysqli_stmt_get_result($this->stmt);
+        if (!$result) {
+            return false;
+        }
+        return mysqli_fetch_assoc($result);
+    }
+    
+    public function fetch_all() {
+        $result = mysqli_stmt_get_result($this->stmt);
+        if (!$result) {
+            return [];
+        }
+        $rows = [];
+        while ($row = mysqli_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+    
+    public function get_result() {
+        return mysqli_stmt_get_result($this->stmt);
+    }
+    
+    public function affected_rows() {
+        return mysqli_stmt_affected_rows($this->stmt);
+    }
+    
+    public function close() {
+        if (!$this->closed && $this->stmt) {
+            mysqli_stmt_close($this->stmt);
+            $this->closed = true;
+            $this->stmt = null;
+        }
+    }
+    
+    public function __destruct() {
+        if (!$this->closed && $this->stmt) {
+            mysqli_stmt_close($this->stmt);
+            $this->closed = true;
+        }
+    }
 }
 
 $VSD = new DB();

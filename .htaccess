@@ -5,47 +5,28 @@ php_value session.cookie_lifetime 604800
 
 RewriteEngine On
 
-# 1. Redirect .php to extensionless (Redirect public URL)
-# For specific whitelisted root files
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(dashboard|edit-document|error|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)\.php [NC]
-RewriteRule ^ /%1 [R=301,L]
+# 1. Map old asset paths to new public/assets structure (CRITICAL)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^css/(.*)$ public/assets/css/$1 [L,NC]
+RewriteRule ^js/(.*)$ public/assets/js/$1 [L,NC]
+RewriteRule ^assets/js/(.*)$ public/assets/js/$1 [L,NC]
+RewriteRule ^assets/sound/(.*)$ public/assets/sound/$1 [L,NC]
+RewriteRule ^uploads/(.*)$ storage/uploads/$1 [L,NC]
 
-# For tutors directory files
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/tutors/(apply|dashboard|profile_edit|request)\.php [NC]
-RewriteRule ^ /tutors/%1 [R=301,L]
-
-# 2. Rewrite extensionless to .php (Internal handling)
-# For whitelisted root files
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(dashboard|edit-document|error|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)$ $1.php [L]
-
-# 2.1 API Folder Handling (Case-Insensitive & Extensionless)
-# Handle /api/ or /API/ calls
+# 2. Handle /API/v1/* routes to API/v1/index.php
+RewriteCond %{REQUEST_URI} ^/(api|API)/v1/ [NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(api|API)/(.*)$ API/$2 [NC,PT]
+RewriteRule ^(api|API)/v1/(.*)$ API/v1/index.php [NC,L,QSA]
 
-# Handle extensionless files in API folder
-RewriteCond %{REQUEST_URI} ^/(api|API)/ [NC]
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(api|API)/(.*)$ API/$2.php [NC,L]
+# 3. New Web Front Controller (Step 3 Refactor)
+# If the request is for a physical file/directory, serve it
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
-# For Admin directory
-RewriteCond %{REQUEST_URI} ^/admin/
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^admin/(.*)$ admin/$1.php [L]
-
-# For Tutors directory
-RewriteCond %{REQUEST_URI} ^/tutors/
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^tutors/(.*)$ tutors/$1.php [L]
-
-# 3. Handle index.php redirect (Hide index.php)
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s(.*)/index\.php [NC]
-RewriteRule ^ %1/ [R=301,L]
+# Redirect all other requests to public/index.php
+RewriteRule ^(.*)$ public/index.php [L,QSA]
 
 # Error Pages
 ErrorDocument 400 /error.php?code=400
@@ -53,7 +34,6 @@ ErrorDocument 401 /error.php?code=401
 ErrorDocument 403 /error.php?code=403
 ErrorDocument 404 /error.php?code=404
 ErrorDocument 500 /error.php?code=500
-
 
 # Protect Sensitive Files
 <FilesMatch "^(\.env|\.git|composer\.lock|composer\.json)">
@@ -75,10 +55,8 @@ ErrorDocument 500 /error.php?code=500
   AddType font/woff2 .woff2
 </IfModule>
 
-
 # Enable Gzip compression
 <IfModule mod_deflate.c>
-  # Compress HTML, CSS, JavaScript, Text, XML and fonts
   AddOutputFilterByType DEFLATE application/javascript
   AddOutputFilterByType DEFLATE application/rss+xml
   AddOutputFilterByType DEFLATE application/vnd.ms-fontobject
@@ -102,18 +80,4 @@ ErrorDocument 500 /error.php?code=500
   AddOutputFilterByType DEFLATE text/javascript
   AddOutputFilterByType DEFLATE text/plain
   AddOutputFilterByType DEFLATE text/xml
-
-  # Remove browser bugs (only needed for really old browsers)
-  BrowserMatch ^Mozilla/4 gzip-only-text/html
-  BrowserMatch ^Mozilla/4\.0[678] no-gzip
-  BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
-  Header append Vary User-Agent
-</IfModule>
-
-# Block access to protected directories
-<IfModule mod_rewrite.c>
-    RewriteRule ^includes/ - [F,L]
-    RewriteRule ^config/ - [F,L]
-    RewriteRule ^database/ - [F,L]
-    RewriteRule ^AAA/ - [F,L]
 </IfModule>
