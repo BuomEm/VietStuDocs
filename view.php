@@ -336,31 +336,9 @@ function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100, $origin
     return true;
 }
 
-// Handle download
+// Handle download - redirect to secure download handler
 if(isset($_GET['download'])) {
-    if(!$is_logged_in) {
-        header("HTTP/1.0 403 Forbidden");
-        die("Please login to download");
-    }
-    
-    // Check if user has purchased the document
-    if(!$has_purchased) {
-        header("HTTP/1.0 403 Forbidden");
-        die("You must purchase this document to download");
-    }
-    
-    // Increment download count every time download button is clicked
-    incrementDocumentDownloads($doc_id);
-    
-    // Download with speed limit (from settings)
-    $download_speed_kbps = (int)getSetting('limit_download_speed_free', 100);
-    
-    // For premium users or document owners, allow faster download
-    if($is_premium || ($is_logged_in && $doc['user_id'] == $user_id)) {
-        $download_speed_kbps = (int)getSetting('limit_download_speed_premium', 500);
-    }
-    
-    downloadFileWithSpeedLimit($file_path, $download_speed_kbps, $doc['original_name']);
+    header("Location: handler/download.php?id=" . $doc_id);
     exit;
 }
 ?>
@@ -969,13 +947,7 @@ include 'includes/sidebar.php';
                 <h3 class="info-card-title-vsd">
                     <i class="fa-solid fa-file-signature"></i> MÔ TẢ TÀI LIỆU
                 </h3>
-                <div class="text-sm leading-relaxed text-base-content/70 whitespace-pre-wrap">
-                    <?php if(!empty($doc['description'])): ?>
-                        <?= htmlspecialchars($doc['description']) ?>
-                    <?php else: ?>
-                        <span class="italic opacity-50">Tài liệu này chưa có mô tả chi tiết.</span>
-                    <?php endif; ?>
-                </div>
+                <div class="text-sm leading-relaxed text-base-content/70 whitespace-pre-wrap"><?php if(!empty($doc['description'])): ?><?= htmlspecialchars(trim($doc['description'])) ?><?php else: ?><span class="italic opacity-50">Tài liệu này chưa có mô tả chi tiết.</span><?php endif; ?></div>
             </div>
 
             <div class="info-card-premium">
@@ -1051,7 +1023,7 @@ include 'includes/sidebar.php';
                                 <span id="currentPageNum">1</span> / <span id="totalPagesNum">--</span>
                             </div>
                           </div>';
-                    $pdf_path_for_preview = 'uploads/' . $doc['file_name'];
+                    $pdf_path_for_preview = 'handler/file.php?doc_id=' . $doc_id;
                     break;
                 case 'docx':
                 case 'doc':
@@ -1065,11 +1037,16 @@ include 'includes/sidebar.php';
                                     <span id="currentPageNum">1</span> / <span id="totalPagesNum">--</span>
                                 </div>
                               </div>';
-                        // Store converted PDF path for JavaScript
-                        $pdf_path_for_preview = $converted_path;
+                        // Store converted PDF path for JavaScript (nếu là đường dẫn tương đối, cần kiểm tra)
+                        // Nếu converted_pdf_path là đường dẫn trong uploads, sử dụng handler
+                        if (strpos($converted_path, 'uploads/') === 0 || strpos($converted_path, '\\uploads\\') !== false) {
+                            $pdf_path_for_preview = 'handler/file.php?doc_id=' . $doc_id;
+                        } else {
+                            $pdf_path_for_preview = $converted_path;
+                        }
                     } else {
                         // Fallback to DOCX viewer if PDF conversion failed or pending
-                        $file_url = 'uploads/' . $doc['file_name'];
+                        $file_url = 'handler/file.php?doc_id=' . $doc_id;
                         echo '<div class="docx-viewer" id="docxViewer"></div>';
                         $pdf_path_for_preview = null;
                     }
@@ -1079,7 +1056,7 @@ include 'includes/sidebar.php';
                 case 'png':
                 case 'gif':
                 case 'webp':
-                    $file_url = 'uploads/' . $doc['file_name'];
+                    $file_url = 'handler/file.php?doc_id=' . $doc_id;
                     echo '<div class="image-viewer">
                             <img src="' . $file_url . '" alt="' . htmlspecialchars($doc['original_name']) . '">
                           </div>';
@@ -1125,11 +1102,11 @@ include 'includes/sidebar.php';
                     $category_name = htmlspecialchars($doc_category['major_name']);
                 }
             ?>
-            <div class="card bg-base-100 shadow-md">
+                <div class="card bg-base-100 shadow-md mb-8">
                 <div class="card-body">
                     <h2 class="card-title text-xl mb-4">
                         <i class="fa-solid fa-folder"></i>
-                        More from: <?= $category_name ?>
+                        Cùng chủ đề: <?= $category_name ?>
                     </h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <?php
@@ -1173,7 +1150,7 @@ include 'includes/sidebar.php';
                 <div class="card-body">
                     <h2 class="card-title text-xl mb-4">
                         <i class="fa-solid fa-star"></i>
-                        Recommended for you
+                        Tài liệu khác
                     </h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <?php
@@ -1618,11 +1595,16 @@ include 'includes/sidebar.php';
         <?php 
         // Set pdfPath based on file type
         if ($file_ext === 'pdf') {
-            $pdf_path_js = "uploads/" . $doc['file_name'];
+            $pdf_path_js = "handler/file.php?doc_id=" . $doc_id;
         } elseif (($file_ext === 'docx' || $file_ext === 'doc')) {
             // For DOCX, prioritize converted PDF if available
             if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
-                $pdf_path_js = $doc['converted_pdf_path'];
+                // Nếu converted_pdf_path là đường dẫn trong uploads, sử dụng handler
+                if (strpos($doc['converted_pdf_path'], 'uploads/') === 0 || strpos($doc['converted_pdf_path'], '\\uploads\\') !== false) {
+                    $pdf_path_js = "handler/file.php?doc_id=" . $doc_id;
+                } else {
+                    $pdf_path_js = $doc['converted_pdf_path'];
+                }
             } else {
                 $pdf_path_js = null;
             }
@@ -1800,7 +1782,7 @@ include 'includes/sidebar.php';
                     throw new Error('DOCX viewer element not found');
                 }
                 
-                const fileUrl = "uploads/<?= $doc['file_name'] ?>";
+                const fileUrl = "handler/file.php?doc_id=<?= $doc_id ?>";
                 const response = await fetch(fileUrl);
                 
                 if (!response.ok) {
@@ -2154,7 +2136,7 @@ include 'includes/sidebar.php';
             showDownloadQueue();
             
             // Start download with progress tracking
-            const downloadUrl = '?id=<?= $doc_id ?>&download=1';
+            const downloadUrl = 'handler/download.php?id=<?= $doc_id ?>';
             const fileName = '<?= htmlspecialchars($doc['original_name'], ENT_QUOTES) ?>';
             
             downloadWithProgress(downloadUrl, fileName);
@@ -2302,7 +2284,7 @@ include 'includes/sidebar.php';
             if (section.classList.contains('show')) {
                 // Close animation
                 section.classList.remove('show');
-                arrow.classList.remove('rotated');
+                if(arrow) arrow.classList.remove('rotated');
                 setTimeout(() => {
                     section.style.display = 'none';
                 }, 400); // Match CSS transition duration
@@ -2313,7 +2295,7 @@ include 'includes/sidebar.php';
                 section.offsetHeight;
                 // Add show class to trigger animation
                 section.classList.add('show');
-                arrow.classList.add('rotated');
+                if(arrow) arrow.classList.add('rotated');
                 
                 // Smooth scroll to show the section
                 setTimeout(() => {
@@ -2422,4 +2404,3 @@ include 'includes/sidebar.php';
     </script>
 </body>
 </html>
-?>

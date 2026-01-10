@@ -950,4 +950,3 @@ function convertDocxToPng($docx_path, $output_path) {
         return false;
     }
 }
-?>

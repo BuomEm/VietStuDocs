@@ -125,4 +125,3 @@ function updateLastActivity() {
         db_query("UPDATE users SET last_activity = NOW() WHERE id = $uid");
     }
 }
-?>

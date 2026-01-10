@@ -1,0 +1,25 @@
+# Bảo mật thư mục uploads
+# Chặn truy cập trực tiếp vào các file document trong thư mục gốc uploads
+# Chỉ cho phép truy cập qua handler/file.php hoặc handler/download.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Cho phép truy cập trực tiếp vào các thư mục con (avatars, thumbnails, settings, tutors)
+    # Những file này có thể được phục vụ trực tiếp vì chúng là file công khai
+    RewriteCond %{REQUEST_URI} ^/uploads/(avatars|thumbnails|settings|tutors)/ [NC]
+    RewriteRule ^ - [L]
+    
+    # Chặn truy cập trực tiếp vào các file document trong thư mục gốc uploads
+    # Chỉ cho phép truy cập qua handler/file.php hoặc handler/download.php với kiểm tra quyền
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} !^/uploads/(avatars|thumbnails|settings|tutors)/ [NC]
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# Fallback: Chặn tất cả file document bằng FilesMatch (nếu mod_rewrite không hoạt động)
+# Apache 2.2
+<FilesMatch "\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip)$">
+    Order deny,allow
+    Deny from all
+</FilesMatch>

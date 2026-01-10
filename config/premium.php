@@ -107,4 +107,3 @@ function activateMonthlyPremium($user_id) {
         VALUES ($user_id, 'monthly', '$start_date', '$end_date', 1)
     ");
 }
-?>

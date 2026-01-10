@@ -65,21 +65,11 @@ if(isset($_GET['delete']) && $is_logged_in) {
     }
 }
 
-// Handle document download (yêu cầu đăng nhập)
+// Handle document download - redirect to secure download handler
 if(isset($_GET['download']) && $is_logged_in) {
     $doc_id = intval($_GET['download']);
-    $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
-    
-    if($doc) {
-        $file_path = "uploads/" . $doc['file_name'];
-        if(file_exists($file_path)) {
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="' . basename($doc['original_name']) . '"');
-            header('Content-Length: ' . filesize($file_path));
-            readfile($file_path);
-            exit;
-        }
-    }
+    header("Location: handler/download.php?id=" . $doc_id);
+    exit;
 }
 ?>
 <?php include 'includes/head.php'; ?>

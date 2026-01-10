@@ -82,12 +82,9 @@ if(!file_exists($file_path)) {
     exit;
 }
 
-// Handle download
+// Handle download - redirect to secure download handler
 if(isset($_GET['download'])) {
-    header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="' . basename($doc['original_name']) . '"');
-    header('Content-Length: ' . filesize($file_path));
-    readfile($file_path);
+    header("Location: ../handler/download.php?id=" . $doc_id);
     exit;
 }
 
@@ -140,7 +137,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
             
             <div class="flex items-center gap-3 shrink-0">
-                <a href="view-document.php?id=<?= $doc_id ?>&download=1" class="btn btn-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                <a href="../handler/download.php?id=<?= $doc_id ?>" class="btn btn-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
                     <i class="fa-solid fa-download text-lg"></i>
                     <span class="hidden sm:inline">Tải xuống</span>
                 </a>
@@ -365,20 +362,22 @@ include __DIR__ . '/../includes/admin-header.php';
                                     switch($file_ext) {
                                         case 'pdf':
                                             echo '<div class="pdf-viewer shadow-2xl mx-auto rounded-lg overflow-hidden bg-white/5" id="pdfViewer"></div>';
-                                            $pdf_path_for_preview = '/uploads/' . $doc['file_name'];
+                                            $pdf_path_for_preview = '../handler/file.php?doc_id=' . $doc_id;
                                             break;
                                         case 'docx':
                                         case 'doc':
                                             // Check if converted PDF exists
                                             $converted_path = !empty($doc['converted_pdf_path']) ? $doc['converted_pdf_path'] : null;
-                                            if ($converted_path && substr($converted_path, 0, 1) !== '/') {
-                                                $converted_path = '/' . $converted_path;
-                                            }
                                             $converted_file_path = $converted_path ? ltrim($converted_path, '/') : null;
                                             
                                             if ($converted_file_path && file_exists(__DIR__ . '/../' . $converted_file_path)) {
                                                 echo '<div class="pdf-viewer shadow-2xl mx-auto rounded-lg overflow-hidden bg-white/5" id="pdfViewer"></div>';
-                                                $pdf_path_for_preview = $converted_path;
+                                                // Nếu converted_pdf_path trong uploads, sử dụng handler
+                                                if (strpos($converted_file_path, 'uploads/') === 0) {
+                                                    $pdf_path_for_preview = '../handler/file.php?doc_id=' . $doc_id;
+                                                } else {
+                                                    $pdf_path_for_preview = '../' . $converted_file_path;
+                                                }
                                             } else {
                                                 echo '<div class="docx-viewer bg-white shadow-2xl mx-auto rounded-lg p-8 min-h-[800px]" id="docxViewer"></div>';
                                                 $pdf_path_for_preview = null;
@@ -389,7 +388,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                         case 'png':
                                         case 'gif':
                                         case 'webp':
-                                            $file_url = '/uploads/' . $doc['file_name'];
+                                            $file_url = '../handler/file.php?doc_id=' . $doc_id;
                                             echo '<div class="flex items-center justify-center h-full"><img src="' . $file_url . '" alt="' . htmlspecialchars($doc['original_name']) . '" class="max-w-full max-h-[800px] shadow-2xl rounded-lg object-contain bg-base-200/50"></div>';
                                             break;
                                         case 'txt':
@@ -405,7 +404,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                                     </div>
                                                     <h3 class="text-xl font-bold mb-2">Không hỗ trợ xem trước</h3>
                                                     <p>Định dạng .' . htmlspecialchars($file_ext) . ' không hỗ trợ xem trực tiếp.</p>
-                                                    <a href="view-document.php?id=' . $doc_id . '&download=1" class="btn btn-primary mt-6 shadow-lg shadow-primary/20">
+                                                    <a href="../handler/download.php?id=' . $doc_id . '" class="btn btn-primary mt-6 shadow-lg shadow-primary/20">
                                                         <i class="fa-solid fa-download mr-2"></i> Tải về để xem
                                                     </a>
                                                   </div>';
@@ -570,7 +569,7 @@ include __DIR__ . '/../includes/admin-header.php';
             
             let docxAPI = window.docx || window.docxPreview;
             const docxViewer = document.getElementById("docxViewer");
-            const fileUrl = "/uploads/<?= $doc['file_name'] ?>";
+            const fileUrl = "../handler/file.php?doc_id=<?= $doc_id ?>";
             
             if (!docxAPI || !docxViewer) throw new Error('Initialization failed');
 
