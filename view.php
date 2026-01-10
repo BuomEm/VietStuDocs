@@ -48,7 +48,11 @@ if($error_type) {
             <div class="card bg-base-100 shadow-xl max-w-2xl w-full">
                 <div class="card-body text-center">
                     <?php if($error_type === 'not_found'): ?>
-                        <i class="fa-solid fa-magnifying-glass text-6xl text-base-content/50 mb-4"></i>
+                        <?php if(!empty(getSetting('site_logo'))): ?>
+                            <img src="<?= htmlspecialchars(getSetting('site_logo')) ?>" alt="Not Found" class="h-24 mx-auto mb-4 opacity-50 grayscale">
+                        <?php else: ?>
+                            <i class="fa-solid fa-magnifying-glass text-6xl text-base-content/50 mb-4"></i>
+                        <?php endif; ?>
                         <h1 class="text-3xl font-bold mb-4">Tài Liệu Không Được Tìm Thấy</h1>
                         <p class="text-base-content/70 mb-6">
                             Tài liệu bạn đang tìm kiếm không tồn tại hoặc có thể đã bị xóa. 
@@ -138,7 +142,11 @@ if(!file_exists($file_path)) {
             <div class="card bg-base-100 shadow-xl max-w-2xl w-full">
                 <div class="card-body text-center">
                     <div class="flex justify-center mb-4">
-                        <i class="fa-solid fa-folder-open text-6xl text-base-content/50"></i>
+                        <?php if(!empty(getSetting('site_logo'))): ?>
+                            <img src="<?= htmlspecialchars(getSetting('site_logo')) ?>" alt="File Not Found" class="h-24 mx-auto opacity-50 grayscale">
+                        <?php else: ?>
+                            <i class="fa-solid fa-folder-open text-6xl text-base-content/50"></i>
+                        <?php endif; ?>
                     </div>
                     <h1 class="text-3xl font-bold mb-4">File Not Found</h1>
                     <p class="text-base-content/70 mb-6">

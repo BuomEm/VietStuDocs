@@ -58,16 +58,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Admin Reply
     elseif ($act === 'admin_reply') {
         $content = trim($_POST['content']);
-        if($content) {
+        $attachment = null;
+        
+        // Handle file upload
+        if (!empty($_FILES['attachment']['name'])) {
+            $upload_dir = __DIR__ . '/../uploads/tutors/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+            
+            $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar'];
+            $file_ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+            $max_size = 10 * 1024 * 1024; // 10MB
+            
+            if (!in_array($file_ext, $allowed_types)) {
+                $msg = ['error', 'Định dạng file không được hỗ trợ!'];
+            } elseif ($_FILES['attachment']['size'] > $max_size) {
+                $msg = ['error', 'File quá lớn! Tối đa 10MB.'];
+            } elseif ($_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                $filename = 'admin_' . time() . '_' . uniqid() . '.' . $file_ext;
+                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $upload_dir . $filename)) {
+                    $attachment = $filename;
+                }
+            }
+        }
+        
+        if($content || $attachment) {
             $req = getRequestDetails($rid);
-            $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, sender_id, content) VALUES (?, ?, ?, ?)")
-                ->execute([$rid, $req['tutor_id'], $user_id, "[ADMIN]: $content"]);
+            $pdo->prepare("INSERT INTO tutor_answers (request_id, tutor_id, sender_id, content, attachment) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$rid, $req['tutor_id'], $user_id, "[ADMIN]: $content", $attachment]);
             if($req['status'] === 'pending') $pdo->prepare("UPDATE tutor_requests SET status='answered' WHERE id=?")->execute([$rid]);
              
              // Notify Student
              $VSD->insert('notifications', ['user_id'=>$req['student_id'], 'type'=>'admin_reply', 'title'=>'Phản hồi hỗ trợ', 'message'=>"Admin đã trả lời yêu cầu #$rid", 'ref_id'=>$rid]);
              sendPushToUser($req['student_id'], ['title'=>'Hỗ trợ mới 💬', 'body'=>"Admin vừa phản hồi yêu cầu của bạn.", 'url'=>'/tutor/requests.php']);
-             $msg = ['success', 'Đã gửi phản hồi.'];
+             $msg = ['success', 'Đã gửi phản hồi.' . ($attachment ? ' (có đính kèm file)' : '')];
         }
     }
     
@@ -438,16 +461,50 @@ require_once __DIR__ . '/../includes/admin-header.php';
 
                 <!-- Admin Reply Area -->
                 <div class="p-4 bg-base-100 border-t border-base-200 shrink-0">
-                    <form method="POST" class="relative">
+                    <form method="POST" enctype="multipart/form-data" class="relative">
                         <input type="hidden" name="action" value="admin_reply">
                         <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                        
+                        <!-- File Preview Area -->
+                        <div id="file-preview-<?= $req['id'] ?>" class="hidden mb-3 p-3 bg-base-200/50 rounded-xl border border-base-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <i id="file-icon-<?= $req['id'] ?>" class="fa-solid fa-file text-primary text-xl"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div id="file-name-<?= $req['id'] ?>" class="font-medium text-sm truncate"></div>
+                                    <div id="file-size-<?= $req['id'] ?>" class="text-xs text-base-content/60"></div>
+                                </div>
+                                <button type="button" onclick="clearFileInput(<?= $req['id'] ?>)" class="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                            <img id="img-preview-<?= $req['id'] ?>" class="hidden mt-3 max-h-32 rounded-lg border border-base-300 object-cover">
+                        </div>
+                        
                         <div class="flex gap-2 items-end">
+                            <!-- File Upload Button -->
+                            <div class="relative">
+                                <input type="file" name="attachment" id="file-input-<?= $req['id'] ?>" class="hidden" 
+                                       accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar"
+                                       onchange="handleFileSelect(this, <?= $req['id'] ?>)">
+                                <button type="button" onclick="document.getElementById('file-input-<?= $req['id'] ?>').click()" 
+                                        class="btn btn-square btn-ghost border border-base-300 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all"
+                                        title="Đính kèm file">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </button>
+                            </div>
+                            
                             <div class="flex-1">
                                 <textarea name="content" class="textarea textarea-bordered w-full h-12 min-h-[3rem] max-h-32 leading-tight focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all resize-none shadow-inner bg-base-200/30" placeholder="Viết phản hồi với tư cách Admin..."></textarea>
                             </div>
                             <button class="btn btn-primary btn-square shadow-lg hover:scale-105 transition-transform">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
+                        </div>
+                        <div class="text-xs text-base-content/40 mt-2 flex items-center gap-2">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Hỗ trợ: ảnh, PDF, Word, Excel, ZIP (tối đa 10MB)
                         </div>
                     </form>
                 </div>
@@ -457,5 +514,62 @@ require_once __DIR__ . '/../includes/admin-header.php';
     </div>
 </dialog>
 <?php endforeach; ?>
+
+<script>
+function handleFileSelect(input, requestId) {
+    const file = input.files[0];
+    const preview = document.getElementById('file-preview-' + requestId);
+    const fileName = document.getElementById('file-name-' + requestId);
+    const fileSize = document.getElementById('file-size-' + requestId);
+    const fileIcon = document.getElementById('file-icon-' + requestId);
+    const imgPreview = document.getElementById('img-preview-' + requestId);
+    
+    if (file) {
+        preview.classList.remove('hidden');
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        // Set icon based on file type
+        const ext = file.name.split('.').pop().toLowerCase();
+        const iconMap = {
+            'pdf': 'fa-file-pdf text-error',
+            'doc': 'fa-file-word text-info',
+            'docx': 'fa-file-word text-info',
+            'xls': 'fa-file-excel text-success',
+            'xlsx': 'fa-file-excel text-success',
+            'zip': 'fa-file-zipper text-warning',
+            'rar': 'fa-file-zipper text-warning'
+        };
+        
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            fileIcon.className = 'fa-solid fa-image text-primary text-xl';
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgPreview.src = e.target.result;
+                imgPreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            imgPreview.classList.add('hidden');
+            fileIcon.className = 'fa-solid ' + (iconMap[ext] || 'fa-file text-primary') + ' text-xl';
+        }
+    }
+}
+
+function clearFileInput(requestId) {
+    document.getElementById('file-input-' + requestId).value = '';
+    document.getElementById('file-preview-' + requestId).classList.add('hidden');
+    document.getElementById('img-preview-' + requestId).classList.add('hidden');
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+</script>
 
 <?php require_once __DIR__ . '/../includes/admin-footer.php'; ?>

@@ -7,7 +7,7 @@ RewriteEngine On
 
 # 1. Redirect .php to extensionless (Redirect public URL)
 # For specific whitelisted root files
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(dashboard|edit-document|error|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)\.php [NC]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(contact|dashboard|edit-document|error|faq|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)\.php [NC]
 RewriteRule ^ /%1 [R=301,L]
 
 # For tutors directory files
@@ -18,7 +18,7 @@ RewriteRule ^ /tutors/%1 [R=301,L]
 # For whitelisted root files
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(dashboard|edit-document|error|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)$ $1.php [L]
+RewriteRule ^(contact|dashboard|edit-document|error|faq|history|index|login|logout|premium|privacy|profile|saved|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)$ $1.php [L]
 
 # 2.1 API Folder Handling (Case-Insensitive & Extensionless)
 # Handle /api/ or /API/ calls

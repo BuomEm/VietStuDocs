@@ -22,6 +22,29 @@
     ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="<?= htmlspecialchars($display_title) ?>">
+    <meta name="description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
+    <meta name="keywords" content="tài liệu học tập, đề thi, giáo án, luận văn, sách giáo khoa, bài giảng, đại học, thpt, thcs, tiểu học, vietstudocs, docshare">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Vietnamese">
+    <meta name="author" content="<?= htmlspecialchars($site_name) ?>">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>">
+    <meta property="og:title" content="<?= htmlspecialchars($display_title) ?>">
+    <meta property="og:description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
+    <meta property="og:image" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>">
+    <meta property="twitter:title" content="<?= htmlspecialchars($display_title) ?>">
+    <meta property="twitter:description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
+    <meta property="twitter:image" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+
     <title><?= htmlspecialchars($display_title) ?></title>
     <!-- DNS Preconnect -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com">

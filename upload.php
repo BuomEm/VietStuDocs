@@ -68,8 +68,8 @@ $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$u
                         <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
                         
                         <div class="relative z-10 flex flex-col items-center text-center">
-                            <div class="w-24 h-24 rounded-3xl bg-primary/5 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-content transition-all duration-500 shadow-sm">
-                                <i class="fa-solid fa-folder-open text-4xl"></i>
+                            <div class="w-24 h-24 rounded-3xl bg-primary/5 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-primary transition-all duration-500 shadow-sm">
+                                <i class="fa-solid fa-folder-open text-4xl group-hover:text-white transition-colors duration-500"></i>
                             </div>
                             <h2 class="text-3xl font-black mb-3 text-base-content group-hover:text-primary transition-colors">Kéo thả file vào đây</h2>
                             <p class="text-base-content/50 max-w-sm mb-8 text-lg">Hoặc nhấp để chọn tệp từ thiết bị của bạn. Hỗ trợ PDF, Word, Excel, PowerPoint và nhiều định dạng khác.</p>

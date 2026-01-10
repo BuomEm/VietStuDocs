@@ -116,7 +116,7 @@ $stats = $VSD->get_row($stats_query);
 
 <div class="drawer-content flex flex-col">
     <?php include 'includes/navbar.php'; ?>
-
+    
     <main class="flex-1 p-4 lg:p-8 bg-base-200/50">
         <!-- Header Section -->
         <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -126,7 +126,7 @@ $stats = $VSD->get_row($stats_query);
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     Lịch Sử Hoạt Động
-                </h1>
+            </h1>
                 <p class="text-base-content/60 mt-2 font-medium">Theo dõi mọi vết chân của bạn trên DocShare</p>
             </div>
             
@@ -314,7 +314,7 @@ $stats = $VSD->get_row($stats_query);
                                                     <span class="text-sm font-black text-base-content/60"><?= htmlspecialchars($purchase['seller_name'] ?? 'VietStuDocs') ?></span>
                                                 </div>
                                             </div>
-                                        </div>
+        </div>
 
                                         <!-- Right Side Actions -->
                                         <div class="flex flex-col items-end gap-3 shrink-0">
@@ -511,10 +511,10 @@ $stats = $VSD->get_row($stats_query);
                         </a>
                     </div>
                 </div>
-            <?php endif; ?>
+                    <?php endif; ?>
         </div>
     </main>
-    
+
     <?php include 'includes/footer.php'; ?>
 </div>
 </div>

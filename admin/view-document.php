@@ -114,250 +114,305 @@ $admin_active_page = 'pending';
 include __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<!-- Page Header -->
-<div class="p-6 bg-base-100 border-b border-base-300">
-    <div class="container mx-auto max-w-7xl">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <div class="breadcrumbs text-sm mb-2">
+<!-- Page Header with Backdrop Blur -->
+<div class="bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-300">
+    <div class="container mx-auto max-w-[1600px] px-6 py-4">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex-1 min-w-0">
+                <div class="breadcrumbs text-sm mb-1 opacity-60">
                     <ul>
-                        <li><a href="pending-docs.php">Tài liệu chờ duyệt</a></li>
-                        <li><?= htmlspecialchars($doc['original_name']) ?></li>
+                        <li><a href="pending-docs.php" class="hover:text-primary transition-colors">Tài liệu chờ duyệt</a></li>
+                        <li class="overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]"><?= htmlspecialchars($doc['original_name']) ?></li>
                     </ul>
                 </div>
-                <h2 class="text-2xl font-bold"><?= htmlspecialchars($doc['original_name']) ?></h2>
-                <p class="text-base-content/70 mt-1">
-                    Tác giả: <?= htmlspecialchars($doc['username']) ?> | 
-                    Ngày tạo: <?= date('d/m/Y H:i', strtotime($doc['created_at'])) ?>
-                </p>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent truncate">
+                        <?= htmlspecialchars($doc['original_name']) ?>
+                    </h1>
+                    <?php if($doc['status'] === 'pending'): ?>
+                        <span class="badge badge-warning badge-lg shadow-sm border-0 font-bold whitespace-nowrap shrink-0">Chờ duyệt</span>
+                    <?php elseif($doc['status'] === 'approved'): ?>
+                        <span class="badge badge-success badge-lg shadow-sm border-0 font-bold whitespace-nowrap shrink-0">Đã duyệt</span>
+                    <?php elseif($doc['status'] === 'rejected'): ?>
+                        <span class="badge badge-error badge-lg shadow-sm border-0 font-bold whitespace-nowrap shrink-0">Đã từ chối</span>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <a href="view-document.php?id=<?= $doc_id ?>&download=1" class="btn btn-primary">
-                    <i class="fa-solid fa-download mr-2"></i>
-                    Tải xuống
+            
+            <div class="flex items-center gap-3 shrink-0">
+                <a href="view-document.php?id=<?= $doc_id ?>&download=1" class="btn btn-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-download text-lg"></i>
+                    <span class="hidden sm:inline">Tải xuống</span>
                 </a>
-                <a href="pending-docs.php" class="btn btn-ghost">
-                    <i class="fa-solid fa-arrow-left mr-2"></i>
-                    Quay lại
+                <a href="pending-docs.php" class="btn btn-ghost hover:bg-base-content/10">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-lg"></i>
+                    <span class="hidden sm:inline">Quay lại</span>
                 </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Page Body -->
-<div class="p-6">
-    <div class="container mx-auto max-w-7xl">
-        <!-- Status Badges -->
-        <div class="flex gap-2 mb-6">
-            <?php if($doc['status'] === 'pending'): ?>
-                <span class="badge badge-warning badge-lg">Chờ duyệt</span>
-            <?php elseif($doc['status'] === 'approved'): ?>
-                <span class="badge badge-success badge-lg">Đã duyệt</span>
-            <?php elseif($doc['status'] === 'rejected'): ?>
-                <span class="badge badge-error badge-lg">Đã từ chối</span>
-            <?php endif; ?>
+<!-- Main Content -->
+<div class="p-6 animate-fade-in">
+    <div class="container mx-auto max-w-[1600px]">
+        
+        <!-- Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="stat bg-base-100 shadow-lg rounded-2xl border border-base-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="stat-figure text-primary">
+                    <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <i class="fa-solid fa-file-lines text-2xl"></i>
+                    </div>
+                </div>
+                <div class="stat-title opacity-70">Định dạng</div>
+                <div class="stat-value text-primary text-2xl uppercase">.<?= $file_ext ?></div>
+                <div class="stat-desc">Loại tệp tin</div>
+            </div>
             
-            <?php if(!$doc['is_public']): ?>
-                <span class="badge badge-outline badge-lg">Riêng tư</span>
-            <?php else: ?>
-                <span class="badge badge-info badge-lg">Công khai</span>
-            <?php endif; ?>
+            <div class="stat bg-base-100 shadow-lg rounded-2xl border border-base-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="stat-figure text-secondary">
+                    <div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+                        <i class="fa-solid fa-hard-drive text-2xl"></i>
+                    </div>
+                </div>
+                <div class="stat-title opacity-70">Kích thước</div>
+                <div class="stat-value text-secondary text-2xl"><?= formatFileSize(filesize($file_path)) ?></div>
+                <div class="stat-desc">Dung lượng lưu trữ</div>
+            </div>
+
+            <div class="stat bg-base-100 shadow-lg rounded-2xl border border-base-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="stat-figure text-accent">
+                    <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                        <i class="fa-solid fa-eye text-2xl"></i>
+                    </div>
+                </div>
+                <div class="stat-title opacity-70">Lượt xem</div>
+                <div class="stat-value text-accent text-2xl"><?= number_format($doc['views'] ?? 0) ?></div>
+                <div class="stat-desc text-success font-medium">
+                    <i class="fa-solid fa-download mr-1"></i> <?= number_format($doc['downloads'] ?? 0) ?> lượt tải
+                </div>
+            </div>
+
+            <div class="stat bg-base-100 shadow-lg rounded-2xl border border-base-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="stat-figure text-info">
+                    <div class="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
+                        <?php if($doc['is_public']): ?>
+                            <i class="fa-solid fa-lock-open text-2xl"></i>
+                        <?php else: ?>
+                            <i class="fa-solid fa-lock text-2xl"></i>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="stat-title opacity-70">Chế độ</div>
+                <div class="stat-value text-info text-xl translate-y-1">
+                    <?= $doc['is_public'] ? 'Công khai' : 'Riêng tư' ?>
+                </div>
+                <div class="stat-desc">Trạng thái hiển thị</div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Document Info -->
-            <div class="lg:col-span-1 space-y-6">
-                <div class="card bg-base-100 shadow">
-                    <div class="card-header bg-base-200">
-                        <h3 class="card-title">
-                            <i class="fa-solid fa-circle-info mr-2"></i>
-                            Thông tin tài liệu
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <dl class="space-y-3">
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Tên file</dt>
-                                <dd class="text-base-content"><?= htmlspecialchars($doc['file_name']) ?></dd>
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <!-- Left Sidebar (Info) -->
+            <div class="xl:col-span-4 space-y-6">
+                <!-- Info Card -->
+                <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden group">
+                    <div class="card-body p-0">
+                        <div class="p-6 bg-gradient-to-br from-base-200 to-base-300 border-b border-base-200">
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info text-primary"></i>
+                                Thông tin chi tiết
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-6">
+                            <!-- Uploader -->
+                            <div class="flex items-start gap-4 p-4 rounded-xl bg-base-200/50 hover:bg-base-200 transition-colors">
+                                <div class="avatar placeholder">
+                                    <div class="bg-neutral text-neutral-content rounded-full w-12 shadow-md ring ring-primary ring-offset-base-100 ring-offset-2">
+                                        <span class="text-xl font-bold"><?= strtoupper(substr($doc['username'], 0, 1)) ?></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-sm opacity-60 font-medium">Người đăng</div>
+                                    <div class="font-bold text-lg"><?= htmlspecialchars($doc['username']) ?></div>
+                                    <div class="text-xs opacity-50 mt-1 flex items-center">
+                                        <i class="fa-regular fa-clock mr-1"></i>
+                                        <?= date('H:i - d/m/Y', strtotime($doc['created_at'])) ?>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Loại file</dt>
-                                <dd><span class="badge badge-primary">.<?= strtoupper($file_ext) ?></span></dd>
-                            </div>
-                            <?php if($doc['total_pages'] > 0): ?>
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Số trang</dt>
-                                <dd class="text-base-content"><?= number_format($doc['total_pages']) ?></dd>
+
+                            <!-- Description -->
+                            <?php if($doc['description']): ?>
+                            <div class="relative">
+                                <div class="text-sm opacity-70 font-bold mb-2 uppercase tracking-wider text-xs">Mô tả tài liệu</div>
+                                <div class="p-4 rounded-xl bg-base-200/50 text-sm leading-relaxed max-h-40 overflow-y-auto custom-scrollbar border border-base-200/50">
+                                    <?= nl2br(htmlspecialchars($doc['description'])) ?>
+                                </div>
                             </div>
                             <?php endif; ?>
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Kích thước</dt>
-                                <dd class="text-base-content"><?= formatFileSize(filesize($file_path)) ?></dd>
+
+                            <!-- Technical Specs -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="p-3 rounded-xl bg-base-200/30 border border-base-200 hover:border-primary/30 transition-colors">
+                                    <div class="text-xs opacity-60 mb-1">Tên tệp gốc</div>
+                                    <div class="font-medium text-sm truncate" title="<?= htmlspecialchars($doc['file_name']) ?>">
+                                        <?= htmlspecialchars($doc['file_name']) ?>
+                                    </div>
+                                </div>
+                                <?php if($doc['total_pages'] > 0): ?>
+                                <div class="p-3 rounded-xl bg-base-200/30 border border-base-200 hover:border-primary/30 transition-colors">
+                                    <div class="text-xs opacity-60 mb-1">Số trang</div>
+                                    <div class="font-medium text-sm">
+                                        <?= number_format($doc['total_pages']) ?> trang
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Lượt xem</dt>
-                                <dd class="text-base-content"><?= number_format($doc['views'] ?? 0) ?></dd>
-                            </div>
-                            <div>
-                                <dt class="text-base-content/70 text-sm font-semibold mb-1">Lượt tải</dt>
-                                <dd class="text-base-content"><?= number_format($doc['downloads'] ?? 0) ?></dd>
-                            </div>
-                        </dl>
-                        
-                        <?php if($doc['description']): ?>
-                        <div class="mt-4 pt-4 border-t border-base-300">
-                            <h4 class="text-sm font-semibold mb-2">Mô tả</h4>
-                            <p class="text-base-content/70 text-sm"><?= nl2br(htmlspecialchars($doc['description'])) ?></p>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </div>
 
                 <!-- Categories Card -->
-                <?php if($doc_category): ?>
-                <div class="card bg-base-100 shadow">
-                    <div class="card-header bg-base-200">
-                        <h3 class="card-title">
-                            <i class="fa-solid fa-tags mr-2"></i>
-                            Phân Loại
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-3">
-                            <!-- Cấp học -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-school text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Cấp học</span>
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body p-0">
+                        <div class="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/30">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-tags text-accent"></i>
+                                Phân loại
+                            </h3>
+                        </div>
+                        <div class="p-5">
+                            <?php if($doc_category): ?>
+                            <div class="flex flex-wrap gap-2">
+                                <!-- Educational Level -->
+                                <div class="badge badge-lg badge-primary gap-2 p-3 h-auto">
+                                    <i class="fa-solid fa-school text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['education_level_name']) ?>
                                 </div>
-                                <span class="badge badge-primary"><?= htmlspecialchars($doc_category['education_level_name']) ?></span>
-                            </div>
-                            
-                            <?php if(isset($doc_category['grade_name'])): ?>
-                            <!-- Lớp -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-users text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Lớp</span>
+
+                                <!-- Grade -->
+                                <?php if(isset($doc_category['grade_name'])): ?>
+                                <div class="badge badge-lg badge-ghost border-base-200 bg-base-200/60 gap-2 p-3 h-auto">
+                                    <i class="fa-solid fa-layer-group text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['grade_name']) ?>
                                 </div>
-                                <span class="badge badge-primary"><?= htmlspecialchars($doc_category['grade_name']) ?></span>
-                            </div>
-                            
-                            <!-- Môn học -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-book text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Môn học</span>
+                                <?php endif; ?>
+
+                                <!-- Subject -->
+                                <?php if(isset($doc_category['subject_name'])): ?>
+                                <div class="badge badge-lg badge-info gap-2 p-3 h-auto font-bold text-info-content">
+                                    <i class="fa-solid fa-book text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['subject_name']) ?>
                                 </div>
-                                <span class="badge badge-info"><?= htmlspecialchars($doc_category['subject_name']) ?></span>
+                                <?php endif; ?>
+
+                                <!-- Major Group -->
+                                <?php if(isset($doc_category['major_group_name'])): ?>
+                                <div class="badge badge-lg badge-secondary gap-2 p-3 h-auto text-secondary-content">
+                                    <i class="fa-solid fa-building text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['major_group_name']) ?>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- Major -->
+                                <?php if(isset($doc_category['major_name'])): ?>
+                                <div class="badge badge-lg badge-ghost border-base-200 bg-base-200/60 gap-2 p-3 h-auto">
+                                    <i class="fa-solid fa-graduation-cap text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['major_name']) ?>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <!-- Doc Type -->
+                                <div class="badge badge-lg badge-outline gap-2 p-3 h-auto border-base-content/20">
+                                    <i class="fa-solid fa-file-signature text-xs opacity-70"></i>
+                                    <?= htmlspecialchars($doc_category['doc_type_name']) ?>
+                                </div>
                             </div>
+                            <?php else: ?>
+                                <div class="alert bg-base-200/50 border-none text-sm">
+                                    <i class="fa-solid fa-circle-exclamation opacity-50"></i>
+                                    <span>Chưa có thông tin phân loại cho tài liệu này.</span>
+                                </div>
                             <?php endif; ?>
-                            
-                            <?php if(isset($doc_category['major_group_name'])): ?>
-                            <!-- Nhóm ngành -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-building text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Nhóm ngành</span>
-                                </div>
-                                <span class="badge badge-primary"><?= htmlspecialchars($doc_category['major_group_name']) ?></span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if(isset($doc_category['major_name'])): ?>
-                            <!-- Ngành học -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-graduation-cap text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Ngành học</span>
-                                </div>
-                                <span class="badge badge-info"><?= htmlspecialchars($doc_category['major_name']) ?></span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <!-- Loại tài liệu -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fa-solid fa-file-lines text-sm text-base-content/70"></i>
-                                    <span class="text-base-content/70 text-sm font-semibold">Loại tài liệu</span>
-                                </div>
-                                <span class="badge badge-success"><?= htmlspecialchars($doc_category['doc_type_name']) ?></span>
-                            </div>
                         </div>
                     </div>
                 </div>
-                <?php else: ?>
-                <div class="card bg-base-100 shadow">
-                    <div class="card-header bg-base-200">
-                        <h3 class="card-title">
-                            <i class="fa-solid fa-tags mr-2"></i>
-                            Phân Loại
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-base-content/70 text-sm">Chưa có phân loại cho tài liệu này.</p>
-                    </div>
-                </div>
-                <?php endif; ?>
             </div>
             
-            <!-- Document Viewer -->
-            <div class="lg:col-span-2">
-                <div class="card bg-base-100 shadow">
-                    <div class="card-header bg-base-200">
-                        <h3 class="card-title">Xem trước</h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="max-h-[800px] overflow-y-auto overflow-x-hidden bg-base-200">
-                            <?php
-                            $pdf_path_for_preview = null;
-                            
-                            switch($file_ext) {
-                                case 'pdf':
-                                    echo '<div class="pdf-viewer p-4" id="pdfViewer"></div>';
-                                    $pdf_path_for_preview = '/uploads/' . $doc['file_name'];
-                                    break;
-                                case 'docx':
-                                case 'doc':
-                                    // Check if converted PDF exists
-                                    $converted_path = !empty($doc['converted_pdf_path']) ? $doc['converted_pdf_path'] : null;
-                                    // Ensure converted_pdf_path is absolute (starts with /)
-                                    if ($converted_path && substr($converted_path, 0, 1) !== '/') {
-                                        $converted_path = '/' . $converted_path;
+            <!-- Right Column (Preview) -->
+            <div class="xl:col-span-8">
+                <div class="card bg-base-100 shadow-xl border border-base-200 h-full overflow-hidden">
+                    <div class="card-body p-0 flex flex-col h-full">
+                        <div class="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/30">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-eye text-success"></i>
+                                Xem trước tài liệu
+                            </h3>
+                            <div class="flex gap-2">
+                                <button onclick="document.getElementById('viewerContainer').classList.toggle('fullscreen-mode')" class="btn btn-sm btn-ghost btn-square" title="Toàn màn hình">
+                                    <i class="fa-solid fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="relative bg-base-300/30 flex-1 min-h-[600px] flex justify-center backdrop-blur-sm">
+                            <div class="w-full h-full overflow-hidden relative" id="viewerContainer">
+                                <div class="h-full overflow-y-auto overflow-x-hidden p-6 custom-scrollbar flex flex-col items-center">
+                                    <?php
+                                    $pdf_path_for_preview = null;
+                                    
+                                    switch($file_ext) {
+                                        case 'pdf':
+                                            echo '<div class="pdf-viewer shadow-2xl mx-auto rounded-lg overflow-hidden bg-white/5" id="pdfViewer"></div>';
+                                            $pdf_path_for_preview = '/uploads/' . $doc['file_name'];
+                                            break;
+                                        case 'docx':
+                                        case 'doc':
+                                            // Check if converted PDF exists
+                                            $converted_path = !empty($doc['converted_pdf_path']) ? $doc['converted_pdf_path'] : null;
+                                            if ($converted_path && substr($converted_path, 0, 1) !== '/') {
+                                                $converted_path = '/' . $converted_path;
+                                            }
+                                            $converted_file_path = $converted_path ? ltrim($converted_path, '/') : null;
+                                            
+                                            if ($converted_file_path && file_exists(__DIR__ . '/../' . $converted_file_path)) {
+                                                echo '<div class="pdf-viewer shadow-2xl mx-auto rounded-lg overflow-hidden bg-white/5" id="pdfViewer"></div>';
+                                                $pdf_path_for_preview = $converted_path;
+                                            } else {
+                                                echo '<div class="docx-viewer bg-white shadow-2xl mx-auto rounded-lg p-8 min-h-[800px]" id="docxViewer"></div>';
+                                                $pdf_path_for_preview = null;
+                                            }
+                                            break;
+                                        case 'jpg':
+                                        case 'jpeg':
+                                        case 'png':
+                                        case 'gif':
+                                        case 'webp':
+                                            $file_url = '/uploads/' . $doc['file_name'];
+                                            echo '<div class="flex items-center justify-center h-full"><img src="' . $file_url . '" alt="' . htmlspecialchars($doc['original_name']) . '" class="max-w-full max-h-[800px] shadow-2xl rounded-lg object-contain bg-base-200/50"></div>';
+                                            break;
+                                        case 'txt':
+                                        case 'log':
+                                        case 'md':
+                                            $content = file_get_contents($file_path);
+                                            echo '<div class="w-full max-w-4xl mx-auto"><pre class="whitespace-pre-wrap break-words font-mono text-sm bg-base-100 p-8 rounded-lg shadow-xl border border-base-300 text-base-content leading-relaxed">' . htmlspecialchars($content) . '</pre></div>';
+                                            break;
+                                        default:
+                                            echo '<div class="flex flex-col items-center justify-center h-full p-12 text-base-content/50">
+                                                    <div class="w-24 h-24 bg-base-200 rounded-full flex items-center justify-center mb-6 ring-4 ring-base-200/50">
+                                                        <i class="fa-solid fa-file-circle-question text-5xl opacity-50"></i>
+                                                    </div>
+                                                    <h3 class="text-xl font-bold mb-2">Không hỗ trợ xem trước</h3>
+                                                    <p>Định dạng .' . htmlspecialchars($file_ext) . ' không hỗ trợ xem trực tiếp.</p>
+                                                    <a href="view-document.php?id=' . $doc_id . '&download=1" class="btn btn-primary mt-6 shadow-lg shadow-primary/20">
+                                                        <i class="fa-solid fa-download mr-2"></i> Tải về để xem
+                                                    </a>
+                                                  </div>';
                                     }
-                                    // Check if file exists (using relative path for file_exists check)
-                                    $converted_file_path = $converted_path ? ltrim($converted_path, '/') : null;
-                                    if ($converted_file_path && file_exists(__DIR__ . '/../' . $converted_file_path)) {
-                                        echo '<div class="pdf-viewer p-4" id="pdfViewer"></div>';
-                                        $pdf_path_for_preview = $converted_path;
-                                    } else {
-                                        $file_url = '/uploads/' . $doc['file_name'];
-                                        echo '<div class="docx-viewer p-4 bg-white" id="docxViewer"></div>';
-                                        $pdf_path_for_preview = null;
-                                    }
-                                    break;
-                                case 'jpg':
-                                case 'jpeg':
-                                case 'png':
-                                case 'gif':
-                                case 'webp':
-                                    $file_url = '/uploads/' . $doc['file_name'];
-                                    echo '<div class="text-center p-6"><img src="' . $file_url . '" alt="' . htmlspecialchars($doc['original_name']) . '" class="max-w-full h-auto mx-auto"></div>';
-                                    break;
-                                case 'txt':
-                                case 'log':
-                                case 'md':
-                                    $content = file_get_contents($file_path);
-                                    echo '<div class="p-6"><pre class="whitespace-pre-wrap break-words font-mono text-sm bg-white p-4 rounded overflow-x-auto">' . htmlspecialchars($content) . '</pre></div>';
-                                    break;
-                                default:
-                                    echo '<div class="p-12 text-center text-base-content/70">
-                                            <i class="fa-solid fa-file text-6xl mb-4"></i>
-                                            <p>File type: .' . htmlspecialchars($file_ext) . ' cannot be previewed</p>
-                                          </div>';
-                            }
-                            ?>
+                                    ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -367,51 +422,72 @@ include __DIR__ . '/../includes/admin-header.php';
 </div>
 
 <style>
-    /* PDF Viewer Styles - Fit to container */
+    /* Fullscreen Mode */
+    .fullscreen-mode {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1000;
+        background: rgba(30, 30, 30, 0.95);
+        display: flex;
+        justify-content: center;
+        padding-top: 2rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .fullscreen-mode > div {
+        max-width: 1200px;
+        width: 100%;
+    }
+
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+    /* PDF Viewer Styles */
     .pdf-viewer {
         width: 100%;
-        overflow-x: hidden;
+        max-width: 900px; /* A4 width approx */
     }
     
     .pdf-viewer canvas {
         max-width: 100%;
         height: auto !important;
         display: block;
-        margin: 0 auto 1rem auto;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 0 auto 1.5rem auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        border-radius: 4px;
     }
     
-    /* DOCX Viewer Styles - Fit to container */
+    /* DOCX Viewer Styles */
     .docx-viewer {
         width: 100%;
-        overflow-x: hidden;
-        overflow-y: auto;
+        max-width: 900px;
     }
     
     .docx-viewer .docx-wrapper {
-        max-width: 100% !important;
-        width: 100% !important;
-        overflow-x: hidden !important;
+        background: transparent !important;
+        padding: 0 !important;
     }
     
     .docx-viewer .docx-wrapper > div {
-        max-width: 100% !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        padding: 1rem !important;
-        overflow-x: hidden !important;
-        word-wrap: break-word !important;
-    }
-    
-    .docx-viewer .docx-wrapper table {
-        max-width: 100% !important;
-        width: 100% !important;
-        table-layout: auto !important;
-    }
-    
-    .docx-viewer .docx-wrapper img {
-        max-width: 100% !important;
-        height: auto !important;
+        margin-bottom: 0 !important;
+        box-shadow: none !important;
+        background-color: transparent !important;
     }
 </style>
 
@@ -420,13 +496,14 @@ include __DIR__ . '/../includes/admin-header.php';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 
 <!-- DOCX Preview Library -->
+<!-- Note: Using a newer version if possible, or sticking to stable -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.4/dist/docx-preview.min.js"></script>
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     
-    // Load PDF if applicable
+    // Load PDF
     <?php if($file_ext === 'pdf' || (($file_ext === 'docx' || $file_ext === 'doc') && isset($pdf_path_for_preview) && $pdf_path_for_preview)): ?>
     (async () => {
         try {
@@ -434,141 +511,93 @@ include __DIR__ . '/../includes/admin-header.php';
             const loadingTask = pdfjsLib.getDocument(pdfPath);
             const pdfDoc = await loadingTask.promise;
             const viewer = document.getElementById("pdfViewer");
-            viewer.innerHTML = '';
             
-            // Get container width for responsive scaling
-            const containerWidth = viewer.offsetWidth - 32; // Subtract padding
-            
-            // Render all pages
-            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                const page = await pdfDoc.getPage(pageNum);
+            if(viewer) {
+                viewer.innerHTML = '';
                 
-                // Calculate scale to fit container width
-                const viewport = page.getViewport({ scale: 1.0 });
-                const scale = Math.min(containerWidth / viewport.width, 2.0); // Max scale 2.0
-                const scaledViewport = page.getViewport({ scale });
-                
-                const canvas = document.createElement("canvas");
-                const context = canvas.getContext("2d");
-                canvas.width = scaledViewport.width;
-                canvas.height = scaledViewport.height;
-                canvas.style.maxWidth = '100%';
-                canvas.style.height = 'auto';
-                canvas.className = "mx-auto mb-4 shadow-lg";
-                
-                await page.render({
-                    canvasContext: context,
-                    viewport: scaledViewport
-                }).promise;
-                
-                viewer.appendChild(canvas);
+                // Render pages with a bit better quality
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    
+                    // Use a generic scale first to get dimensions
+                    const viewportRaw = page.getViewport({ scale: 1.5 }); // Good baseline quality
+                    
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    
+                    canvas.width = viewportRaw.width;
+                    canvas.height = viewportRaw.height;
+                    
+                    // Styling to make it responsive
+                    canvas.style.maxWidth = '100%';
+                    canvas.style.height = 'auto';
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewportRaw
+                    }).promise;
+                    
+                    viewer.appendChild(canvas);
+                }
             }
         } catch(error) {
-            document.getElementById("pdfViewer").innerHTML = '<div class="p-12 text-center text-base-content/70">Error loading PDF: ' + error.message + '</div>';
+            const viewer = document.getElementById("pdfViewer");
+            if(viewer) {
+                viewer.innerHTML = `
+                    <div class="alert alert-error shadow-lg max-w-lg mx-auto mt-10">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div>
+                            <h3 class="font-bold">Lỗi tải PDF</h3>
+                            <div class="text-xs">${error.message}_${error.name}</div>
+                        </div>
+                    </div>`;
+            }
             console.error('PDF loading error:', error);
         }
     })();
     <?php endif; ?>
     
-    // Load DOCX if applicable
+    // Load DOCX
     <?php if(($file_ext === 'docx' || $file_ext === 'doc') && !isset($pdf_path_for_preview)): ?>
     (async () => {
         try {
-            // Wait for libraries to load
+            // Wait for libraries
             let retries = 0;
-            while ((typeof JSZip === 'undefined' || (typeof docx === 'undefined' && typeof docxPreview === 'undefined')) && retries < 15) {
-                await new Promise(resolve => setTimeout(resolve, 200));
+            while ((typeof JSZip === 'undefined' || (typeof docx === 'undefined' && typeof docxPreview === 'undefined')) && retries < 20) {
+                await new Promise(resolve => setTimeout(resolve, 100));
                 retries++;
             }
             
-            if (typeof JSZip === 'undefined') {
-                throw new Error('JSZip library not loaded');
-            }
-            
-            let docxAPI = null;
-            if (typeof docx !== 'undefined' && docx.renderAsync) {
-                docxAPI = docx;
-            } else if (typeof docxPreview !== 'undefined' && docxPreview.renderAsync) {
-                docxAPI = docxPreview;
-            } else if (window.docxPreview && window.docxPreview.renderAsync) {
-                docxAPI = window.docxPreview;
-            } else if (window.docx && window.docx.renderAsync) {
-                docxAPI = window.docx;
-            } else {
-                console.error('Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('docx')));
-                throw new Error('DOCX preview library not loaded correctly.');
-            }
-            
+            let docxAPI = window.docx || window.docxPreview;
             const docxViewer = document.getElementById("docxViewer");
-            if (!docxViewer) {
-                throw new Error('DOCX viewer element not found');
-            }
-            
             const fileUrl = "/uploads/<?= $doc['file_name'] ?>";
+            
+            if (!docxAPI || !docxViewer) throw new Error('Initialization failed');
+
             const response = await fetch(fileUrl);
-            
-            if (!response.ok) {
-                throw new Error('Failed to fetch file: ' + response.statusText);
-            }
-            
             const arrayBuffer = await response.arrayBuffer();
-            
-            if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-                throw new Error('File is empty or invalid');
-            }
-            
-            if (typeof docxAPI.renderAsync !== 'function') {
-                throw new Error('docx.renderAsync is not available. Library version may be incompatible.');
-            }
             
             await docxAPI.renderAsync(arrayBuffer, docxViewer, null, {
                 className: "docx-wrapper",
                 inWrapper: true,
-                ignoreWidth: true,  // Ignore width to allow responsive scaling
+                ignoreWidth: false,
                 ignoreHeight: false,
-                ignoreFonts: false,
                 breakPages: true,
-                ignoreLastRenderedPageBreak: false,
-                experimental: false,
-                trimXmlDeclaration: true,
-                useBase64URL: false,
-                showChanges: false,
-                showInsertions: false,
-                showDeletions: false
+                experimental: true // Try experimental for better rendering
             });
             
-            // After rendering, ensure content fits container
-            setTimeout(() => {
-                const wrapper = docxViewer.querySelector('.docx-wrapper');
-                if (wrapper) {
-                    const containerWidth = docxViewer.offsetWidth;
-                    const contentWidth = wrapper.scrollWidth;
-                    
-                    if (contentWidth > containerWidth) {
-                        const scale = (containerWidth - 40) / contentWidth; // 40px for padding
-                        wrapper.style.transform = `scale(${scale})`;
-                        wrapper.style.transformOrigin = 'top left';
-                        wrapper.style.width = `${contentWidth}px`;
-                        wrapper.style.height = `${wrapper.scrollHeight * scale}px`;
-                    }
-                    
-                    // Ensure all tables and images fit
-                    const tables = wrapper.querySelectorAll('table');
-                    tables.forEach(table => {
-                        table.style.maxWidth = '100%';
-                        table.style.width = 'auto';
-                    });
-                    
-                    const images = wrapper.querySelectorAll('img');
-                    images.forEach(img => {
-                        img.style.maxWidth = '100%';
-                        img.style.height = 'auto';
-                    });
-                }
-            }, 500);
-            
         } catch(error) {
-            document.getElementById("docxViewer").innerHTML = '<div class="p-12 text-center text-base-content/70">Error loading DOCX: ' + error.message + '</div>';
+            const viewer = document.getElementById("docxViewer");
+            if(viewer) {
+                viewer.innerHTML = `
+                    <div class="alert alert-error shadow-lg max-w-lg mx-auto mt-10">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div>
+                            <h3 class="font-bold">Lỗi tải văn bản</h3>
+                            <div class="text-xs">${error.message}</div>
+                        </div>
+                    </div>`;
+            }
             console.error('DOCX loading error:', error);
         }
     })();

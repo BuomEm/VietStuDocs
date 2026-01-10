@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "data": {
+    "pho_thong": [
+      {"id": 1, "name": "Sách giáo khoa", "code": "SGK"},
+      {"id": 2, "name": "Bài tập", "code": "BT"},
+      {"id": 3, "name": "Đề kiểm tra", "code": "DKT"},
+      {"id": 4, "name": "Đề thi", "code": "DT"},
+      {"id": 5, "name": "Sách tham khảo", "code": "STK"},
+      {"id": 6, "name": "Tài liệu khác", "code": "KHAC"}
+    ],
+    "dai_hoc": [
+      {"id": 7, "name": "Giáo trình", "code": "GT"},
+      {"id": 8, "name": "Slide bài giảng", "code": "SLIDE"},
+      {"id": 9, "name": "Luận văn", "code": "LV"},
+      {"id": 10, "name": "Đồ án", "code": "DA"},
+      {"id": 11, "name": "Tài liệu tham khảo", "code": "TLTK"},
+      {"id": 12, "name": "Tài liệu khác", "code": "KHAC_DH"}
+    ]
+  },
+  "meta": {
+    "last_updated": "2025-01-28",
+    "version": "1.0",
+    "description": "API danh sách loại tài liệu theo cấp học"
+  }
+}
+
