@@ -885,10 +885,24 @@ include 'includes/sidebar.php';
             </div>
 
             <?php 
-            $doc_points = getDocumentPoints($doc_id);
+            // Get pricing: user_price from documents, admin_points from docs_points
+            // Logic: use user_price if > 0, otherwise use admin_points
+            $pricing_query = "SELECT d.user_price, dp.admin_points 
+                             FROM documents d 
+                             LEFT JOIN docs_points dp ON d.id = dp.document_id 
+                             WHERE d.id = $doc_id";
+            $pricing_data = db_get_row($pricing_query);
             $price = 0;
-            if($doc_points) {
-                $price = $doc_points['user_price'] > 0 ? $doc_points['user_price'] : ($doc_points['admin_points'] ?? 0);
+            if($pricing_data) {
+                // user_price can be NULL, 0, or > 0
+                $user_price = isset($pricing_data['user_price']) && $pricing_data['user_price'] !== null ? intval($pricing_data['user_price']) : null;
+                $admin_points = intval($pricing_data['admin_points'] ?? 0);
+                // Logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+                if ($user_price === null) {
+                    $price = $admin_points; // Use admin_points if user_price is NULL
+                } else {
+                    $price = $user_price; // Use user_price (can be 0 for free or > 0)
+                }
             }
             ?>
 

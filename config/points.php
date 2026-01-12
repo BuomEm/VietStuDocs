@@ -82,11 +82,12 @@ function deductPoints($user_id, $points, $reason, $document_id = null) {
 function getDocumentPoints($document_id) {
     $document_id = intval($document_id);
     
+    // Use LEFT JOIN to ensure we get document data even if docs_points doesn't exist
     return db_get_row("
-        SELECT dp.admin_points, d.user_price, d.user_id
-        FROM docs_points dp
-        JOIN documents d ON dp.document_id = d.id
-        WHERE dp.document_id=$document_id
+        SELECT d.user_price, d.user_id, dp.admin_points
+        FROM documents d
+        LEFT JOIN docs_points dp ON d.id = dp.document_id
+        WHERE d.id = $document_id
         LIMIT 1
     ");
 }
@@ -307,8 +308,16 @@ function purchaseDocument($buyer_id, $document_id) {
         return ['success' => false, 'message' => 'Bạn không thể mua tài liệu của chính mình'];
     }
     
-    // Get points to pay
-    $points_to_pay = intval($doc['user_price']) > 0 ? intval($doc['user_price']) : intval($doc['admin_points'] ?? 0);
+    // Get points to pay - logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+    $user_price = isset($doc['user_price']) && $doc['user_price'] !== null ? intval($doc['user_price']) : null;
+    $admin_points = intval($doc['admin_points'] ?? 0);
+    
+    // Logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+    if ($user_price === null) {
+        $points_to_pay = $admin_points;
+    } else {
+        $points_to_pay = $user_price;
+    }
     
     // If document is free
     if($points_to_pay <= 0) {

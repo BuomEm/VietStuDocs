@@ -130,11 +130,23 @@ function buildRichTelegramMessage($type, $default_message, $document_id, $extra_
         }
         $buttons[] = ['text' => '🚩 Xem báo cáo', 'url' => getBaseUrl() . "/admin/reports.php"];
     } elseif ($type === 'document_sold' && $document_id) {
-        $doc_query = "SELECT d.original_name, d.user_price, d.admin_points FROM documents d WHERE d.id = $document_id";
+        $doc_query = "SELECT d.original_name, d.user_price, dp.admin_points 
+                      FROM documents d 
+                      LEFT JOIN docs_points dp ON d.id = dp.document_id 
+                      WHERE d.id = $document_id";
         $doc = mysqli_fetch_assoc(mysqli_query($conn, $doc_query));
         if ($doc) {
             $data['document'] = $doc['original_name'];
-            $data['price'] = ($doc['user_price'] > 0 ? $doc['user_price'] : $doc['admin_points']) . " điểm";
+            // Pricing logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+            $user_price = isset($doc['user_price']) && $doc['user_price'] !== null ? intval($doc['user_price']) : null;
+            $admin_points = intval($doc['admin_points'] ?? 0);
+            
+            if ($user_price === null) {
+                $price = $admin_points;
+            } else {
+                $price = $user_price;
+            }
+            $data['price'] = $price . " điểm";
             if (isset($extra_data['buyer_name'])) $data['buyer'] = $extra_data['buyer_name'];
         }
     } elseif ($type === 'system_alert' && is_array($extra_data)) {

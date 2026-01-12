@@ -60,6 +60,9 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
     $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
     
     // Build ORDER BY based on sort method
+    // Pricing logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+    $points_expr = "CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END";
+    
     switch($sort) {
         case 'popular':
             $order_by = "ORDER BY (d.views + d.downloads * 2) DESC, d.created_at DESC";
@@ -74,12 +77,12 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
                 $order_by = "ORDER BY 
                     (CASE WHEN d.original_name LIKE '%$keyword_escaped%' THEN 100 ELSE 0 END) DESC,
                     $relevance_score DESC,
-                    (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) DESC,
+                    $points_expr DESC,
                     (d.views + d.downloads * 2) DESC";
             } else {
                 // No keyword: sort by points + popularity
                 $order_by = "ORDER BY 
-                    (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) DESC,
+                    $points_expr DESC,
                     (d.views + d.downloads * 2) DESC,
                     d.created_at DESC";
             }
@@ -110,16 +113,20 @@ function searchDocuments($keyword = '', $filters = [], $sort = 'relevance', $pag
     $total_results = db_get_row($count_query)['total'] ?? 0;
     
     // Get search results
+    // Pricing logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+    $points_select = "CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END as points";
+    
     $search_query = "
         SELECT DISTINCT
             d.*,
             u.username,
             u.avatar,
-            (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points,
+            $points_select,
             " . ($relevance_score ? "$relevance_score as relevance_score," : "") . "
             (d.views + d.downloads * 2) as popularity_score
         FROM documents d
         JOIN users u ON d.user_id = u.id
+        LEFT JOIN docs_points dp ON d.id = dp.document_id
         $join_sql
         $where_sql
         " . (!empty($having_clauses) ? "GROUP BY d.id HAVING " . implode(' AND ', $having_clauses) : "") . "
@@ -229,18 +236,22 @@ function getUserRecentSearches($user_id, $limit = 10) {
  * Get featured documents (when no search keyword)
  */
 function getFeaturedDocuments($limit = 20) {
+    // Pricing logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+    $points_expr = "CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END";
+    
     $query = "
         SELECT 
             d.*,
             u.username,
             u.avatar,
-            (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points,
+            $points_expr as points,
             (d.views + d.downloads * 2) as popularity_score
         FROM documents d
         JOIN users u ON d.user_id = u.id
+        LEFT JOIN docs_points dp ON d.id = dp.document_id
         WHERE d.status = 'approved'
         ORDER BY 
-            (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) DESC,
+            $points_expr DESC,
             (d.views + d.downloads * 2) DESC,
             d.created_at DESC
         LIMIT $limit

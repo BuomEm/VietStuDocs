@@ -20,7 +20,7 @@ if($doc_id <= 0) {
 }
 
 // Get document - only owner can edit
-$doc = db_get_row("SELECT d.*, aa.rejection_reason, dp.notes as admin_notes 
+$doc = db_get_row("SELECT d.*, aa.rejection_reason, dp.notes as admin_notes, dp.admin_points
      FROM documents d 
      LEFT JOIN admin_approvals aa ON d.id = aa.document_id AND d.status = 'rejected'
      LEFT JOIN docs_points dp ON d.id = dp.document_id
@@ -67,6 +67,34 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
     $description = !empty($_POST['description']) ? db_escape(trim($_POST['description'])) : '';
     $is_public = isset($_POST['is_public']) && $_POST['is_public'] == '1' ? 1 : 0;
     
+    // Get pricing data
+    $use_user_price = isset($_POST['use_user_price']) && $_POST['use_user_price'] == '1' ? 1 : 0;
+    $user_price = null; // Default to NULL (use admin_points)
+    
+    if ($use_user_price) {
+        $user_price_input = isset($_POST['user_price']) ? trim($_POST['user_price']) : '';
+        if ($user_price_input !== '') {
+            $user_price = intval($user_price_input);
+            if ($user_price < 0) $user_price = 0; // Ensure non-negative
+            
+            // Get admin_points for validation
+            $admin_points_query = "SELECT dp.admin_points FROM docs_points dp WHERE dp.document_id = $doc_id";
+            $admin_points_result = db_query($admin_points_query);
+            $admin_points_row = mysqli_fetch_assoc($admin_points_result);
+            $admin_points = $admin_points_row ? intval($admin_points_row['admin_points'] ?? 0) : 0;
+            
+            // Validation: user_price must be <= admin_points (if admin_points > 0)
+            if ($admin_points > 0 && $user_price > $admin_points) {
+                $error = "Giá bạn đặt (" . number_format($user_price) . " điểm) không được vượt quá giá Admin (" . number_format($admin_points) . " điểm).";
+                // Fallback to admin_points if validation fails
+                $user_price = $admin_points;
+            }
+        } else {
+            // If toggle is on but no value provided, set to 0 (free)
+            $user_price = 0;
+        }
+    }
+    
     // Get category data
     $category_data = null;
     if (!empty($_POST['category_data'])) {
@@ -74,9 +102,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // Update document
+    $user_price_sql = $user_price === null ? 'NULL' : $user_price;
     $update_query = "UPDATE documents SET 
                      description='$description', 
-                     is_public=$is_public
+                     is_public=$is_public,
+                     user_price=$user_price_sql
                      WHERE id=$doc_id AND user_id=$user_id";
     
     if(db_query($update_query)) {
@@ -304,36 +334,152 @@ $current_page = 'dashboard';
                         <?php endif; ?>
                     </div>
 
-                    <!-- Middle Section: Privacy Settings -->
-                    <div class="flex-1 px-8">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-base-content/40 mb-6">Cài đặt hiển thị</h3>
-                        
-                        <div class="grid grid-cols-1 gap-4">
-                            <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 1 ? 'border-primary/20 bg-primary/5' : '' ?>" id="pubLabel">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
-                                        <i class="fa-solid fa-earth-asia"></i>
+                    <!-- Middle Section: Privacy Settings & Pricing -->
+                    <div class="flex-1 px-8 space-y-6">
+                        <div>
+                            <h3 class="text-xs font-black uppercase tracking-widest text-base-content/40 mb-6">Cài đặt hiển thị</h3>
+                            
+                            <div class="grid grid-cols-1 gap-4">
+                                <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 1 ? 'border-primary/20 bg-primary/5' : '' ?>" id="pubLabel">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
+                                            <i class="fa-solid fa-earth-asia"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[11px] font-black uppercase tracking-tight">Công khai</div>
+                                            <div class="text-[9px] font-bold opacity-30 italic">Ai cũng có thể thấy</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-[11px] font-black uppercase tracking-tight">Công khai</div>
-                                        <div class="text-[9px] font-bold opacity-30 italic">Ai cũng có thể thấy</div>
-                                    </div>
-                                </div>
-                                <input type="radio" name="is_public" value="1" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 1 ? 'checked' : '' ?> onclick="updatePrivacyUI(true)">
-                            </label>
+                                    <input type="radio" name="is_public" value="1" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 1 ? 'checked' : '' ?> onclick="updatePrivacyUI(true)">
+                                </label>
 
-                            <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 0 ? 'border-primary/20 bg-primary/5' : '' ?>" id="privLabel">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
-                                        <i class="fa-solid fa-shield-halved"></i>
+                                <label class="group cursor-pointer flex items-center justify-between p-5 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $doc['is_public'] == 0 ? 'border-primary/20 bg-primary/5' : '' ?>" id="privLabel">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-base-100">
+                                            <i class="fa-solid fa-shield-halved"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[11px] font-black uppercase tracking-tight">Riêng tư</div>
+                                            <div class="text-[9px] font-bold opacity-30 italic">Chỉ mình bạn xem</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-[11px] font-black uppercase tracking-tight">Riêng tư</div>
-                                        <div class="text-[9px] font-bold opacity-30 italic">Chỉ mình bạn xem</div>
+                                    <input type="radio" name="is_public" value="0" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 0 ? 'checked' : '' ?> onclick="updatePrivacyUI(false)">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Settings -->
+                        <div class="pt-6 border-t border-base-300/30">
+                            <h3 class="text-xs font-black uppercase tracking-widest text-base-content/40 mb-6">Cài đặt điểm</h3>
+                            
+                            <?php 
+                            // Check if user_price is NULL, 0, or > 0
+                            $current_user_price = isset($doc['user_price']) && $doc['user_price'] !== null ? intval($doc['user_price']) : null;
+                            $current_admin_points = intval($doc['admin_points'] ?? 0);
+                            
+                            // Toggle is ON if user_price is not NULL (can be 0 or > 0)
+                            $use_user_price = $current_user_price !== null ? 1 : 0;
+                            
+                            // Display price: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+                            if ($current_user_price === null) {
+                                $display_price = $current_admin_points;
+                            } else {
+                                $display_price = $current_user_price;
+                            }
+                            ?>
+                            
+                            <div class="space-y-4">
+                                <!-- Toggle: Use Custom Price -->
+                                <div class="form-control">
+                                    <label class="label cursor-pointer justify-between p-4 rounded-[1.5rem] bg-base-200/30 border-2 border-transparent transition-all hover:bg-base-200/50 <?= $use_user_price ? 'border-primary/20 bg-primary/5' : '' ?>" id="priceToggleLabel">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-warning shadow-sm border border-base-100">
+                                                <i class="fa-solid fa-coins"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[11px] font-black uppercase tracking-tight">Đặt giá riêng</div>
+                                                <div class="text-[9px] font-bold opacity-30 italic">
+                                                    <?php if ($use_user_price && $current_user_price !== null): ?>
+                                                        <?php if ($current_user_price == 0): ?>
+                                                            Đang dùng: Miễn phí
+                                                        <?php else: ?>
+                                                            Đang dùng: <?= number_format($current_user_price) ?> điểm
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        Đang dùng: <?= number_format($current_admin_points) ?> điểm (từ Admin)
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="checkbox" name="use_user_price" value="1" class="toggle toggle-primary toggle-sm" id="use_user_price_toggle" <?= $use_user_price ? 'checked' : '' ?> onchange="toggleUserPrice(this.checked)">
+                                    </label>
+                                </div>
+
+                                <!-- User Price Input (Hidden by default) -->
+                                <div class="form-control <?= $use_user_price ? '' : 'hidden' ?>" id="user_price_container">
+                                    <label class="label py-1">
+                                        <span class="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">Số điểm tùy chỉnh</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute left-6 top-1/2 -translate-y-1/2 text-warning/60">
+                                            <i class="fa-solid fa-coins text-lg"></i>
+                                        </div>
+                                        <input type="number" 
+                                               name="user_price" 
+                                               id="user_price_input"
+                                               min="0" 
+                                               max="<?= $current_admin_points > 0 ? $current_admin_points : '' ?>"
+                                               step="1"
+                                               value="<?= $current_user_price !== null ? $current_user_price : '' ?>"
+                                               placeholder="<?= $current_admin_points > 0 ? 'Nhập số điểm (0 = miễn phí, tối đa ' . number_format($current_admin_points) . ')' : 'Nhập số điểm (0 = miễn phí)' ?>"
+                                               <?= !$use_user_price ? 'readonly' : '' ?>
+                                               class="input input-lg w-full bg-base-200/50 border-2 border-transparent focus:border-primary/20 focus:bg-base-100 transition-all font-bold pl-16 rounded-2xl <?= !$use_user_price ? 'cursor-not-allowed opacity-50' : '' ?>">
+                                    </div>
+                                    <label class="label mt-2">
+                                        <span class="text-[9px] font-bold text-base-content/30 italic uppercase tracking-wider">
+                                            <?php if ($current_admin_points > 0): ?>
+                                                Giá Admin: <?= number_format($current_admin_points) ?> điểm. Tắt toggle để dùng giá Admin. Đặt 0 = miễn phí. Tối đa: <?= number_format($current_admin_points) ?> điểm.
+                                            <?php else: ?>
+                                                Đặt 0 để tài liệu miễn phí
+                                            <?php endif; ?>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <!-- Display Current Price Info -->
+                                <div class="p-4 rounded-2xl bg-base-200/30 border border-base-200/50">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center text-warning">
+                                                <i class="fa-solid fa-info-circle text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[10px] font-black uppercase tracking-tight text-base-content/60">Giá hiện tại</div>
+                                                <div class="text-sm font-bold text-warning">
+                                                    <?php if ($display_price > 0): ?>
+                                                        <?= number_format($display_price) ?> điểm
+                                                    <?php else: ?>
+                                                        Miễn phí
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php if ($current_user_price === null): ?>
+                                            <div class="badge badge-sm bg-primary/10 text-primary border-none font-bold">
+                                                Từ Admin
+                                            </div>
+                                        <?php elseif ($current_user_price == 0): ?>
+                                            <div class="badge badge-sm bg-success/10 text-success border-none font-bold">
+                                                Miễn phí
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="badge badge-sm bg-warning/10 text-warning border-none font-bold">
+                                                Tùy chỉnh
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
-                                <input type="radio" name="is_public" value="0" class="radio radio-primary radio-sm" <?= $doc['is_public'] == 0 ? 'checked' : '' ?> onclick="updatePrivacyUI(false)">
-                            </label>
+                            </div>
                         </div>
                     </div>
 
@@ -410,6 +556,31 @@ function updatePrivacyUI(isPublic) {
     }
 }
 
+function toggleUserPrice(enabled) {
+    const container = document.getElementById('user_price_container');
+    const input = document.getElementById('user_price_input');
+    const label = document.getElementById('priceToggleLabel');
+    
+    if (enabled) {
+        container.classList.remove('hidden');
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        // If input is empty, set to 0 as default (free)
+        if (input.value === '') {
+            input.value = '0';
+        }
+        // Focus after a small delay to ensure container is visible
+        setTimeout(() => input.focus(), 100);
+        label.classList.add('border-primary/20', 'bg-primary/5');
+    } else {
+        container.classList.add('hidden');
+        // Clear value and set to readonly so it submits as empty (NULL)
+        input.setAttribute('readonly', 'readonly');
+        input.value = '';
+        label.classList.remove('border-primary/20', 'bg-primary/5');
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
     // Bind events
@@ -428,6 +599,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Update hidden input before form submit
     editForm.addEventListener('submit', function(e) {
         categoryDataInput.value = JSON.stringify(categoryData);
+        
+        // Validate user_price if toggle is enabled
+        const useUserPriceToggle = document.getElementById('use_user_price_toggle');
+        const userPriceInput = document.getElementById('user_price_input');
+        
+        if (useUserPriceToggle && useUserPriceToggle.checked) {
+            const userPrice = parseInt(userPriceInput.value) || 0;
+            const maxPrice = parseInt(userPriceInput.getAttribute('max')) || 0;
+            
+            // If admin_points > 0, validate user_price <= admin_points
+            if (maxPrice > 0 && userPrice > maxPrice) {
+                e.preventDefault();
+                alert('Giá bạn đặt (' + userPrice.toLocaleString() + ' điểm) không được vượt quá giá Admin (' + maxPrice.toLocaleString() + ' điểm).');
+                userPriceInput.focus();
+                return false;
+            }
+            
+            // If toggle is on but input is empty, set to 0 (free)
+            if (userPriceInput.value === '') {
+                userPriceInput.value = '0';
+            }
+        } else {
+            // If toggle is off, clear the input value so it submits as empty (NULL)
+            userPriceInput.value = '';
+        }
     });
 });
 

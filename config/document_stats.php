@@ -123,9 +123,10 @@ function getTopViewedDocuments($limit = 10) {
         SELECT 
             d.*,
             u.username,
-            (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points
+            CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END as points
         FROM documents d
         JOIN users u ON d.user_id = u.id
+        LEFT JOIN docs_points dp ON d.id = dp.document_id
         WHERE d.status = 'approved' AND d.is_public = 1
         ORDER BY d.views DESC, d.downloads DESC
         LIMIT $limit
@@ -155,9 +156,10 @@ function getTopDownloadedDocuments($limit = 10) {
         SELECT 
             d.*,
             u.username,
-            (SELECT COALESCE(admin_points, user_price, 0) FROM docs_points WHERE document_id = d.id LIMIT 1) as points
+            CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END as points
         FROM documents d
         JOIN users u ON d.user_id = u.id
+        LEFT JOIN docs_points dp ON d.id = dp.document_id
         WHERE d.status = 'approved' AND d.is_public = 1
         ORDER BY d.downloads DESC, d.views DESC
         LIMIT $limit

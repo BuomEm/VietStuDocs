@@ -109,7 +109,7 @@ $total_saved = count($all_saved_docs);
                                 </a>
                                 <button onclick="vsdConfirm({title: 'Xác nhận bỏ lưu', message: 'Bạn có chắc chắn muốn bỏ lưu tài liệu này?', type: 'warning', onConfirm: () => window.location.href='saved.php?unsave=<?= $doc['id'] ?>'})" 
                                         class="btn btn-error btn-circle btn-lg shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
-                                    <i class="fa-solid fa-bookmark-slash text-xl"></i>
+                                    <i class="fa-solid fa-trash-can text-xl text-white"></i>
                                 </button>
                             </div>
                         </div>

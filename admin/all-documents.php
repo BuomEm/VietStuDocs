@@ -89,9 +89,11 @@ if($level_filter !== 'all') {
 
 // Filter by Price
 if($price_filter === 'free') {
-    $where[] = "(d.user_price = 0 OR d.user_price IS NULL) AND (d.admin_points = 0 OR d.admin_points IS NULL)";
+    // Free: user_price = 0 OR (user_price IS NULL AND admin_points = 0)
+    $where[] = "(d.user_price = 0 OR (d.user_price IS NULL AND COALESCE(dp.admin_points, 0) = 0))";
 } elseif($price_filter === 'paid') {
-    $where[] = "(d.user_price > 0 OR d.admin_points > 0)";
+    // Paid: (user_price IS NOT NULL AND user_price > 0) OR (user_price IS NULL AND admin_points > 0)
+    $where[] = "((d.user_price IS NOT NULL AND d.user_price > 0) OR (d.user_price IS NULL AND COALESCE(dp.admin_points, 0) > 0))";
 }
 
 $where_sql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -102,7 +104,7 @@ $order_sql = match($sort_order) {
     'views_desc' => 'ORDER BY d.views DESC',
     'downloads_desc' => 'ORDER BY d.downloads DESC',
     'sales_desc' => 'ORDER BY sales DESC', // Relies on alias in SELECT
-    'price_desc' => 'ORDER BY GREATEST(COALESCE(d.user_price,0), COALESCE(d.admin_points,0)) DESC',
+    'price_desc' => 'ORDER BY CASE WHEN d.user_price IS NULL THEN COALESCE(dp.admin_points, 0) ELSE d.user_price END DESC',
     default => 'ORDER BY d.created_at DESC' // newest
 };
 
@@ -112,11 +114,12 @@ $total_pages = ceil($total_docs / $per_page);
 
 // Fetch Data
 $docs = $VSD->get_list("
-    SELECT d.*, u.username, u.avatar,
+    SELECT d.*, u.username, u.avatar, dp.admin_points,
            (SELECT COUNT(*) FROM document_sales WHERE document_id=d.id) as sales,
            (SELECT SUM(points_paid) FROM document_sales WHERE document_id=d.id) as earned
     FROM documents d
     LEFT JOIN users u ON d.user_id = u.id
+    LEFT JOIN docs_points dp ON d.id = dp.document_id
     $where_sql
     $order_sql
     LIMIT $per_page OFFSET $offset
@@ -357,7 +360,15 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 <span class="badge badge-xs badge-ghost font-mono">.<?= strtoupper($ext) ?></span>
                                                 <span><?= date('H:i d/m/Y', strtotime($doc['created_at'])) ?></span>
                                                 <?php 
-                                                    $price = ($doc['user_price'] ?? 0) > 0 ? $doc['user_price'] : ($doc['admin_points'] ?? 0);
+                                                    // user_price can be NULL, 0, or > 0
+                                                    $user_price = isset($doc['user_price']) && $doc['user_price'] !== null ? intval($doc['user_price']) : null;
+                                                    $admin_points = intval($doc['admin_points'] ?? 0);
+                                                    // Logic: NULL -> admin_points, 0 -> 0 (free), > 0 -> user_price
+                                                    if ($user_price === null) {
+                                                        $price = $admin_points;
+                                                    } else {
+                                                        $price = $user_price;
+                                                    }
                                                 ?>
                                                 <?php if($price > 0): ?>
                                                     <span class="text-warning font-semibold"><i class="fa-solid fa-coins text-[10px] mr-0.5"></i><?= number_format($price) ?></span>
