@@ -29,88 +29,71 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         $error = "Email hoặc mật khẩu không chính xác";
     }
 }
+
+$page_title = "Đăng nhập";
+include 'includes/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="vi" data-theme="vietstudocs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - <?= htmlspecialchars($site_name) ?></title>
-    <link rel="icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
-    <link rel="shortcut icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
-    
-    <!-- Google Fonts: Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS & DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    
-    <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            overflow-x: hidden;
-        }
+<style>
+    body {
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
+        overflow-x: hidden;
+    }
 
-        .glass-card {
-            background: rgba(255, 255, 255, 0.82);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
-        }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
+    }
 
-        .orb {
-            position: fixed; /* Fixed to prevent pushing the body height */
-            border-radius: 50%;
-            filter: blur(100px);
-            z-index: 0;
-            opacity: 0.3;
-        }
+    .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        z-index: 0;
+        opacity: 0.3;
+    }
 
-        .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
-        .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
+    .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
+    .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
 
-        .input-premium {
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(128, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
+    .input-premium {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(128, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
 
-        .input-premium:focus {
-            background: white;
-            border-color: #800000;
-            box-shadow: 0 0 0 4px rgba(128, 0, 0, 0.1);
-        }
+    .input-premium:focus {
+        background: white;
+        border-color: #800000;
+        box-shadow: 0 0 0 4px rgba(128, 0, 0, 0.1);
+    }
 
-        .btn-premium {
-            background: #800000;
-            color: white;
-            border: none;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+    .btn-premium {
+        background: #800000;
+        color: white;
+        border: none;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
 
-        .btn-premium:hover {
-            background: #a00000;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(128, 0, 0, 0.3);
-        }
+    .btn-premium:hover {
+        background: #a00000;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(128, 0, 0, 0.3);
+    }
 
-        .form-fade {
-            animation: fadeIn 0.5s ease forwards;
-        }
+    .form-fade {
+        animation: fadeIn 0.5s ease forwards;
+    }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center relative p-4">
+<div class="min-h-screen flex items-center justify-center relative p-4">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
@@ -130,7 +113,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             <p class="text-gray-500 font-medium"><?= htmlspecialchars($site_desc) ?></p>
         </div>
 
-        <div class="glass-card rounded-[2.5rem] p-8 md:p-10">
+        <div class="glass-card rounded-[3rem] p-10">
             <!-- Alert Messages -->
             <?php if($error): ?>
                 <div class="alert alert-error mb-6 rounded-2xl bg-red-50 border-red-100 text-red-800">
@@ -138,58 +121,59 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                     <span class="text-sm font-semibold"><?= htmlspecialchars($error) ?></span>
                 </div>
             <?php endif; ?>
-            <?php if($success): ?>
-                <div class="alert alert-success mb-6 rounded-2xl bg-green-50 border-green-100 text-green-800">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span class="text-sm font-semibold"><?= htmlspecialchars($success) ?></span>
-                </div>
-            <?php endif; ?>
 
             <!-- Login Form -->
             <div class="form-fade">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">Chào mừng trở lại!</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Chào mừng trở lại!</h2>
+                
                 <form method="POST" action="login" class="space-y-5">
                     <div class="form-control">
                         <label class="label px-1">
-                            <span class="label-text font-bold text-gray-600">Email</span>
+                            <span class="label-text font-bold text-gray-600">Email hoặc Tên đăng nhập</span>
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
                                 <i class="fa-solid fa-envelope"></i>
                             </span>
-                            <input type="email" name="email" placeholder="email@example.com" class="input input-bordered w-full pl-11 rounded-xl input-premium" required>
+                            <input type="text" name="email" placeholder="email@example.com" class="input input-bordered w-full pl-11 rounded-2xl input-premium" required>
                         </div>
                     </div>
 
                     <div class="form-control">
                         <label class="label px-1">
                             <span class="label-text font-bold text-gray-600">Mật khẩu</span>
+                            <a href="#" class="label-text-alt text-[#800000] font-bold hover:underline">Quên mật khẩu?</a>
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
                                 <i class="fa-solid fa-lock"></i>
                             </span>
-                            <input type="password" name="password" placeholder="••••••••" class="input input-bordered w-full pl-11 rounded-xl input-premium" required>
-                        </div>
-                        <div class="text-right mt-2">
-                            <a href="#" class="text-xs font-bold text-[#800000] hover:underline">Quên mật khẩu?</a>
+                            <input type="password" name="password" placeholder="••••••••" class="input input-bordered w-full pl-11 rounded-2xl input-premium" required>
                         </div>
                     </div>
 
-                    <button type="submit" name="login" class="btn btn-premium w-full h-12 rounded-xl text-base font-bold mt-4">
-                        Đăng nhập ngay
+                    <div class="flex items-center justify-between px-1">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" class="checkbox checkbox-sm border-gray-300" />
+                            <span class="label-text text-gray-500 text-xs">Ghi nhớ đăng nhập</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" name="login" class="btn btn-premium w-full h-14 rounded-2xl text-lg font-bold mt-2 shadow-lg shadow-red-900/20 hover:shadow-red-900/40">
+                        <i class="fa-solid fa-right-to-bracket mr-2"></i>
+                        Đăng nhập
                     </button>
                 </form>
 
                 <div class="relative my-8">
-                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-transparent px-2 text-gray-400 font-bold">Hoặc</span></div>
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-100"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-transparent px-4 text-gray-400 font-bold">Hoặc</span></div>
                 </div>
 
-                <p class="text-center text-gray-500 text-sm font-medium">
-                    Chưa có tài khoản? 
-                    <a href="/signup" class="text-[#800000] font-extrabold hover:underline ml-1">Đăng ký miễn phí</a>
-                </p>
+                <a href="/signup" class="btn btn-ghost w-full h-14 rounded-2xl text-gray-600 border border-gray-100 hover:bg-gray-50 mb-4">
+                    <i class="fa-solid fa-user-plus mr-2"></i>
+                    Tạo tài khoản mới
+                </a>
             </div>
         </div>
         
@@ -198,6 +182,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             &copy; <?= date('Y') ?> <?= htmlspecialchars($site_name) ?>. Tất cả quyền được bảo lưu.
         </p>
     </div>
-
+</div>
 </body>
 </html>

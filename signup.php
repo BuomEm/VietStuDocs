@@ -79,199 +79,181 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
         }
     }
 }
+$page_title = "Đăng ký";
+include 'includes/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="vi" data-theme="vietstudocs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng ký - <?= htmlspecialchars($site_name) ?></title>
-    <link rel="icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
-    <link rel="shortcut icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
+
+<style>
+    body {
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
+        overflow-x: hidden;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
+    }
+
+    .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        z-index: 0;
+        opacity: 0.3;
+    }
+
+    .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
+    .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
+    .orb-3 { width: 300px; height: 300px; background: #4a90d9; top: 50%; right: -5%; }
+
+    .input-premium {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(128, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .input-premium:focus {
+        background: white;
+        border-color: #800000;
+        box-shadow: 0 0 0 4px rgba(128, 0, 0, 0.1);
+    }
+
+    .btn-premium {
+        background: #800000;
+        color: white;
+        border: none;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-premium:hover {
+        background: #a00000;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(128, 0, 0, 0.3);
+    }
+
+    .btn-google {
+        background: white;
+        color: #333;
+        border: 1px solid #e5e5e5;
+        transition: all 0.3s ease;
+    }
+
+    .btn-google:hover {
+        background: #f8f8f8;
+        border-color: #ddd;
+    }
+
+    .btn-google.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .form-fade {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Avatar Upload (next to username) */
+    .avatar-upload-small {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .avatar-upload-small .avatar-preview-small {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 2px dashed rgba(128, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .avatar-upload-small:hover .avatar-preview-small {
+        border-color: #800000;
+        border-style: solid;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(128, 0, 0, 0.15);
+    }
+
+    .avatar-upload-small .avatar-preview-small img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    .avatar-upload-small .avatar-edit-small {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 22px;
+        height: 22px;
+        background: #800000;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        color: white;
+        border: 2px solid white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(128,0,0,0.3);
+    }
+
+    .avatar-upload-small:hover .avatar-edit-small {
+        background: #a00000;
+        transform: scale(1.1);
+    }
+
+    .avatar-upload-small input[type="file"] {
+        display: none;
+    }
+
+    .coming-soon-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+        color: white;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+    }
+
+    .checkbox-premium {
+        --chkbg: #800000;
+        --chkfg: white;
+        border: 2px solid #800000 !important;
+        border-radius: 4px;
+    }
     
-    <!-- Google Fonts: Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-
-    <!-- Tailwind CSS & DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    .checkbox-premium:not(:checked) {
+        background-color: white;
+        border-color: #999 !important;
+    }
     
-    <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            overflow-x: hidden;
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.82);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.12);
-        }
-
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            z-index: 0;
-            opacity: 0.3;
-        }
-
-        .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; left: -15%; }
-        .orb-2 { width: 400px; height: 400px; background: #ffcc00; bottom: -10%; right: -10%; }
-        .orb-3 { width: 300px; height: 300px; background: #4a90d9; top: 50%; right: -5%; }
-
-        .input-premium {
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(128, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .input-premium:focus {
-            background: white;
-            border-color: #800000;
-            box-shadow: 0 0 0 4px rgba(128, 0, 0, 0.1);
-        }
-
-        .btn-premium {
-            background: #800000;
-            color: white;
-            border: none;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .btn-premium:hover {
-            background: #a00000;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(128, 0, 0, 0.3);
-        }
-
-        .btn-google {
-            background: white;
-            color: #333;
-            border: 1px solid #e5e5e5;
-            transition: all 0.3s ease;
-        }
-
-        .btn-google:hover {
-            background: #f8f8f8;
-            border-color: #ddd;
-        }
-
-        .btn-google.disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .form-fade {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Avatar Upload (next to username) */
-        .avatar-upload-small {
-            position: relative;
-            width: 56px;
-            height: 56px;
-            flex-shrink: 0;
-            cursor: pointer;
-        }
-
-        .avatar-upload-small .avatar-preview-small {
-            width: 56px;
-            height: 56px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            border: 2px dashed rgba(128, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .avatar-upload-small:hover .avatar-preview-small {
-            border-color: #800000;
-            border-style: solid;
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(128, 0, 0, 0.15);
-        }
-
-        .avatar-upload-small .avatar-preview-small img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 12px;
-        }
-
-        .avatar-upload-small .avatar-edit-small {
-            position: absolute;
-            bottom: -4px;
-            right: -4px;
-            width: 22px;
-            height: 22px;
-            background: #800000;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            color: white;
-            border: 2px solid white;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 6px rgba(128,0,0,0.3);
-        }
-
-        .avatar-upload-small:hover .avatar-edit-small {
-            background: #a00000;
-            transform: scale(1.1);
-        }
-
-        .avatar-upload-small input[type="file"] {
-            display: none;
-        }
-
-        .coming-soon-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-            color: white;
-            font-size: 9px;
-            font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
-        }
-
-        .checkbox-premium {
-            --chkbg: #800000;
-            --chkfg: white;
-            border: 2px solid #800000 !important;
-            border-radius: 4px;
-        }
-        
-        .checkbox-premium:not(:checked) {
-            background-color: white;
-            border-color: #999 !important;
-        }
-        
-        .checkbox-premium:hover {
-            border-color: #800000 !important;
-        }
-    </style>
-</head>
+    .checkbox-premium:hover {
+        border-color: #800000 !important;
+    }
+</style>
 <body class="min-h-screen flex items-center justify-center relative p-4 py-8">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>

@@ -31,37 +31,22 @@ $quotes = [
     "Đừng học để thành công, hãy học để có giá trị. - Albert Einstein"
 ];
 $random_quote = $quotes[array_rand($quotes)];
+
+$page_title = $info['title'];
+include 'includes/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="vi" data-theme="vietstudocs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $info['title'] ?> - <?= htmlspecialchars(getSetting('site_name', 'DocShare')) ?></title>
-    <link rel="icon" href="<?= htmlspecialchars(getSetting('site_logo', '/favicon.ico')) ?>">
-    <link rel="shortcut icon" href="<?= htmlspecialchars(getSetting('site_logo', '/favicon.ico')) ?>">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    
-    <style>
-        :root {
-            --primary-maroon: #800000;
-            --base-cream: #f9f6f2;
-        }
+<style>
+    :root {
+        --primary-maroon: #800000;
+        --base-cream: #f9f6f2;
+    }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+    body {
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
 
         .glass-card {
             background: rgba(255, 255, 255, 0.82);

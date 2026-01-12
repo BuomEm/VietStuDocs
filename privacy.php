@@ -8,100 +8,84 @@ require_once 'config/settings.php';
 $site_name = getSetting('site_name', 'DocShare');
 $site_logo = getSetting('site_logo', '');
 $site_desc = getSetting('site_description', 'Chia sẻ tri thức, kết nối cộng đồng');
+$page_title = "Chính sách bảo mật";
+include 'includes/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="vi" data-theme="vietstudocs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chính sách bảo mật - <?= htmlspecialchars($site_name) ?></title>
-    <link rel="icon" href="<?= htmlspecialchars(!empty($site_logo) ? $site_logo : '/favicon.ico') ?>">
-    
-    <!-- Google Fonts: Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS & DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    
-    <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            min-height: 100vh;
-        }
+<style>
+    body {
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
+        min-height: 100vh;
+    }
 
-        .glass-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.08);
-        }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(128, 0, 0, 0.08);
+    }
 
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            z-index: 0;
-            opacity: 0.2;
-            pointer-events: none;
-        }
+    .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        z-index: 0;
+        opacity: 0.2;
+        pointer-events: none;
+    }
 
-        .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; right: -15%; }
-        .orb-2 { width: 400px; height: 400px; background: #4a90d9; bottom: -10%; left: -10%; }
+    .orb-1 { width: 500px; height: 500px; background: #800000; top: -15%; right: -15%; }
+    .orb-2 { width: 400px; height: 400px; background: #4a90d9; bottom: -10%; left: -10%; }
 
-        .content-section h2 {
-            color: #800000;
-            font-weight: 800;
-            font-size: 1.25rem;
-            margin-top: 2rem;
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+    .content-section h2 {
+        color: #800000;
+        font-weight: 800;
+        font-size: 1.25rem;
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-        .content-section h2:first-child {
-            margin-top: 0;
-        }
+    .content-section h2:first-child {
+        margin-top: 0;
+    }
 
-        .content-section p, .content-section li {
-            color: #4a5568;
-            line-height: 1.8;
-        }
+    .content-section p, .content-section li {
+        color: #4a5568;
+        line-height: 1.8;
+    }
 
-        .content-section ul {
-            list-style: none;
-            padding-left: 0;
-        }
+    .content-section ul {
+        list-style: none;
+        padding-left: 0;
+    }
 
-        .content-section ul li {
-            position: relative;
-            padding-left: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
+    .content-section ul li {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
 
-        .content-section ul li::before {
-            content: "•";
-            color: #800000;
-            font-weight: bold;
-            position: absolute;
-            left: 0;
-        }
+    .content-section ul li::before {
+        content: "•";
+        color: #800000;
+        font-weight: bold;
+        position: absolute;
+        left: 0;
+    }
 
-        .info-box {
-            background: linear-gradient(135deg, rgba(128, 0, 0, 0.05) 0%, rgba(128, 0, 0, 0.02) 100%);
-            border-left: 4px solid #800000;
-            padding: 1rem 1.5rem;
-            border-radius: 0 1rem 1rem 0;
-            margin: 1.5rem 0;
-        }
-    </style>
-</head>
-<body class="p-4 py-8">
+    .info-box {
+        background: linear-gradient(135deg, rgba(128, 0, 0, 0.05) 0%, rgba(128, 0, 0, 0.02) 100%);
+        border-left: 4px solid #800000;
+        padding: 1rem 1.5rem;
+        border-radius: 0 1rem 1rem 0;
+        margin: 1.5rem 0;
+    }
+</style>
+
+<div class="p-4 py-8">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
