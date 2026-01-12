@@ -20,10 +20,11 @@ function getCurrentUsername() {
     return $_SESSION['username'] ?? null;
 }
 
-function loginUser($email, $password) {
-    $email = db_escape($email);
+function loginUser($identifier, $password) {
+    $identifier = db_escape($identifier);
     
-    $query = "SELECT id, username, password FROM users WHERE email='$email'";
+    // Support login via email or username
+    $query = "SELECT id, username, password FROM users WHERE email='$identifier' OR username='$identifier'";
     $user = db_get_row($query);
     
     if($user) {

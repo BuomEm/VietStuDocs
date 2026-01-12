@@ -642,7 +642,7 @@ include 'includes/head.php';
                             </div> -->
 
                             <div class="grid grid-cols-2 gap-4">
-                                <button onclick="closePaymentModal()" class="btn btn-ghost rounded-2xl h-14 font-black text-[10px] tracking-[0.2em] opacity-30">ĐÓNG</button>
+                                <button onclick="this.closest('dialog').close()" class="btn btn-ghost rounded-2xl h-14 font-black text-[10px] tracking-[0.2em] opacity-30">ĐÓNG</button>
                                 <a href="https://t.me/admin" target="_blank" class="btn bg-red-800 hover:bg-red-900 border-none text-white rounded-2xl h-14 font-black text-[10px] tracking-[0.2em] shadow-xl shadow-red-900/20">
                                     <i class="fa-brands fa-telegram text-lg mr-1"></i> ADMIN
                                 </a>

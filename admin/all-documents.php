@@ -523,7 +523,7 @@ include __DIR__ . '/../includes/admin-header.php';
                 <textarea name="notes" class="textarea textarea-bordered"></textarea>
             </div>
             <div class="flex justify-end gap-2">
-                <button type="button" class="btn" onclick="approveModal.close()">Hủy</button>
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
                 <button type="submit" class="btn btn-success text-white">Xác nhận duyệt</button>
             </div>
         </form>
@@ -543,7 +543,7 @@ include __DIR__ . '/../includes/admin-header.php';
                 <textarea name="rejection_reason" class="textarea textarea-bordered h-24" required placeholder="VD: Nội dung không phù hợp..."></textarea>
             </div>
             <div class="flex justify-end gap-2">
-                <button type="button" class="btn" onclick="rejectModal.close()">Hủy</button>
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
                 <button type="submit" class="btn btn-error text-white">Xác nhận từ chối</button>
             </div>
         </form>

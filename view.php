@@ -705,13 +705,13 @@ include 'includes/sidebar.php';
     }
     
     .watermark-text {
-        position: fixed;
+        position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-30deg);
-        font-size: 8rem;
+        font-size: 5rem;
         font-weight: 900;
-        color: rgba(0,0,0,0.03);
+        color: rgba(0,0,0,0.1);
         white-space: nowrap;
         pointer-events: none;
     }
@@ -796,6 +796,106 @@ include 'includes/sidebar.php';
     }
 
     /* Loading Overlay */
+    /* Purchase Banner Premium */
+    .preview-banner-vsd {
+        background: oklch(var(--b1));
+        border: 1px solid oklch(var(--p) / 0.1);
+        border-radius: 2rem;
+        padding: 24px 32px;
+        margin-bottom: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        box-shadow: 0 20px 40px -15px oklch(var(--p) / 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .preview-banner-vsd::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 6px;
+        height: 100%;
+        background: oklch(var(--p));
+    }
+
+    .preview-banner-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .preview-icon-box {
+        width: 56px;
+        height: 56px;
+        background: oklch(var(--p) / 0.1);
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: oklch(var(--p));
+        flex-shrink: 0;
+    }
+
+    .preview-text h3 {
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: oklch(var(--bc));
+        margin-bottom: 4px;
+    }
+
+    .preview-text p {
+        font-size: 0.85rem;
+        color: oklch(var(--bc) / 0.6);
+        font-weight: 500;
+    }
+
+    .preview-price-area {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .price-value-vsd {
+        text-align: right;
+    }
+
+    .price-num-vsd {
+        font-size: 1.5rem;
+        font-weight: 1000;
+        color: oklch(var(--p));
+        display: block;
+        line-height: 1;
+    }
+
+    .price-txt-vsd {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.4;
+    }
+
+    @media (max-width: 768px) {
+        .preview-banner-vsd {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 20px;
+        }
+        .preview-price-area {
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px solid oklch(var(--bc) / 0.05);
+        }
+        .price-value-vsd {
+            text-align: left;
+        }
+    }
+
     .vsd-loading-overlay {
         position: fixed;
         inset: 0;
@@ -1008,19 +1108,32 @@ include 'includes/sidebar.php';
         <!-- Viewer Section -->
         <div class="viewer-card-vsd <?= !$has_purchased ? 'protected' : '' ?>">
             <?php if(!$has_purchased): ?>
-                <div class="alert alert-warning">
-                    <i class="fa-solid fa-triangle-exclamation shrink-0 text-xl"></i>
-                    <div>
-                        <h3 class="font-bold">Bản Xem Trước</h3>
-                        <div class="text-sm">Bạn đang xem bản xem trước (5 trang đầu) của tài liệu này.</div>
-                        <div class="text-sm mt-1">Để xem toàn bộ tài liệu, vui lòng mua với giá <strong><?= number_format($price) ?> điểm</strong>.</div>
-                        <div class="mt-3">
-                            <?php if($is_logged_in): ?>
-                                <button class="btn btn-primary btn-sm" onclick="openPurchaseModal(<?= $doc_id ?>, <?= $price ?>)">Mua Ngay</button>
-                            <?php else: ?>
-                                <a href="/login" class="btn btn-primary btn-sm">Đăng Nhập Để Mua</a>
-                            <?php endif; ?>
+                <div class="preview-banner-vsd">
+                    <div class="preview-banner-info">
+                        <div class="preview-icon-box">
+                            <i class="fa-solid fa-eye"></i>
                         </div>
+                        <div class="preview-text">
+                            <h3>Bản Xem Trước</h3>
+                            <p>Bạn đang xem 5 trang đầu. Sở hữu ngay để xem toàn bộ tài liệu.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-price-area">
+                        <div class="price-value-vsd">
+                            <span class="price-num-vsd"><?= number_format($price) ?></span>
+                            <span class="price-txt-vsd">Điểm tích lũy</span>
+                        </div>
+                        
+                        <?php if($is_logged_in): ?>
+                            <button class="btn btn-primary h-14 px-8 rounded-2xl font-black text-xs tracking-widest" onclick="openPurchaseModal(<?= $doc_id ?>, <?= $price ?>)">
+                                MUA NGAY
+                            </button>
+                        <?php else: ?>
+                            <a href="/login" class="btn btn-primary h-14 px-8 rounded-2xl font-black text-xs tracking-widest">
+                                ĐĂNG NHẬP
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
@@ -1099,7 +1212,7 @@ include 'includes/sidebar.php';
             ?>
             <?php if(!$has_purchased): ?>
                 <div class="watermark-overlay">
-                    <div class="watermark-text">DOCSHARE - BẢN QUYỀN</div>
+                    <div class="watermark-text"><?= htmlspecialchars(strtoupper($site_name)) ?> - BẢN QUYỀN</div>
                 </div>
             <?php endif; ?>
         </div>
@@ -1260,9 +1373,7 @@ include 'includes/sidebar.php';
                 <div class="text-xs text-base-content/50">Sau khi mua, bạn có thể xem và tải xuống tài liệu</div>
             </div>
             <div class="flex gap-2">
-                <form method="dialog" class="flex-1">
-                    <button class="btn btn-ghost w-full">Hủy</button>
-                </form>
+                <button type="button" class="btn btn-ghost w-full" onclick="this.closest('dialog').close()">Hủy</button>
                 <button id="confirmPurchaseBtn" onclick="confirmPurchase(event)" class="btn btn-primary flex-1">Xác Nhận Mua</button>
             </div>
         </div>
@@ -1358,9 +1469,7 @@ include 'includes/sidebar.php';
                     <span class="text-sm">Báo cáo sai sự thật có thể dẫn đến việc tài khoản của bạn bị hạn chế.</span>
                 </div>
                 <div class="modal-action">
-                    <form method="dialog">
-                        <button type="button" class="btn btn-ghost">Hủy</button>
-                    </form>
+                    <button type="button" class="btn btn-ghost" onclick="this.closest('dialog').close()">Hủy</button>
                     <button type="submit" class="btn btn-error">
                         <i class="fa-solid fa-paper-plane mr-2"></i>
                         Gửi Báo Cáo

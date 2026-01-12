@@ -28,9 +28,7 @@ function renderConfirmModal($id, $title, $message, $confirmButtonText = 'Đồng
         </h3>
         <p class=\"py-4 text-base-content/80\">$message</p>
         <div class=\"modal-action gap-2\">
-          <form method=\"dialog\">
-            <button class=\"btn btn-ghost\">Hủy bỏ</button>
-          </form>
+          <button type=\"button\" class=\"btn btn-ghost\" onclick=\"this.closest('dialog').close()\">Hủy bỏ</button>
           <button onclick=\"$confirmAction\" class=\"btn $btnClass\">$confirmButtonText</button>
         </div>
       </div>
@@ -56,9 +54,7 @@ function renderGlobalModal() {
         </h3>
         <p id="vsd_confirm_message" class="py-4 text-base-content/80">Bạn có chắc chắn muốn thực hiện hành động này?</p>
         <div class="modal-action gap-2">
-          <form method="dialog">
-            <button class="btn btn-ghost">Hủy bỏ</button>
-          </form>
+          <button type="button" class="btn btn-ghost" onclick="this.closest(\'dialog\').close()">Hủy bỏ</button>
           <button id="vsd_confirm_btn" class="btn btn-primary">Xác nhận</button>
         </div>
       </div>

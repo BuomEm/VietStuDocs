@@ -18,7 +18,7 @@ $error = '';
 $success = '';
 
 // Handle Login
-if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
+if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['login']) || isset($_POST['email']))) {
     $email = $_POST['email'];
     $password = $_POST['password'];
     
@@ -126,7 +126,7 @@ include 'includes/head.php';
             <div class="form-fade">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Chào mừng trở lại!</h2>
                 
-                <form method="POST" action="login" class="space-y-5">
+                <form method="POST" action="" class="space-y-5">
                     <div class="form-control">
                         <label class="label px-1">
                             <span class="label-text font-bold text-gray-600">Email hoặc Tên đăng nhập</span>
@@ -154,7 +154,7 @@ include 'includes/head.php';
 
                     <div class="flex items-center justify-between px-1">
                         <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" class="checkbox checkbox-sm border-gray-300" />
+                            <input type="checkbox" name="remember" class="checkbox checkbox-sm border-gray-300" />
                             <span class="label-text text-gray-500 text-xs">Ghi nhớ đăng nhập</span>
                         </label>
                     </div>

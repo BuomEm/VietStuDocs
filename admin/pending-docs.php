@@ -202,7 +202,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
 
             <div class="modal-action">
-                <button type="button" class="btn" onclick="document.getElementById('approveModal').close()">Hủy</button>
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
                 <button type="submit" class="btn btn-success text-white px-8">Xác nhận Duyệt</button>
             </div>
         </form>
@@ -226,7 +226,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
 
             <div class="modal-action">
-                <button type="button" class="btn" onclick="document.getElementById('rejectModal').close()">Hủy</button>
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
                 <button type="submit" class="btn btn-error text-white px-8">Xác nhận Từ chối</button>
             </div>
         </form>

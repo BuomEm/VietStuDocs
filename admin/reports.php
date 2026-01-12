@@ -317,7 +317,7 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
         </div>
         <div class="modal-action">
-            <form method="dialog"><button class="btn">Đóng</button></form>
+            <button type="button" class="btn" onclick="this.closest('dialog').close()">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>

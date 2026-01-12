@@ -653,7 +653,7 @@ $tutors = getActiveTutors($_GET);
 
             <div class="modal-action-vsd p-5 shrink-0 mt-auto">
                 <div class="flex gap-3">
-                    <button type="button" class="btn btn-ghost rounded-2xl flex-1 font-black text-xs uppercase tracking-widest opacity-30 h-11 min-h-0" onclick="request_modal.close()">Hủy</button>
+                    <button type="button" class="btn btn-ghost rounded-2xl flex-1 font-black text-xs uppercase tracking-widest opacity-30 h-11 min-h-0" onclick="this.closest('dialog').close()">Hủy</button>
                     <button type="submit" form="requestForm" class="vsd-btn-ask flex-1 justify-center h-11 min-h-0">Gửi yêu cầu</button>
                 </div>
             </div>

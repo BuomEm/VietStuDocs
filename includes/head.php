@@ -467,8 +467,11 @@
                     btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> ' + (btn.innerText || 'Processing...');
                     btn.dataset.originalContent = originalText;
                 }
-                btn.disabled = true;
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
+                // IMPORTANT: Disable in next tick so the name/value of the button is included in the POST request
+                setTimeout(() => {
+                    btn.disabled = true;
+                }, 0);
             });
             
             // Failsafe: Re-enable buttons after 15 seconds if page doesn't reload

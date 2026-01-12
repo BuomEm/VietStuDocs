@@ -35,7 +35,7 @@ if(isset($_SESSION['user_id'])) {
                 $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
                 $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                 ?>
-                <a href="/dashboard.php" class="text-xl font-bold text-primary flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap h-12 w-full hover:bg-primary/5 transition-all">
+                <a href="/dashboard" class="text-xl font-bold text-primary flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap h-12 w-full hover:bg-primary/5 transition-all">
                     <?php if (!empty($site_logo)): ?>
                         <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="h-8 w-8 object-contain flex-shrink-0">
                     <?php else: ?>
@@ -56,7 +56,7 @@ if(isset($_SESSION['user_id'])) {
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <!-- Dashboard -->
                     <li>
-                        <a href="/dashboard.php" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Trang chủ">
+                        <a href="/dashboard" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Trang chủ">
                             <i class="fa-solid fa-house w-5 h-5"></i>
                             <span class="menu-text">Trang chủ</span>
                         </a>
@@ -64,7 +64,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Upload -->
                     <li>
-                        <a href="/upload.php" class="<?= $current_page === 'upload' ? 'active' : '' ?>" data-tip="Đăng tài liệu">
+                        <a href="/upload" class="<?= $current_page === 'upload' ? 'active' : '' ?>" data-tip="Đăng tài liệu">
                             <i class="fa-solid fa-cloud-arrow-up w-5 h-5"></i>
                             <span class="menu-text">Đăng tài liệu</span>
                         </a>
@@ -72,7 +72,7 @@ if(isset($_SESSION['user_id'])) {
 
                     <!-- Tutor Dashboard -->
                     <li>
-                        <a href="/tutors/dashboard" class="<?= ($current_page === 'tutor_dashboard' || strpos($_SERVER['PHP_SELF'], '/tutors/dashboard.php') !== false) ? 'active' : '' ?>" data-tip="Thuê Gia Sư">
+                        <a href="/tutors/dashboard" class="<?= ($current_page === 'tutor_dashboard' || strpos($_SERVER['PHP_SELF'], '/tutors/dashboard') !== false) ? 'active' : '' ?>" data-tip="Thuê Gia Sư">
                             <i class="fa-solid fa-user-graduate w-5 h-5"></i>
                             <span class="menu-text">Thuê Gia Sư</span>
                         </a>
@@ -80,7 +80,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Saved -->
                     <li>
-                        <a href="/saved.php" class="<?= $current_page === 'saved' ? 'active' : '' ?>" data-tip="Đã lưu">
+                        <a href="/saved" class="<?= $current_page === 'saved' ? 'active' : '' ?>" data-tip="Đã lưu">
                             <i class="fa-solid fa-bookmark w-5 h-5"></i>
                             <span class="menu-text">Đã lưu</span>
                         </a>
@@ -88,7 +88,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- History -->
                     <li>
-                        <a href="/history.php" class="<?= $current_page === 'history' ? 'active' : '' ?>" data-tip="Lịch Sử">
+                        <a href="/history" class="<?= $current_page === 'history' ? 'active' : '' ?>" data-tip="Lịch Sử">
                             <i class="fa-solid fa-clock-rotate-left w-5 h-5"></i>
                             <span class="menu-text">Lịch Sử</span>
                         </a>
@@ -96,7 +96,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Premium -->
                     <li>
-                        <a href="/premium.php" class="<?= $current_page === 'premium' ? 'active' : '' ?>" data-tip="Premium">
+                        <a href="/premium" class="<?= $current_page === 'premium' ? 'active' : '' ?>" data-tip="Premium">
                             <i class="fa-solid fa-crown w-5 h-5"></i>
                             <span class="menu-text">
                                 Premium

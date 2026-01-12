@@ -265,7 +265,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
                     </div>
                 </div>
             </div>
-            <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost hover:bg-base-200 text-base-content/60"><i class="fa-solid fa-times"></i></button></form>
+            <button type="button" onclick="this.closest('dialog').close()" class="btn btn-sm btn-circle btn-ghost hover:bg-base-200 text-base-content/60"><i class="fa-solid fa-times"></i></button>
         </div>
 
         <!-- Modal Body Container -->

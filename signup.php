@@ -18,7 +18,7 @@ $error = '';
 $success = '';
 
 // Handle Registration
-if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
+if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['register']) || isset($_POST['username']))) {
     // Validate terms acceptance
     if(!isset($_POST['terms']) || $_POST['terms'] !== 'on') {
         $error = "Bạn phải đồng ý với điều khoản sử dụng!";
@@ -296,7 +296,7 @@ include 'includes/head.php';
                 <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Tạo tài khoản mới</h2>
                 <p class="text-gray-500 text-sm text-center mb-6">Tham gia cộng đồng chia sẻ tài liệu</p>
 
-                <form method="POST" action="signup" enctype="multipart/form-data" class="space-y-4">
+                <form method="POST" action="" enctype="multipart/form-data" class="space-y-4">
                     <!-- Username + Avatar Row -->
                     <div class="form-control">
                         <label class="label px-1">
