@@ -19,37 +19,44 @@ $page_keywords = "dashboard, quản lý tài liệu, thống kê, thư viện c�
 $current_page = 'dashboard';
 
 // Pagination settings
-$items_per_page = 10;
-$current_page_num = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$offset = ($current_page_num - 1) * $items_per_page;
+$items_per_page = 12;
 
 // Fetch user's documents with pagination (chỉ khi đã đăng nhập)
+$current_my_page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$my_offset = ($current_my_page - 1) * $items_per_page;
 $total_my_docs = 0;
-$total_pages = 0;
+$total_my_pages = 0;
 $my_docs = [];
+
 if($is_logged_in) {
     $total_my_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents WHERE user_id=$user_id")['total'];
-    $total_pages = ceil($total_my_docs / $items_per_page);
+    $total_my_pages = ceil($total_my_docs / $items_per_page);
 
     $my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar 
                               FROM documents d 
                               JOIN users u ON d.user_id = u.id 
                               WHERE d.user_id=$user_id 
                               ORDER BY d.created_at DESC 
-                              LIMIT $items_per_page OFFSET $offset");
+                              LIMIT $items_per_page OFFSET $my_offset");
 }
 
-// Fetch all public documents (only approved)
+// Fetch all public documents (only approved) with pagination
 $public_docs_where = "d.is_public = TRUE AND d.status = 'approved'";
 if($is_logged_in) {
     $public_docs_where .= " AND d.user_id != $user_id";
 }
+
+$total_public_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents d WHERE $public_docs_where")['total'];
+$total_pub_pages = ceil($total_public_docs / $items_per_page);
+$current_pub_page = isset($_GET['pub_page']) ? max(1, intval($_GET['pub_page'])) : 1;
+$pub_offset = ($current_pub_page - 1) * $items_per_page;
+
 $public_docs = $VSD->get_list("
     SELECT d.*, u.username, u.avatar FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE $public_docs_where
     ORDER BY d.created_at DESC
-    LIMIT 12
+    LIMIT $items_per_page OFFSET $pub_offset
 ");
 
 // Handle document deletion (yêu cầu đăng nhập)
@@ -397,25 +404,25 @@ if(isset($_GET['download']) && $is_logged_in) {
                 <?php endforeach; ?>
                 </div>
 
-                <!-- Pagination -->
-                <?php if ($total_pages > 1): ?>
+                <!-- Pagination for My Documents -->
+                <?php if ($total_my_pages > 1): ?>
                 <div class="mt-12 flex justify-center">
                     <div class="join bg-base-200/50 p-1 rounded-2xl border border-base-300">
-                        <?php if ($current_page_num > 1): ?>
-                            <a href="?page=<?= $current_page_num - 1 ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                        <?php if ($current_my_page > 1): ?>
+                            <a href="?page=<?= $current_my_page - 1 ?>&pub_page=<?= $current_pub_page ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
                                 <i class="fa-solid fa-chevron-left text-xs"></i>
                             </a>
                         <?php endif; ?>
 
                         <?php 
-                        for($i = 1; $i <= $total_pages; $i++): 
-                            if ($i == 1 || $i == $total_pages || ($i >= $current_page_num - 1 && $i <= $current_page_num + 1)):
+                        for($i = 1; $i <= $total_my_pages; $i++): 
+                            if ($i == 1 || $i == $total_my_pages || ($i >= $current_my_page - 1 && $i <= $current_my_page + 1)):
                         ?>
-                            <a href="?page=<?= $i ?>" class="join-item btn <?= $i == $current_page_num ? 'btn-primary shadow-lg shadow-primary/20' : 'btn-ghost hover:bg-base-100' ?> rounded-xl min-w-[48px]">
+                            <a href="?page=<?= $i ?>&pub_page=<?= $current_pub_page ?>" class="join-item btn <?= $i == $current_my_page ? 'btn-primary shadow-lg shadow-primary/20' : 'btn-ghost hover:bg-base-100' ?> rounded-xl min-w-[48px]">
                                 <?= $i ?>
                             </a>
                         <?php 
-                            elseif ($i == $current_page_num - 2 || $i == $current_page_num + 2):
+                            elseif ($i == $current_my_page - 2 || $i == $current_my_page + 2):
                         ?>
                             <button class="join-item btn btn-ghost btn-disabled rounded-xl cursor-default">...</button>
                         <?php 
@@ -423,8 +430,8 @@ if(isset($_GET['download']) && $is_logged_in) {
                         endfor; 
                         ?>
 
-                        <?php if ($current_page_num < $total_pages): ?>
-                            <a href="?page=<?= $current_page_num + 1 ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                        <?php if ($current_my_page < $total_my_pages): ?>
+                            <a href="?page=<?= $current_my_page + 1 ?>&pub_page=<?= $current_pub_page ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
                                 <i class="fa-solid fa-chevron-right text-xs"></i>
                             </a>
                         <?php endif; ?>
@@ -546,6 +553,41 @@ if(isset($_GET['download']) && $is_logged_in) {
                     </div>
                 <?php endforeach; ?>
                 </div>
+
+                <!-- Pagination for Public Documents -->
+                <?php if ($total_pub_pages > 1): ?>
+                <div class="mt-12 flex justify-center">
+                    <div class="join bg-base-200/50 p-1 rounded-2xl border border-base-300">
+                        <?php if ($current_pub_page > 1): ?>
+                            <a href="?pub_page=<?= $current_pub_page - 1 ?>&page=<?= $current_my_page ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                                <i class="fa-solid fa-chevron-left text-xs"></i>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php 
+                        for($i = 1; $i <= $total_pub_pages; $i++): 
+                            if ($i == 1 || $i == $total_pub_pages || ($i >= $current_pub_page - 1 && $i <= $current_pub_page + 1)):
+                        ?>
+                            <a href="?pub_page=<?= $i ?>&page=<?= $current_my_page ?>" class="join-item btn <?= $i == $current_pub_page ? 'btn-secondary shadow-lg shadow-secondary/20 text-secondary-content' : 'btn-ghost hover:bg-base-100' ?> rounded-xl min-w-[48px]">
+                                <?= $i ?>
+                            </a>
+                        <?php 
+                            elseif ($i == $current_pub_page - 2 || $i == $current_pub_page + 2):
+                        ?>
+                            <button class="join-item btn btn-ghost btn-disabled rounded-xl cursor-default">...</button>
+                        <?php 
+                            endif;
+                        endfor; 
+                        ?>
+
+                        <?php if ($current_pub_page < $total_pub_pages): ?>
+                            <a href="?pub_page=<?= $current_pub_page + 1 ?>&page=<?= $current_my_page ?>" class="join-item btn btn-ghost hover:bg-base-100 rounded-xl px-4">
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="text-center py-20 bg-base-100 rounded-[3rem] border border-base-200 shadow-inner">
                     <i class="fa-solid fa-file-circle-question text-6xl text-base-content/10 mb-6"></i>
