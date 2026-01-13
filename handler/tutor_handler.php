@@ -1,5 +1,6 @@
 <?php
 session_start();
+header('Content-Type: application/json');
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/tutor.php';
 
@@ -45,11 +46,19 @@ switch ($action) {
         $data = [
             'title' => $title,
             'content' => $content,
-            'package_type' => $package
+            'package_type' => $package,
+            'points' => intval($_POST['points'] ?? 0)
         ];
         
         // Handle file upload
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
+            
+            // Validate Logic: Only VIP can attach files
+            if ($package !== 'vip') {
+                echo json_encode(['success' => false, 'message' => 'Chỉ gói VIP mới được phép đính kèm tài liệu.']);
+                exit;
+            }
+
             $allowed = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'zip'];
             $filename = $_FILES['attachment']['name'];
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -81,29 +90,31 @@ switch ($action) {
         echo json_encode($result);
         break;
 
+    case 'send_chat_message': // Chat messages from both tutor and student
     case 'answer_request':
-        // Check if user is actually a tutor
-        if (!isTutor($user_id)) {
-            echo json_encode(['success' => false, 'message' => 'Bạn không phải là gia sư.']);
-            exit;
-        }
-
         $request_id = intval($_POST['request_id'] ?? 0);
         $content = trim($_POST['content'] ?? '');
         
         if (!$request_id || empty($content)) {
-            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập nội dung trả lời.']);
+            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập nội dung tin nhắn.']);
+            exit;
+        }
+
+        // Validate user is part of this request (either tutor or student)
+        $request = getRequestDetails($request_id);
+        if (!$request || ($request['tutor_id'] != $user_id && $request['student_id'] != $user_id)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền gửi tin nhắn cho yêu cầu này.']);
             exit;
         }
 
         $attachment = null;
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
-            $allowed = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'zip']; // Allow more for answers
+            $allowed = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'zip'];
             $filename = $_FILES['attachment']['name'];
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
             
             if (in_array($ext, $allowed)) {
-                $new_name = 'ans_' . uniqid() . '_' . time() . '.' . $ext;
+                $new_name = 'chat_' . uniqid() . '_' . time() . '.' . $ext;
                 $upload_dir = __DIR__ . '/../uploads/tutors/';
                 
                 if (!file_exists($upload_dir)) {
@@ -116,7 +127,7 @@ switch ($action) {
             }
         }
 
-        // Logic handled in config/tutor.php
+        // Use unified chat function
         $result = answerTutorRequest($user_id, $request_id, $content, $attachment);
         echo json_encode($result);
         break;
@@ -138,6 +149,89 @@ switch ($action) {
 
         $result = rateTutor($user_id, $request_id, $rating, $review);
         echo json_encode($result);
+        break;
+
+    case 'create_offer':
+        if (!isTutor($user_id)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không phải là gia sư.']);
+            exit;
+        }
+        $request_id = intval($_POST['request_id'] ?? 0);
+        $points = intval($_POST['points'] ?? 0);
+        $reason = trim($_POST['reason'] ?? '');
+        
+        $result = createTutorOffer($user_id, $request_id, $points, $reason);
+        echo json_encode($result);
+        break;
+
+    case 'request_withdrawal':
+        if (!isTutor($user_id)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không phải là gia sư.']);
+            exit;
+        }
+        $points = intval($_POST['points'] ?? 0);
+        $bank_info = trim($_POST['bank_info'] ?? '');
+        
+        if ($points < 50) {
+            echo json_encode(['success' => false, 'message' => 'Số điểm rút tối thiểu là 50.']);
+            exit;
+        }
+        if (empty($bank_info)) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập thông tin ngân hàng.']);
+            exit;
+        }
+
+        $result = requestWithdrawal($user_id, $points, $bank_info);
+        echo json_encode($result);
+        break;
+
+    case 'accept_offer':
+        $offer_id = intval($_POST['offer_id'] ?? 0);
+        $result = acceptTutorOffer($user_id, $offer_id);
+        echo json_encode($result);
+        break;
+
+    case 'student_extend_time':
+        $request_id = intval($_POST['request_id'] ?? 0);
+        $hours = intval($_POST['hours'] ?? 0);
+        
+        if (!$request_id || $hours <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ.']);
+            exit;
+        }
+
+        $request = getRequestDetails($request_id);
+        if (!$request || $request['student_id'] != $user_id) {
+             echo json_encode(['success' => false, 'message' => 'Không có quyền.']);
+             exit;
+        }
+
+        $pdo = getTutorDBConnection();
+        try {
+            $pdo->beginTransaction();
+
+            // Update Request SLA only (No points involved)
+            $stmt = $pdo->prepare("UPDATE tutor_requests SET sla_deadline = DATE_ADD(sla_deadline, INTERVAL ? HOUR) WHERE id = ?");
+            $stmt->execute([$hours, $request_id]);
+            
+            $pdo->commit();
+
+            // Notify Tutor
+            global $VSD;
+            $VSD->insert('notifications', [
+                'user_id' => $request['tutor_id'],
+                'title' => 'Thời gian được gia hạn',
+                'message' => "Học viên đã gia hạn thêm {$hours} giờ cho yêu cầu #$request_id",
+                'type' => 'tutor_extended',
+                'ref_id' => $request_id
+            ]);
+
+            echo json_encode(['success' => true, 'message' => "Đã gia hạn thêm {$hours} giờ thành công!"]);
+
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        }
         break;
 
     case 'send_chat_message':

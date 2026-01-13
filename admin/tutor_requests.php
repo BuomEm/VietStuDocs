@@ -34,18 +34,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $req = getRequestDetails($rid);
             if ($req && $req['status'] === 'disputed') {
                 if ($res === 'pay_tutor') {
-                    if (addPoints($req['tutor_id'], $req['points_used'], "Admin giải quyết yêu cầu #$rid", null)) {
+                    $admin_shares = [
+                        'normal' => intval(getSetting('tutor_commission_basic', 25)),
+                        'medium' => intval(getSetting('tutor_commission_standard', 30)),
+                        'vip'    => intval(getSetting('tutor_commission_premium', 25))
+                    ];
+                    $share = $admin_shares[$req['package_type']] ?? 25;
+                    
+                    if (settleEscrow($req['transaction_id'], $req['tutor_id'], $share)) {
+                        // Settle offers too
+                        $start = $pdo->prepare("SELECT transaction_id FROM tutor_offers WHERE request_id = ? AND status = 'accepted' AND transaction_id IS NOT NULL");
+                        $start->execute([$rid]);
+                        $offers = $start->fetchAll();
+                        foreach($offers as $o) settleEscrow($o['transaction_id'], $req['tutor_id'], $share);
+
                         $pdo->prepare("UPDATE tutor_requests SET status='completed', review=CONCAT(review, ' [Admin: Đã thanh toán cho Tutor]') WHERE id=?")->execute([$rid]);
                          // Notify Tutor
-                         $VSD->insert('notifications', ['user_id'=>$req['tutor_id'], 'title'=>'Khiếu nại được giải quyết', 'message'=>"Yêu cầu #$rid: Đã thanh toán {$req['points_used']} pts.", 'type'=>'dispute_resolved']);
+                         $VSD->insert('notifications', ['user_id'=>$req['tutor_id'], 'title'=>'Khiếu nại được giải quyết', 'message'=>"Yêu cầu #$rid: Đã thanh toán cho Gia sư.", 'type'=>'dispute_resolved']);
                          sendPushToUser($req['tutor_id'], ['title'=>'Tiền về! 💰', 'body'=>"Yêu cầu #$rid đã được thanh toán.", 'url'=>'/history.php']);
                         $msg = ['success', 'Đã xử lý: Thanh toán cho Tutor.'];
                     }
                 } elseif ($res === 'refund_student') {
-                    if (addPoints($req['student_id'], $req['points_used'], "Hoàn tiền yêu cầu #$rid", null)) {
+                    if (refundEscrow($req['transaction_id'], "Admin hoàn tiền cho SV")) {
+                        // Refund offers too
+                        $start = $pdo->prepare("SELECT transaction_id FROM tutor_offers WHERE request_id = ? AND status = 'accepted' AND transaction_id IS NOT NULL");
+                        $start->execute([$rid]);
+                        $offers = $start->fetchAll();
+                        foreach($offers as $o) refundEscrow($o['transaction_id'], "Admin hoàn tiền cho SV (Offer)");
+
                         $pdo->prepare("UPDATE tutor_requests SET status='completed', review=CONCAT(review, ' [Admin: Đã hoàn tiền cho SV]') WHERE id=?")->execute([$rid]);
                         // Notify Student
-                        $VSD->insert('notifications', ['user_id'=>$req['student_id'], 'title'=>'Khiếu nại thành công', 'message'=>"Yêu cầu #$rid: Đã hoàn tiền {$req['points_used']} pts.", 'type'=>'dispute_resolved']);
+                        $VSD->insert('notifications', ['user_id'=>$req['student_id'], 'title'=>'Khiếu nại thành công', 'message'=>"Yêu cầu #$rid: Đã hoàn tiền về ví.", 'type'=>'dispute_resolved']);
                         sendPushToUser($req['student_id'], ['title'=>'Hoàn tiền thành công ↩️', 'body'=>"Yêu cầu #$rid đã được hoàn tiền.", 'url'=>'/history.php']);
                         $msg = ['success', 'Đã xử lý: Hoàn tiền cho Học viên.'];
                     }
@@ -210,7 +229,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
                             </td>
                             <td>
                                 <div class="font-mono font-bold text-primary flex items-center gap-1">
-                                    <?= number_format($r['points_used']) ?> <span class="text-[10px] opacity-70">pts</span>
+                                    <?= number_format($r['points_used']) ?> <span class="text-[10px] opacity-70">VSD</span>
                                 </div>
                                 <div class="badge badge-ghost badge-xs text-[9px] uppercase tracking-wider opacity-60"><?= $r['package_type'] ?></div>
                             </td>

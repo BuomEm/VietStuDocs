@@ -14,6 +14,8 @@ $user_id = $is_logged_in ? getCurrentUserId() : 0;
 $is_premium = $is_logged_in ? isPremium($user_id) : false;
 $premium_info = $is_logged_in ? getPremiumInfo($user_id) : null;
 $page_title = "Dashboard - DocShare";
+$page_description = "Quản lý tài liệu cá nhân, theo dõi thống kê và khám phá kho tài liệu khổng lồ trên DocShare.";
+$page_keywords = "dashboard, quản lý tài liệu, thống kê, thư viện cá nhân";
 $current_page = 'dashboard';
 
 // Pagination settings

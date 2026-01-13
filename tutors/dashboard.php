@@ -363,6 +363,9 @@ $my_requests = $stmt->fetchAll();
                             <a href="/tutors" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg">
                                 <i class="fa-solid fa-plus text-xs"></i> <span>Đặt câu hỏi</span>
                             </a>
+                            <a href="/tutors/withdraw" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg bg-orange-600">
+                                <i class="fa-solid fa-money-bill-transfer text-xs"></i> <span>Rút tiền</span>
+                            </a>
                             <a href="/tutors/profile_edit" class="vsd-btn-view h-12 px-6 rounded-2xl shadow-none hover:shadow-lg bg-emerald-600">
                                 <i class="fa-solid fa-user-pen text-xs"></i> <span>Cập nhật hồ sơ</span>
                             </a>

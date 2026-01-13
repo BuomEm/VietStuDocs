@@ -7,33 +7,40 @@ require_once __DIR__ . '/../push/send_push.php';
 function getUserPoints($user_id) {
     $user_id = intval($user_id);
     
-    $row = db_get_row("SELECT current_points, total_earned, total_spent FROM user_points WHERE user_id=$user_id");
+    $row = db_get_row("SELECT current_points, topup_points, bonus_points, total_earned, total_spent FROM user_points WHERE user_id=$user_id");
     if($row) {
         return $row;
     }
     
     // If user doesn't have points record, create one with zero balance
-    db_query("INSERT INTO user_points (user_id, current_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0)");
-    return ['current_points' => 0, 'total_earned' => 0, 'total_spent' => 0];
+    db_query("INSERT INTO user_points (user_id, current_points, topup_points, bonus_points, total_earned, total_spent) VALUES ($user_id, 0, 0, 0, 0, 0)");
+    return ['current_points' => 0, 'topup_points' => 0, 'bonus_points' => 0, 'total_earned' => 0, 'total_spent' => 0];
 }
 
-function addPoints($user_id, $points, $reason, $document_id = null) {
+function addPoints($user_id, $points, $reason, $document_id = null, $type = 'topup') {
     $user_id = intval($user_id);
     $points = intval($points);
     $reason = db_escape($reason);
+    $type = ($type === 'bonus') ? 'bonus' : 'topup';
+    
+    // IP and Device
+    $ip = db_escape($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $device = db_escape(substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 255));
     
     // Add transaction record
     $doc_id = $document_id ? intval($document_id) : 'NULL';
-    $query = "INSERT INTO point_transactions (user_id, transaction_type, points, related_document_id, reason, status) 
-              VALUES ($user_id, 'earn', $points, $doc_id, '$reason', 'completed')";
+    $query = "INSERT INTO point_transactions (user_id, transaction_type, points, point_type, related_document_id, reason, status, ip_address, device_id) 
+              VALUES ($user_id, 'earn', $points, '$type', $doc_id, '$reason', 'completed', '$ip', '$device')";
     
     if(!db_query($query)) {
         return false;
     }
     
     // Update user points balance
+    $column = ($type === 'bonus') ? 'bonus_points' : 'topup_points';
     $update = "UPDATE user_points SET 
               current_points = current_points + $points,
+              $column = $column + $points,
               total_earned = total_earned + $points
               WHERE user_id=$user_id";
     
@@ -46,26 +53,35 @@ function deductPoints($user_id, $points, $reason, $document_id = null) {
     $reason = db_escape($reason);
     
     // Check if user has enough points
-    $current = getUserPoints($user_id);
-    if($current['current_points'] < $points) {
+    $points_data = getUserPoints($user_id);
+    if($points_data['current_points'] < $points) {
         return false;
     }
     
+    // Logic: Deduct from bonus points first, then topup
+    $bonus_to_deduct = min($points_data['bonus_points'], $points);
+    $topup_to_deduct = $points - $bonus_to_deduct;
+    
+    // IP and Device for Anti-Abuse
+    $ip = db_escape($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $device = db_escape(substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 255));
+    
     // Add transaction record
     $doc_id = $document_id ? intval($document_id) : 'NULL';
-    $query = "INSERT INTO point_transactions (user_id, transaction_type, points, related_document_id, reason, status) 
-              VALUES ($user_id, 'spend', $points, $doc_id, '$reason', 'completed')";
+    $query = "INSERT INTO point_transactions (user_id, transaction_type, points, bonus_points_deducted, topup_points_deducted, related_document_id, reason, status, ip_address, device_id) 
+              VALUES ($user_id, 'spend', $points, $bonus_to_deduct, $topup_to_deduct, $doc_id, '$reason', 'completed', '$ip', '$device')";
     
     if(!db_query($query)) {
         return false;
     }
     
-    // Get the transaction ID immediately after insert
     $transaction_id = db_insert_id();
     
     // Update user points balance
     $update = "UPDATE user_points SET 
               current_points = current_points - $points,
+              bonus_points = bonus_points - $bonus_to_deduct,
+              topup_points = topup_points - $topup_to_deduct,
               total_spent = total_spent + $points
               WHERE user_id=$user_id";
     
@@ -73,8 +89,116 @@ function deductPoints($user_id, $points, $reason, $document_id = null) {
         return false;
     }
     
-    // Return transaction ID if successful
     return $transaction_id;
+}
+
+// ============ ESCROW FUNCTIONS ============
+
+function lockPoints($user_id, $points, $reason, $ref_type = 'tutor_request', $ref_id = null) {
+    $user_id = intval($user_id);
+    $points = intval($points);
+    $reason = db_escape($reason);
+    $ref_type = db_escape($ref_type);
+    $ref_id = $ref_id ? intval($ref_id) : 'NULL';
+    
+    // Check if user has enough points
+    $points_data = getUserPoints($user_id);
+    if($points_data['current_points'] < $points) {
+        return false;
+    }
+    
+    // Deduct from bonus points first, then topup
+    $bonus_to_lock = min($points_data['bonus_points'], $points);
+    $topup_to_lock = $points - $bonus_to_lock;
+    
+    // IP and Device
+    $ip = db_escape($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $device = db_escape(substr($_SERVER['HTTP_USER_AGENT'] ?? 'unknown', 0, 255));
+    
+    // Add transaction record with 'locked' status
+    $query = "INSERT INTO point_transactions (user_id, transaction_type, points, bonus_points_deducted, topup_points_deducted, related_id, related_type, reason, status, ip_address, device_id) 
+              VALUES ($user_id, 'lock', $points, $bonus_to_lock, $topup_to_lock, $ref_id, '$ref_type', '$reason', 'locked', '$ip', '$device')";
+    
+    if(!db_query($query)) {
+        return false;
+    }
+    
+    $transaction_id = db_insert_id();
+    
+    // Update user points balance (reduce current, but keep track of locked)
+    $update = "UPDATE user_points SET 
+              current_points = current_points - $points,
+              bonus_points = bonus_points - $bonus_to_lock,
+              topup_points = topup_points - $topup_to_lock,
+              locked_points = locked_points + $points
+              WHERE user_id=$user_id";
+    
+    if(!db_query($update)) {
+        return false;
+    }
+    
+    return $transaction_id;
+}
+
+function settleEscrow($transaction_id, $tutor_id, $admin_share_percent) {
+    $transaction_id = intval($transaction_id);
+    $tutor_id = intval($tutor_id);
+    
+    $tx = db_get_row("SELECT * FROM point_transactions WHERE id = $transaction_id");
+    if (!$tx) return false;
+
+    if ($tx['status'] === 'settled') {
+        return true;
+    }
+
+    if ($tx['status'] !== 'locked') {
+        return false;
+    }
+    
+    $total_points = intval($tx['points']);
+    $user_id = intval($tx['user_id']);
+    
+    $admin_points = floor($total_points * ($admin_share_percent / 100));
+    $tutor_points = $total_points - $admin_points;
+    
+    // 1. Mark transaction as settled
+    db_query("UPDATE point_transactions SET status = 'settled' WHERE id = $transaction_id");
+    
+    // 2. Update user's locked_points (reduce)
+    db_query("UPDATE user_points SET locked_points = locked_points - $total_points, total_spent = total_spent + $total_points WHERE user_id = $user_id");
+    
+    // 3. Add Topup Points to Tutor (Tutor always receives Topup points that can be withdrawn)
+    addPoints($tutor_id, $tutor_points, "Thù lao từ yêu cầu #{$tx['related_id']}", null, 'topup');
+    
+    // 4. Record Admin Commission (if needed for reporting)
+    // We could have an admin_vault table or just log it
+    db_query("INSERT INTO admin_earnings (amount, source_type, source_id) VALUES ($admin_points, 'tutor_request', {$tx['related_id']})");
+    
+    return true;
+}
+
+function refundEscrow($transaction_id, $reason = 'Yêu cầu bị hủy') {
+    $transaction_id = intval($transaction_id);
+    $tx = db_get_row("SELECT * FROM point_transactions WHERE id = $transaction_id AND status = 'locked'");
+    if (!$tx) return false;
+    
+    $total_points = intval($tx['points']);
+    $user_id = intval($tx['user_id']);
+    $bonus_refund = intval($tx['bonus_points_deducted']);
+    $topup_refund = intval($tx['topup_points_deducted']);
+    
+    // 1. Mark transaction as refunded
+    db_query("UPDATE point_transactions SET status = 'refunded' WHERE id = $transaction_id");
+    
+    // 2. Return points to user
+    $update = "UPDATE user_points SET 
+              current_points = current_points + $total_points,
+              bonus_points = bonus_points + $bonus_refund,
+              topup_points = topup_points + $topup_refund,
+              locked_points = locked_points - $total_points
+              WHERE user_id=$user_id";
+    
+    return db_query($update);
 }
 
 // ============ DOCUMENT POINTS FUNCTIONS ============
@@ -359,8 +483,8 @@ function purchaseDocument($buyer_id, $document_id) {
         return ['success' => false, 'message' => 'Không thể ghi nhận giao dịch. Điểm đã được hoàn lại.'];
     }
     
-    // Award points to seller
-    addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id);
+    // Award points to seller (AS BONUS POINTS - Non-convertible)
+    addPoints($seller_id, $points_to_pay, "Tài liệu của bạn đã được mua: " . $doc_name, $document_id, 'bonus');
     
     // Notify Seller
     global $VSD;

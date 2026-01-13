@@ -274,6 +274,14 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
     .progress-sidebar-vsd {
         position: sticky;
         top: 100px;
+        z-index: 10;
+    }
+
+    @media (max-width: 1024px) {
+        .progress-sidebar-vsd {
+            position: relative;
+            top: 0;
+        }
     }
 
     .step-item-vsd {
@@ -346,10 +354,10 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                     </a>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
                     
                     <!-- Main Content -->
-                    <div class="lg:col-span-8">
+                    <div class="lg:col-span-8 order-2 lg:order-1">
                         
                         <!-- Question Card -->
                         <div class="glass-card-vsd animate-in fade-in slide-in-from-bottom duration-700">
@@ -417,15 +425,49 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                     </div>
                                 </div>
                                 <div class="meta-item-vsd pt-4">
-                                    <span class="meta-label-vsd">Gói dịch vụ</span>
-                                    <div class="font-black text-xs uppercase tracking-widest text-primary"><?= $request['package_type'] ?></div>
+                                    <span class="meta-label-vsd">Phí dịch vụ</span>
+                                    <div class="font-black text-xs uppercase tracking-widest text-error"><?= $request['points_used'] ?> VSD (TẠM GIỮ)</div>
                                 </div>
                                 <div class="meta-item-vsd pt-4">
-                                    <span class="meta-label-vsd">Phí dịch vụ</span>
-                                    <div class="font-black text-xs uppercase tracking-widest text-error"><?= $request['points_used'] ?> VSD</div>
+                                    <span class="meta-label-vsd">Hạn chót trả lời (SLA)</span>
+                                    <div class="font-black text-xs uppercase tracking-widest <?= (strtotime($request['sla_deadline']) < time() && $request['status'] == 'pending') ? 'text-error' : 'text-success' ?>">
+                                        <?= date('H:i d/m/Y', strtotime($request['sla_deadline'])) ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Offers Section -->
+                        <?php 
+                        $offers = getRequestOffers($request_id);
+                        if (!empty($offers)): 
+                        ?>
+                            <div class="mt-8 space-y-4">
+                                <h3 class="font-black text-xs uppercase tracking-widest opacity-30 px-4">Đề nghị bổ sung điểm</h3>
+                                <?php foreach($offers as $offer): 
+                                    $is_accepted = $offer['status'] === 'accepted';
+                                ?>
+                                    <div class="glass-card-vsd !p-6 border-l-4 <?= $is_accepted ? 'border-l-emerald-500' : 'border-l-warning' ?> flex flex-col md:flex-row justify-between items-center gap-6">
+                                        <div>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span class="badge <?= $is_accepted ? 'badge-success text-white' : 'badge-warning' ?> font-black text-[10px]">+<?= $offer['points_offered'] ?> POINTS</span>
+                                                <?php if(!$is_accepted): ?>
+                                                    <span class="text-[10px] font-bold opacity-40 uppercase">Hết hạn: <?= date('H:i d/m', strtotime($offer['deadline'])) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <p class="text-sm font-bold italic">"<?= htmlspecialchars($offer['reason']) ?>"</p>
+                                        </div>
+                                        <?php if($is_accepted): ?>
+                                            <div class="px-8 py-3 rounded-2xl bg-emerald-500/10 text-emerald-600 font-black text-xs uppercase tracking-widest border border-emerald-500/20">
+                                                 <i class="fa-solid fa-check mr-2"></i> Đã chấp nhận
+                                            </div>
+                                        <?php elseif($is_student && $request['status'] == 'pending'): ?>
+                                            <button onclick="acceptOffer(<?= $offer['id'] ?>)" class="btn btn-warning rounded-2xl h-12 px-8 font-black text-xs uppercase tracking-widest shadow-lg shadow-warning/20">Chấp nhận</button>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Conversation Section -->
                         <div id="conversationSection" class="chat-container-vsd">
@@ -529,8 +571,27 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                             </div>
                         <?php endif; ?>
 
+                        <!-- Cancelled Card -->
+                        <?php if ($request['status'] === 'cancelled'): ?>
+                            <div class="glass-card-vsd mt-12 border-red-500/20 bg-red-500/5">
+                                <div class="flex flex-col items-center text-center py-8">
+                                    <div class="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-6 text-red-500 text-3xl">
+                                        <i class="fa-solid fa-ban"></i>
+                                    </div>
+                                    <h3 class="font-black text-2xl text-red-600 mb-2">Yêu cầu đã bị hủy</h3>
+                                    <p class="text-sm font-bold opacity-60 max-w-md mx-auto">
+                                        Yêu cầu này đã bị hủy do quá hạn trả lời hoặc theo yêu cầu của hệ thống. 
+                                        Tiền cọc đã được hoàn lại cho học viên.
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Message Input Panel -->
-                        <?php if (($is_tutor && $request['status'] === 'pending') || ($is_student && $request['status'] === 'pending' && !empty($request['answers'])) || ($is_tutor && $request['status'] === 'answered')): ?>
+                        <?php 
+                        $is_expired = ($request['status'] === 'pending' && strtotime($request['sla_deadline']) < time());
+                        if (($is_tutor && $request['status'] === 'pending') || ($is_student && $request['status'] === 'pending' && !empty($request['answers'])) || ($is_tutor && $request['status'] === 'answered')): 
+                        ?>
                             <div class="input-glass-vsd animate-in slide-in-from-bottom duration-700">
                                 <h3 class="font-black text-xs uppercase tracking-[0.2em] opacity-30 mb-8"><?= $is_tutor ? 'Gia sư trả lời' : 'Học viên nhắn tin' ?></h3>
                                 
@@ -538,27 +599,47 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                     <input type="hidden" name="action" value="<?= $is_tutor ? 'answer_request' : 'student_chat' ?>">
                                     <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
                                     
-                                    <div class="form-control">
-                                        <textarea name="content" required class="vsd-textarea h-40" placeholder="Nhập nội dung tin nhắn của bạn..."></textarea>
-                                    </div>
+                                    <?php if ($is_expired): ?>
+                                        <div class="alert bg-error/10 border-error/20 text-error rounded-2xl">
+                                            <i class="fa-solid fa-clock"></i>
+                                            <span class="text-sm font-bold">Thời gian hỗ trợ đã kết thúc. Vui lòng gia hạn thêm thời gian hoặc hoàn tất yêu cầu.</span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="form-control">
+                                            <textarea name="content" required class="vsd-textarea h-32" placeholder="Nhập nội dung tin nhắn của bạn..."></textarea>
+                                        </div>
+                                    <?php endif; ?>
                                     
-                                    <div class="flex flex-col md:flex-row gap-6 items-center justify-between">
-                                        <div class="flex items-center gap-4 w-full md:w-auto">
-                                            <label class="btn btn-ghost rounded-2xl h-14 px-6 border border-base-content/5 flex items-center gap-2 cursor-pointer hover:bg-base-200">
-                                                <i class="fa-solid fa-paperclip opacity-40"></i>
-                                                <span class="text-[10px] font-black uppercase tracking-widest opacity-40">Đính kèm file</span>
+                                    <div class="flex flex-wrap gap-3 items-center">
+                                        <?php if (!$is_expired): ?>
+                                            <label class="btn btn-ghost btn-sm rounded-xl h-10 px-4 border border-base-content/10 flex items-center gap-2 cursor-pointer hover:bg-base-200">
+                                                <i class="fa-solid fa-paperclip opacity-40 text-xs"></i>
+                                                <span class="text-[9px] font-black uppercase tracking-wider opacity-40">Đính kèm</span>
                                                 <input type="file" name="attachment" class="hidden" />
                                             </label>
-                                        </div>
+                                        <?php endif; ?>
+                                        
+                                        <?php if($is_tutor): ?>
+                                            <button type="button" onclick="showOfferModal()" class="btn btn-ghost btn-sm rounded-xl h-10 px-4 border-warning/30 text-warning hover:bg-warning/5 font-black text-[9px] uppercase tracking-wider">
+                                                Gia hạn / Thêm điểm
+                                            </button>
+                                            <button type="button" onclick="finishRequestManual()" class="btn btn-ghost btn-sm rounded-xl h-10 px-4 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5 font-black text-[9px] uppercase tracking-wider">
+                                                Hoàn tất
+                                            </button>
+                                        <?php endif; ?>
 
-                                        <div class="flex gap-4 w-full md:w-auto">
-                                            <?php if($is_tutor): ?>
-                                                <button type="button" onclick="finishRequestManual()" class="btn btn-outline border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/5 rounded-2xl h-14 px-8 font-black text-xs uppercase tracking-widest">
-                                                    Hoàn tất hỗ trợ
-                                                </button>
-                                            <?php endif; ?>
-                                            <button type="submit" class="vsd-btn-send flex-1 md:flex-none">Gửi tin nhắn</button>
-                                        </div>
+                                        <?php if($is_student): ?>
+                                            <button type="button" onclick="showExtensionModal()" class="btn btn-ghost btn-sm rounded-xl h-10 px-4 border-info/30 text-info hover:bg-info/5 font-black text-[9px] uppercase tracking-wider">
+                                                Gia hạn thời gian
+                                            </button>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (!$is_expired): ?>
+                                            <button type="submit" class="vsd-btn-send ml-auto h-12 px-6 text-xs">
+                                                <span class="btn-text">Gửi</span>
+                                                <span class="btn-loading hidden"><span class="loading loading-spinner loading-xs"></span></span>
+                                            </button>
+                                        <?php endif; ?>
                                     </div>
                                 </form>
                             </div>
@@ -566,7 +647,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                     </div>
 
                     <!-- Sidebar Progress -->
-                    <div class="lg:col-span-4">
+                    <div class="lg:col-span-4 order-1 lg:order-2">
                         <aside class="progress-sidebar-vsd">
                             <div class="glass-card-vsd animate-in slide-in-from-right duration-700">
                                 <h3 class="font-black text-xs uppercase tracking-[0.25em] mb-10 opacity-30">Trình trạng yêu cầu</h3>
@@ -576,7 +657,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                         <div class="step-icon-vsd"><i class="fa-solid fa-paper-plane"></i></div>
                                         <div class="step-content-vsd">
                                             <h4 class="step-title-vsd">Gửi câu hỏi</h4>
-                                            <p class="text-[10px] font-bold opacity-40 uppercase">Thành công</p>
+                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['points_used'] ?> points locked</p>
                                         </div>
                                     </div>
                                     
@@ -584,7 +665,11 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                         <div class="step-icon-vsd"><i class="fa-solid fa-chalkboard-user"></i></div>
                                         <div class="step-content-vsd">
                                             <h4 class="step-title-vsd">Gia sư phản hồi</h4>
-                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['status'] == 'pending' ? 'Đang thực hiện' : 'Hoàn tất' ?></p>
+                                            <?php if($request['status'] == 'pending'): ?>
+                                                <p class="text-[10px] font-bold text-warning uppercase animate-pulse" id="main-sla-timer">Đang chờ xử lý...</p>
+                                            <?php else: ?>
+                                                <p class="text-[10px] font-bold opacity-40 uppercase">Hoàn tất</p>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                     
@@ -633,6 +718,8 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
+            btn.querySelector('.btn-text')?.classList.add('hidden');
+            btn.querySelector('.btn-loading')?.classList.remove('hidden');
 
             const formData = new FormData(this);
             formData.append('action', action);
@@ -658,8 +745,11 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                 }
             } catch (err) {
                 console.error(err);
+                showAlert('Có lỗi xảy ra khi gửi tin nhắn', 'error');
             } finally {
                 btn.disabled = false;
+                btn.querySelector('.btn-text')?.classList.remove('hidden');
+                btn.querySelector('.btn-loading')?.classList.add('hidden');
             }
         });
     }
@@ -738,6 +828,37 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
 
     setInterval(pollMessages, 3000);
 
+    async function acceptOffer(offerId) {
+        vsdConfirm({
+            title: 'Chấp nhận đề nghị',
+            message: 'Bạn đồng ý bổ sung điểm cho yêu cầu này theo đề nghị của Gia sư?',
+            type: 'warning',
+            confirmText: 'Đồng ý',
+            onConfirm: async function() {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'accept_offer');
+                    formData.append('offer_id', offerId);
+                    
+                    const res = await fetch('/handler/tutor_handler.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    
+                    if(data.success) {
+                        showAlert(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    }
+
     async function finishRequestManual() {
         vsdConfirm({
             title: 'Hoàn tất hỗ trợ',
@@ -761,6 +882,143 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                         setTimeout(() => location.reload(), 1000);
                     } else {
                         showAlert(data.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    }
+
+    function updateCountdowns() {
+        const now = new Date().getTime();
+        
+        // Update main timer
+        const mainTimer = document.getElementById('main-sla-timer');
+        if(mainTimer) {
+             const deadlineStr = '<?= $request['sla_deadline'] ?? '' ?>';
+             if(deadlineStr) {
+                const deadline = new Date(deadlineStr).getTime();
+                const distance = deadline - now;
+                
+                if (distance < 0) {
+                    mainTimer.innerHTML = "<span class='text-error'>Đã quá hạn</span>";
+                } else {
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    mainTimer.innerHTML = `Còn lại: ${hours}h ${minutes}p`;
+                }
+             }
+        }
+        
+        // Update bubble timers
+        document.querySelectorAll('.sla-timer').forEach(el => {
+            const dStr = el.getAttribute('data-deadline');
+            if(dStr) {
+                 const d = new Date(dStr).getTime();
+                 const dist = d - now;
+                 if(dist > 0) {
+                     const h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                     const m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+                     el.innerText = `(Hết hạn trong ${h}h ${m}p)`;
+                 } else {
+                     el.innerText = '(Đã hết hạn)';
+                 }
+            }
+        });
+    }
+    
+    // Start interval
+    setInterval(updateCountdowns, 60000); // Check every minute
+    updateCountdowns(); // Run immediately
+
+    function showOfferModal() {
+        vsdPrompt({
+            title: 'Đề nghị thêm điểm',
+            message: 'Nếu câu hỏi phức tạp hơn mô tả ban đầu, bạn có thể đề nghị học viên bổ sung điểm.',
+            inputs: [
+                {
+                    label: 'Mức điểm bổ sung',
+                    name: 'points',
+                    type: 'select',
+                    options: [
+                        {value: 10, label: '+10 points'},
+                        {value: 20, label: '+20 points'},
+                        {value: 40, label: '+40 points'},
+                        {value: 60, label: '+60 points'}
+                    ]
+                },
+                {
+                    label: 'Lý do đề nghị',
+                    name: 'reason',
+                    type: 'textarea',
+                    placeholder: 'Ví dụ: Bài toán cần giải theo 3 cách khác nhau...'
+                }
+            ],
+            confirmText: 'Gửi đề nghị',
+            onConfirm: async function(data) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'create_offer');
+                    formData.append('request_id', REQUEST_ID);
+                    formData.append('points', data.points);
+                    formData.append('reason', data.reason);
+                    
+                    const res = await fetch('/handler/tutor_handler.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const resData = await res.json();
+                    
+                    if(resData.success) {
+                        showAlert(resData.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(resData.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    }
+
+    function showExtensionModal() {
+        vsdPrompt({
+            title: 'Gia hạn thời gian',
+            message: 'Bạn có thể dùng điểm tích lũy để gia hạn thêm thời gian cho Gia sư. Cứ 10 VSD = +1 Giờ.',
+            inputs: [
+                {
+                    label: 'Mức gia hạn',
+                    name: 'points',
+                    type: 'select',
+                    options: [
+                        {value: 10, label: '10 VSD (+1 Giờ)'},
+                        {value: 20, label: '20 VSD (+2 Giờ)'},
+                        {value: 40, label: '40 VSD (+4 Giờ)'},
+                        {value: 60, label: '60 VSD (+6 Giờ)'}
+                    ]
+                }
+            ],
+            confirmText: 'Gia hạn ngay',
+            onConfirm: async function(data) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'student_extend_time');
+                    formData.append('request_id', REQUEST_ID);
+                    formData.append('points', data.points);
+                    
+                    const res = await fetch('/handler/tutor_handler.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const resData = await res.json();
+                    
+                    if(resData.success) {
+                        showAlert(resData.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(resData.message, 'error');
                     }
                 } catch (err) {
                     console.error(err);

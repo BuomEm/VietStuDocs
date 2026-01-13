@@ -7,6 +7,10 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/points.php';
 
 redirectIfNotAdmin();
+require_once __DIR__ . '/../config/tutor.php';
+
+// Auto-trigger SLA completions (Lazy Cron)
+checkSLAExpirations();
 
 $admin_id = getCurrentUserId();
 $page_title = "Dashboard";
@@ -87,6 +91,11 @@ $recent_users = $VSD->get_list("
     ORDER BY created_at DESC
     LIMIT 5
 ");
+
+// ACTIONABLE STATS
+$pending_withdrawals = $VSD->get_row("SELECT COUNT(*) as count, SUM(amount_vsd) as total_vsd FROM withdrawal_requests WHERE status='pending'");
+$disputed_requests = $VSD->get_row("SELECT COUNT(*) as count FROM tutor_requests WHERE status='disputed'");
+$pending_tutors = $VSD->get_row("SELECT COUNT(*) as count FROM tutors WHERE status='pending'");
 
 $unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
 
@@ -394,43 +403,46 @@ include __DIR__ . '/../includes/admin-header.php';
                 </div>
             </div>
 
-            <!-- Secondary Stats -->
+            <!-- Actionable Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="stat-card" style="--card-accent: oklch(var(--su) / 0.15)">
-                    <div class="flex items-center gap-4">
-                        <div class="stat-icon bg-success/10 text-success">
-                            <i class="fa-solid fa-coins"></i>
-                        </div>
-                        <div>
-                            <div class="stat-value text-success text-xl"><?= number_format($transaction_stats['total_earned']) ?></div>
-                            <div class="stat-label">Điểm phát ra (30 ngày)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card" style="--card-accent: oklch(var(--er) / 0.15)">
+                <a href="withdrawals.php" class="stat-card hover:bg-base-200 cursor-pointer" style="--card-accent: oklch(var(--er) / 0.15)">
                     <div class="flex items-center gap-4">
                         <div class="stat-icon bg-error/10 text-error">
-                            <i class="fa-solid fa-cart-shopping"></i>
+                            <i class="fa-solid fa-money-bill-transfer"></i>
                         </div>
                         <div>
-                            <div class="stat-value text-error text-xl"><?= number_format($transaction_stats['total_spent']) ?></div>
-                            <div class="stat-label">Điểm tiêu thụ (30 ngày)</div>
+                            <div class="stat-value text-error text-xl"><?= number_format($pending_withdrawals['count'] ?? 0) ?></div>
+                            <div class="stat-label">Yêu cầu rút tiền</div>
+                            <?php if(($pending_withdrawals['count'] ?? 0) > 0): ?>
+                            <div class="text-xs text-error mt-1 animate-pulse"><?= number_format($pending_withdrawals['total_vsd'] ?? 0) ?> VSD chờ duyệt</div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                </div>
+                </a>
 
-                <div class="stat-card" style="--card-accent: oklch(var(--s) / 0.15)">
+                <a href="tutor_requests.php?status=disputed" class="stat-card hover:bg-base-200 cursor-pointer" style="--card-accent: oklch(var(--wa) / 0.15)">
+                    <div class="flex items-center gap-4">
+                        <div class="stat-icon bg-warning/10 text-warning">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value text-warning text-xl"><?= number_format($disputed_requests['count'] ?? 0) ?></div>
+                            <div class="stat-label">Khiếu nại cần xử lý</div>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="tutors.php" class="stat-card hover:bg-base-200 cursor-pointer" style="--card-accent: oklch(var(--s) / 0.15)">
                     <div class="flex items-center gap-4">
                         <div class="stat-icon bg-secondary/10 text-secondary">
-                            <i class="fa-solid fa-exchange-alt"></i>
+                            <i class="fa-solid fa-user-graduate"></i>
                         </div>
                         <div>
-                            <div class="stat-value text-secondary text-xl"><?= number_format($transaction_stats['total_transactions']) ?></div>
-                            <div class="stat-label">Giao dịch (30 ngày)</div>
+                            <div class="stat-value text-secondary text-xl"><?= number_format($pending_tutors['count'] ?? 0) ?></div>
+                            <div class="stat-label">Gia sư chờ duyệt</div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Quick Actions -->

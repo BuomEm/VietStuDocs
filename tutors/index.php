@@ -6,6 +6,21 @@ require_once __DIR__ . '/../config/tutor.php';
 $page_title = "Tìm Gia Sư - VietStuDocs";
 $current_page = 'tutors';
 $tutors = getActiveTutors($_GET);
+
+// SEO
+$page_keywords = "gia sư, tìm gia sư, dạy kèm, toán, lý, hóa, anh văn, luyện thi, " . htmlspecialchars($_GET['subject'] ?? '');
+$page_description = "Tìm kiếm gia sư giỏi, uy tín. Hỗ trợ giải bài tập, ôn thi đại học, cấp 3, cấp 2 nhanh chóng tại DocShare.";
+
+// Get SLA settings for display
+$sla_basic = floatval(getSetting('tutor_sla_basic', 0.5));
+$sla_standard = floatval(getSetting('tutor_sla_standard', 1));
+$sla_premium = floatval(getSetting('tutor_sla_premium', 6));
+
+// Format SLA for display
+function formatSLA($hours) {
+    if ($hours < 1) return intval($hours * 60) . 'p';
+    return intval($hours) . 'h';
+}
 ?>
 <?php require_once __DIR__ . '/../includes/head.php'; ?>
 
@@ -468,6 +483,13 @@ $tutors = getActiveTutors($_GET);
                 <div class="tutors-hero animate-in fade-in zoom-in-95 duration-700">
                     <h1>Gia Sư Ưu Tú</h1>
                     <p>Hỏi bài trực tiếp với những gia sư giỏi nhất. Nhận lời giải chi tiết và hỗ trợ 1-1 ngay lập tức.</p>
+                    <?php if(isset($_SESSION['user_id']) && isTutor($_SESSION['user_id'])): ?>
+                        <div class="mt-6">
+                            <a href="/tutors/withdraw" class="btn bg-white text-vsd-red hover:bg-white/90 border-none rounded-2xl font-black px-8">
+                                <i class="fa-solid fa-money-bill-transfer mr-2"></i> RÚT TIỀN GIA SƯ
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="tutors-layout">
@@ -561,20 +583,24 @@ $tutors = getActiveTutors($_GET);
                                             
                                             <div class="tutor-pricing-grid">
                                                 <div class="pricing-item-vsd">
-                                                    <div class="pricing-label-vsd">Cơ bản</div>
-                                                    <div class="pricing-value-vsd text-success"><?= $tutor['price_basic'] ?> VSD</div>
+                                                    <div class="pricing-label-vsd">Normal</div>
+                                                    <div class="pricing-value-vsd text-success"><?= $tutor['price_basic'] ?? 25 ?> VSD</div>
                                                 </div>
                                                 <div class="pricing-item-vsd border-x border-base-content/5">
-                                                    <div class="pricing-label-vsd">Tiêu chuẩn</div>
-                                                    <div class="pricing-value-vsd text-info"><?= $tutor['price_standard'] ?> VSD</div>
+                                                    <div class="pricing-label-vsd">Medium</div>
+                                                    <div class="pricing-value-vsd text-info"><?= $tutor['price_standard'] ?? 35 ?> VSD</div>
                                                 </div>
                                                 <div class="pricing-item-vsd">
-                                                    <div class="pricing-label-vsd">Cao cấp</div>
-                                                    <div class="pricing-value-vsd text-warning"><?= $tutor['price_premium'] ?> VSD</div>
+                                                    <div class="pricing-label-vsd">VIP</div>
+                                                    <div class="pricing-value-vsd text-warning"><?= $tutor['price_premium'] ?? 60 ?> VSD</div>
                                                 </div>
                                             </div>
                                             
-                                            <button onclick="openRequestModal(<?= $tutor['user_id'] ?>, '<?= htmlspecialchars($tutor['username']) ?>', <?= $tutor['price_basic'] ?>, <?= $tutor['price_standard'] ?>, <?= $tutor['price_premium'] ?>)" class="vsd-btn-ask">
+                                            <button onclick='openRequestModal(<?= $tutor['user_id'] ?>, "<?= htmlspecialchars($tutor['username']) ?>", <?= json_encode([
+                                                "normal" => $tutor['price_basic'] ?? 25,
+                                                "medium" => $tutor['price_standard'] ?? 35,
+                                                "vip" => $tutor['price_premium'] ?? 60
+                                            ]) ?>)' class="vsd-btn-ask">
                                                 Đặt câu hỏi <i class="fa-solid fa-arrow-right"></i>
                                             </button>
                                         </div>
@@ -613,32 +639,40 @@ $tutors = getActiveTutors($_GET);
                 </div>
                 
                 <div class="form-control">
-                    <label class="form-label-vsd !mb-1">Gói câu hỏi</label>
-                    <div class="grid grid-cols-3 gap-2">
+                    <label class="form-label-vsd !mb-1">Chọn gói & Mức điểm</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <label class="cursor-pointer group">
-                            <input type="radio" name="package_type" value="basic" class="hidden" checked />
-                            <div class="package-option h-full flex flex-col justify-center">
-                                <div class="font-black text-sm text-success">BASIC</div>
-                                <div id="modal_price_basic" class="text-xs font-bold my-1">0 VSD</div>
-                                <div class="text-[9px] font-bold opacity-40">TRẢ LỜI NGẮN</div>
+                            <input type="radio" name="package_type" value="normal" class="hidden" checked onchange="updatePriceDisplay('normal')" />
+                            <div class="package-option h-full flex flex-col justify-center py-4 border-2">
+                                <div class="font-black text-sm text-success">NORMAL</div>
+                                <div class="text-[10px] font-bold opacity-40 mt-1">SLA: <?= formatSLA($sla_basic) ?> • <span id="price_display_normal"></span> pts</div>
                             </div>
                         </label>
                         <label class="cursor-pointer group">
-                            <input type="radio" name="package_type" value="standard" class="hidden" />
-                            <div class="package-option h-full flex flex-col justify-center">
-                                <div class="font-black text-sm text-info">STANDARD</div>
-                                <div id="modal_price_standard" class="text-xs font-bold my-1">0 VSD</div>
-                                <div class="text-[9px] font-bold opacity-40">GIẢI CHI TIẾT</div>
+                            <input type="radio" name="package_type" value="medium" class="hidden" onchange="updatePriceDisplay('medium')" />
+                            <div class="package-option h-full flex flex-col justify-center py-4 border-2">
+                                <div class="font-black text-sm text-info">MEDIUM</div>
+                                <div class="text-[10px] font-bold opacity-40 mt-1">SLA: <?= formatSLA($sla_standard) ?> • <span id="price_display_medium"></span> pts</div>
                             </div>
                         </label>
                         <label class="cursor-pointer group">
-                            <input type="radio" name="package_type" value="premium" class="hidden" />
-                            <div class="package-option h-full flex flex-col justify-center">
-                                <div class="font-black text-sm text-warning">PREMIUM</div>
-                                <div id="modal_price_premium" class="text-xs font-bold my-1">0 VSD</div>
-                                <div class="text-[9px] font-bold opacity-40">GIẢI + FILE</div>
+                            <input type="radio" name="package_type" value="vip" class="hidden" onchange="updatePriceDisplay('vip')" />
+                            <div class="package-option h-full flex flex-col justify-center py-4 border-2">
+                                <div class="font-black text-sm text-warning">VIP</div>
+                                <div class="text-[10px] font-bold opacity-40 mt-1">SLA: <?= formatSLA($sla_premium) ?> • <span id="price_display_vip"></span> pts</div>
                             </div>
                         </label>
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="form-label-vsd !mb-1 flex justify-between">
+                        <span>Số điểm cần trả (Cố định)</span>
+                    </label>
+                    <div class="flex items-center gap-4 bg-base-200/50 p-4 rounded-2xl border border-base-content/5">
+                        <input type="hidden" name="points" id="points_input">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><i class="fa-solid fa-coins"></i></div>
+                        <div class="font-black text-primary text-2xl" id="points_final_display">0 VSD</div>
                     </div>
                 </div>
 
@@ -664,34 +698,50 @@ $tutors = getActiveTutors($_GET);
     </dialog>
 
     <script>
-    function openRequestModal(tutorId, tutorName, pBasic, pStandard, pPremium) {
+    let currentTutorPrices = {};
+
+    function openRequestModal(tutorId, tutorName, prices) {
         document.getElementById('modal_tutor_name').innerText = tutorName;
         document.getElementById('modal_tutor_id').value = tutorId;
         
-        // Update prices
-        document.getElementById('modal_price_basic').innerText = pBasic + ' VSD';
-        document.getElementById('modal_price_standard').innerText = pStandard + ' VSD';
-        document.getElementById('modal_price_premium').innerText = pPremium + ' VSD';
+        currentTutorPrices = prices;
         
+        // Update labels
+        document.getElementById('price_display_normal').innerText = prices.normal;
+        document.getElementById('price_display_medium').innerText = prices.medium;
+        document.getElementById('price_display_vip').innerText = prices.vip;
+        
+        updatePriceDisplay('normal'); // Default
         document.getElementById('request_modal').showModal();
     }
 
-    const packageRadios = document.querySelectorAll('input[name="package_type"]');
-    const fileUploadDiv = document.getElementById('file_upload_div');
-
-    packageRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if(this.value === 'premium') {
-                fileUploadDiv.classList.remove('hidden');
-            } else {
-                fileUploadDiv.classList.add('hidden');
-                fileUploadDiv.querySelector('input').value = ''; 
-            }
-        });
-    });
+    function updatePriceDisplay(pkg) {
+        const price = currentTutorPrices[pkg];
+        document.getElementById('points_input').value = price;
+        document.getElementById('points_final_display').innerText = price + ' VSD';
+        
+        // Only VIP gets file attachments
+        const fileDiv = document.getElementById('file_upload_div');
+        if (pkg === 'vip') {
+            fileDiv.classList.remove('hidden');
+        } else {
+            fileDiv.classList.add('hidden');
+            fileDiv.querySelector('input[type="file"]').value = ''; // Clear file if switching away
+        }
+    }
 
     document.getElementById('requestForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        let btn = document.querySelector('button[form="requestForm"]');
+        // Fallback if button not found by form attribute (e.g. inside form)
+        if (!btn) btn = this.querySelector('button[type="submit"]');
+
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Đang gửi...';
+        }
+
         const formData = new FormData(this);
         
         try {
@@ -699,15 +749,38 @@ $tutors = getActiveTutors($_GET);
                 method: 'POST',
                 body: formData
             });
+            
+            // Check if response is JSON
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text();
+                console.error("Non-JSON response:", text);
+                throw new Error("Server returned invalid format.");
+            }
+
             const data = await res.json();
             
             if(data.success) {
                 window.location.href = '/tutors/request?id=' + data.request_id;
             } else {
-                showAlert(data.message, 'error');
+                if(typeof showAlert === 'function') {
+                    showAlert(data.message, 'error');
+                } else {
+                    alert(data.message);
+                }
             }
         } catch(err) {
-            showAlert('Có lỗi xảy ra', 'error');
+            console.error(err);
+            if(typeof showAlert === 'function') {
+                showAlert('Có lỗi xảy ra: ' + err.message, 'error');
+            } else {
+                alert('Có lỗi xảy ra: ' + err.message);
+            }
+        } finally {
+            if(btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Gửi yêu cầu';
+            }
         }
     });
     </script>

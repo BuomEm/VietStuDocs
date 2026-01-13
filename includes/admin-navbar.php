@@ -12,7 +12,7 @@ global $VSD;
 $unread_notifications_count = 0;
 $navbar_notifications = [];
 
-if (isset($VSD)) {
+if (isset($VSD) && $admin_id) {
     $unread_notifications_count = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
     $navbar_notifications = $VSD->get_list("SELECT * FROM admin_notifications WHERE admin_id=$admin_id ORDER BY created_at DESC LIMIT 5");
 }

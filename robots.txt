@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /config/
+Disallow: /bin/
+Disallow: /vendor/
+Disallow: /.git/
+Disallow: /.env
+Disallow: /handler/
+Disallow: /push/
+Disallow: /TEST/
+
+Sitemap: /sitemap.php

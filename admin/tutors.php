@@ -62,6 +62,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // Update Rank
+    elseif ($action === 'update_rank') {
+        $tid = $_POST['tutor_id'];
+        $rank = $_POST['rank'];
+        $pdo->prepare("UPDATE tutors SET tutor_rank = ? WHERE id = ?")->execute([$rank, $tid]);
+        $flash = ['success', "Đã cập nhật hạng: $rank"];
+    }
+    
     if(isset($flash)) {
         $_SESSION['flash_msg'] = $flash[1];
         $_SESSION['flash_type'] = $flash[0];
@@ -340,15 +348,15 @@ include __DIR__ . '/../includes/admin-header.php';
                                                     <div class="grid grid-cols-3 gap-2 text-center">
                                                         <div>
                                                             <div class="text-xs text-base-content/60">Cơ bản</div>
-                                                            <div class="font-bold text-warning text-sm"><?= $u['price_basic'] ?> pts</div>
+                                                            <div class="font-bold text-warning text-sm"><?= $u['price_basic'] ?> VSD</div>
                                                         </div>
                                                         <div>
                                                             <div class="text-xs text-base-content/60">Tiêu chuẩn</div>
-                                                            <div class="font-bold text-warning text-sm"><?= $u['price_standard'] ?> pts</div>
+                                                            <div class="font-bold text-warning text-sm"><?= $u['price_standard'] ?> VSD</div>
                                                         </div>
                                                         <div>
-                                                            <div class="text-xs text-base-content/60">Cao cấp</div>
-                                                            <div class="font-bold text-warning text-sm"><?= $u['price_premium'] ?> pts</div>
+                                                            <div class="text-xs text-base-content/60">VIP</div>
+                                                            <div class="font-bold text-warning text-sm"><?= $u['price_premium'] ?> VSD</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -426,6 +434,10 @@ include __DIR__ . '/../includes/admin-header.php';
                                 <div class="w-3 h-3 <?= $is_online ? 'bg-success' : 'bg-base-300' ?> rounded-full shadow-lg"></div>
                             </div>
 
+                            <?php 
+                                $t_stats = getTutorStats($t['user_id']);
+                            ?>
+
                             <!-- Card Header -->
                             <div class="bg-gradient-to-r from-base-200/50 to-base-300/30 p-6 border-b border-base-200/30">
                                 <div class="flex items-center gap-4">
@@ -486,30 +498,46 @@ include __DIR__ . '/../includes/admin-header.php';
                                     <?php endif; ?>
                                 </div>
 
+                                <!-- Analytics row -->
+                                <div class="grid grid-cols-3 gap-2 mb-4">
+                                     <div class="bg-base-200/50 p-2 rounded-xl text-center">
+                                         <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Hoàn thành</div>
+                                         <div class="text-xs font-black text-primary"><?= round($t_stats['completion_rate']) ?>%</div>
+                                     </div>
+                                     <div class="bg-base-200/50 p-2 rounded-xl text-center">
+                                         <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Phản hồi</div>
+                                         <div class="text-xs font-black text-secondary"><?= round($t_stats['avg_response_time']) ?>m</div>
+                                     </div>
+                                     <div class="bg-base-200/50 p-2 rounded-xl text-center">
+                                         <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Tổng câu</div>
+                                         <div class="text-xs font-black text-slate-500"><?= $t_stats['total_requests'] ?></div>
+                                     </div>
+                                </div>
+
                                 <!-- Pricing Form -->
                                 <div class="mb-4">
-                                    <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wide mb-2">Bảng giá (điểm)</div>
+                                    <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wide mb-2">Bảng giá (VSD)</div>
                                     <form method="POST" class="bg-base-200/50 p-3 rounded-xl border border-base-200/50">
                                         <input type="hidden" name="action" value="update_prices">
                                         <input type="hidden" name="tutor_id" value="<?= $t['id'] ?>">
                                         <div class="grid grid-cols-3 gap-2 mb-3">
                                             <div class="text-center">
                                                 <div class="text-xs text-base-content/60 mb-1">Cơ bản</div>
-                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors"
+                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors font-bold"
                                                        name="price_basic" value="<?= $t['price_basic'] ?>" placeholder="0">
                                             </div>
                                             <div class="text-center">
                                                 <div class="text-xs text-base-content/60 mb-1">Tiêu chuẩn</div>
-                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors"
+                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors font-bold"
                                                        name="price_standard" value="<?= $t['price_standard'] ?>" placeholder="0">
                                             </div>
                                             <div class="text-center">
-                                                <div class="text-xs text-base-content/60 mb-1">Cao cấp</div>
-                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors"
+                                                <div class="text-xs text-base-content/60 mb-1">VIP</div>
+                                                <input class="input input-xs w-full text-center bg-base-100 border border-base-300 focus:border-primary transition-colors font-bold"
                                                        name="price_premium" value="<?= $t['price_premium'] ?>" placeholder="0">
                                             </div>
                                         </div>
-                                        <button class="btn btn-primary btn-xs w-full rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                                        <button class="btn btn-primary btn-xs w-full rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-bold">
                                             <i class="fa-solid fa-save mr-2"></i>
                                             Lưu thay đổi
                                         </button>
@@ -526,6 +554,18 @@ include __DIR__ . '/../includes/admin-header.php';
                                             <i class="fa-solid <?= $t['is_verified_tutor'] ? 'fa-ban' : 'fa-check-circle' ?> mr-2"></i>
                                             <?= $t['is_verified_tutor'] ? 'Hủy Verified' : 'Cấp Verified' ?>
                                         </button>
+                                    </form>
+
+                                    <!-- Rank Selector -->
+                                    <form method="POST" class="mt-2 w-full flex items-center gap-2">
+                                        <input type="hidden" name="action" value="update_rank">
+                                        <input type="hidden" name="tutor_id" value="<?= $t['id'] ?>">
+                                        <select name="rank" onchange="this.form.submit()" class="select select-bordered select-xs w-full rounded-full">
+                                            <option value="New" <?= ($t['tutor_rank'] ?? 'New') == 'New' ? 'selected' : '' ?>>Hạng: New</option>
+                                            <option value="Verified" <?= ($t['tutor_rank'] ?? '') == 'Verified' ? 'selected' : '' ?>>Hạng: Verified</option>
+                                            <option value="Pro" <?= ($t['tutor_rank'] ?? '') == 'Pro' ? 'selected' : '' ?>>Hạng: Pro</option>
+                                            <option value="VIP" <?= ($t['tutor_rank'] ?? '') == 'VIP' ? 'selected' : '' ?>>Hạng: VIP</option>
+                                        </select>
                                     </form>
 
                                     <?php if($t['status'] === 'active'): ?>

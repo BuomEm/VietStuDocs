@@ -23,6 +23,7 @@ $admin_avatar = function_exists('getCurrentUserAvatar') ? getCurrentUserAvatar()
 $pending_tutors = 0;
 $pending_reports = 0;
 $disputed_requests = 0;
+$pending_withdrawals = 0;
 
 try {
     if (isset($GLOBALS['conn'])) {
@@ -34,6 +35,9 @@ try {
         $pdo_check = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
         $stmt = $pdo_check->query("SELECT COUNT(*) FROM tutor_requests WHERE status = 'disputed'");
         $disputed_requests = $stmt->fetchColumn();
+        
+        $stmt_w = $pdo_check->query("SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'pending'");
+        $pending_withdrawals = $stmt_w->fetchColumn();
     }
 } catch(Exception $e) {}
 
@@ -50,6 +54,7 @@ $menu_items = [
     'management' => [
         ['id' => 'tutors', 'icon' => 'fa-solid fa-chalkboard-user', 'label' => 'Gia sư', 'href' => 'tutors.php', 'badge' => $pending_tutors, 'badge_type' => 'warning'],
         ['id' => 'tutor_requests', 'icon' => 'fa-solid fa-comments', 'label' => 'Hỏi đáp & Dispute', 'href' => 'tutor_requests.php', 'badge' => $disputed_requests, 'badge_type' => 'error'],
+        ['id' => 'withdrawals', 'icon' => 'fa-solid fa-money-bill-transfer', 'label' => 'Duyệt Rút tiền', 'href' => 'withdrawals.php', 'badge' => $pending_withdrawals, 'badge_type' => 'warning'],
         ['id' => 'users', 'icon' => 'fa-solid fa-users', 'label' => 'Người dùng', 'href' => 'users.php', 'badge' => null],
         ['id' => 'categories', 'icon' => 'fa-solid fa-tags', 'label' => 'Danh mục', 'href' => 'categories.php', 'badge' => null],
     ],

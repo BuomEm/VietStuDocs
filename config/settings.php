@@ -42,10 +42,10 @@ function setSetting($name, $value, $description = null, $category = 'general') {
     
     if ($count > 0) {
         // Update existing
-        return $VSD->update('settings', ['value' => $value], "name='$name'");
+        return $VSD->update('settings', ['value' => $value, 'category' => $category], "name='$name'");
     } else {
         // Insert new
-        return $VSD->insert('settings', ['name' => $name, 'value' => $value]);
+        return $VSD->insert('settings', ['name' => $name, 'value' => $value, 'category' => $category]);
     }
 }
 
@@ -62,6 +62,22 @@ function getSettingsByCategory($category) {
         'site' => ['site_name', 'site_logo', 'site_description', 'site_keywords', 'site_author'],
         'telegram' => ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_admin_ids'],
         'apis' => ['cloudconvert_api_key'],
+        'tutor' => [
+            'tutor_anti_abuse', 
+            'tutor_commission_basic', 'tutor_commission_standard', 'tutor_commission_premium',
+            'tutor_sla_basic', 'tutor_sla_standard', 'tutor_sla_premium',
+            'tutor_min_basic', 'tutor_max_basic',
+            'tutor_min_standard', 'tutor_max_standard',
+            'tutor_min_premium', 'tutor_max_premium'
+        ],
+        'shop' => [
+            'shop_bank_name', 'shop_bank_number', 'shop_bank_owner',
+            'shop_pkg1_price', 'shop_pkg1_topup', 'shop_pkg1_bonus', 'shop_pkg1_popular',
+            'shop_pkg2_price', 'shop_pkg2_topup', 'shop_pkg2_bonus', 'shop_pkg2_popular',
+            'shop_pkg3_price', 'shop_pkg3_topup', 'shop_pkg3_bonus', 'shop_pkg3_popular',
+            'shop_pkg4_price', 'shop_pkg4_topup', 'shop_pkg4_bonus', 'shop_pkg4_popular',
+            'shop_pkg5_price', 'shop_pkg5_topup', 'shop_pkg5_bonus', 'shop_pkg5_popular'
+        ],
         'notifications' => [
             'notify_browser_push_enabled', 'notify_telegram_enabled',
             'notify_new_document_browser', 'notify_new_document_telegram',

@@ -19,33 +19,63 @@
             $display_title = "$site_name | $clean_title";
         }
     }
+
+    // Dynamic Description & Keywords
+    $default_desc = function_exists('getSetting') ? getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.') : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam';
+    $display_description = isset($page_description) && !empty($page_description) ? $page_description : $default_desc;
+    
+    $default_keywords = "tài liệu học tập, đề thi, giáo án, luận văn, sách giáo khoa, bài giảng, đại học, thpt, thcs, tiểu học, vietstudocs, docshare";
+    $display_keywords = isset($page_keywords) && !empty($page_keywords) ? $page_keywords . ", " . $default_keywords : $default_keywords;
+
+    // Canonical URL
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+    $current_url = $protocol . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    // Remove query strings for canonical if needed, but keeping it simple for now
+    $canonical_url = isset($page_canonical) ? $page_canonical : strtok($current_url, '?');
     ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Primary Meta Tags -->
+    <title><?= htmlspecialchars($display_title) ?></title>
     <meta name="title" content="<?= htmlspecialchars($display_title) ?>">
-    <meta name="description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
-    <meta name="keywords" content="tài liệu học tập, đề thi, giáo án, luận văn, sách giáo khoa, bài giảng, đại học, thpt, thcs, tiểu học, vietstudocs, docshare">
+    <meta name="description" content="<?= htmlspecialchars($display_description) ?>">
+    <meta name="keywords" content="<?= htmlspecialchars($display_keywords) ?>">
     <meta name="robots" content="index, follow">
     <meta name="language" content="Vietnamese">
     <meta name="author" content="<?= htmlspecialchars($site_name) ?>">
+    
+    <!-- Canonical -->
+    <link rel="canonical" href="<?= htmlspecialchars($canonical_url) ?>" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>">
+    <meta property="og:url" content="<?= htmlspecialchars($current_url) ?>">
     <meta property="og:title" content="<?= htmlspecialchars($display_title) ?>">
-    <meta property="og:description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
-    <meta property="og:image" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($display_description) ?>">
+    <meta property="og:image" content="<?= $protocol . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>">
+    <meta property="twitter:url" content="<?= htmlspecialchars($current_url) ?>">
     <meta property="twitter:title" content="<?= htmlspecialchars($display_title) ?>">
-    <meta property="twitter:description" content="<?= function_exists('getSetting') ? htmlspecialchars(getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.')) : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam' ?>">
-    <meta property="twitter:image" content="<?= (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+    <meta property="twitter:description" content="<?= htmlspecialchars($display_description) ?>">
+    <meta property="twitter:image" content="<?= $protocol . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
 
-    <title><?= htmlspecialchars($display_title) ?></title>
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "<?= htmlspecialchars($site_name) ?>",
+      "url": "<?= $protocol . "://$_SERVER[HTTP_HOST]" ?>",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "<?= $protocol . "://$_SERVER[HTTP_HOST]" ?>/search.php?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
     <!-- DNS Preconnect -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">

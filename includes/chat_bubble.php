@@ -343,6 +343,43 @@ function updateChatUI(data) {
 
     // Footer notice
     updateFooterStatus(status);
+    
+    // SLA Countdown for bubble header
+    if (status === 'pending' && data.request.sla_deadline) {
+        startChatHeaderCountdown(data.request.sla_deadline);
+    } else {
+        stopChatHeaderCountdown();
+    }
+}
+
+let chatHeaderCountdownInterval = null;
+
+function startChatHeaderCountdown(deadlineStr) {
+    stopChatHeaderCountdown();
+    const statusEl = document.getElementById('chat-header-status');
+    const deadline = new Date(deadlineStr).getTime();
+    
+    chatHeaderCountdownInterval = setInterval(() => {
+        const now = new Date().getTime();
+        const dist = deadline - now;
+        
+        if (dist < 0) {
+            statusEl.innerHTML = '<span class="text-error font-black">QUÁ HẠN</span>';
+            stopChatHeaderCountdown();
+        } else {
+            const h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((dist % (1000 * 60)) / 1000);
+            statusEl.innerText = `CÒN LẠI: ${h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            statusEl.classList.add('text-warning');
+        }
+    }, 1000);
+}
+
+function stopChatHeaderCountdown() {
+    if(chatHeaderCountdownInterval) clearInterval(chatHeaderCountdownInterval);
+    chatHeaderCountdownInterval = null;
+    document.getElementById('chat-header-status').classList.remove('text-warning');
 }
 
 function appendMessageUI(msg) {

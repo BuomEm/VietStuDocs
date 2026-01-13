@@ -8,6 +8,7 @@ require_once __DIR__ . '/../config/points.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/premium.php';
 require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/tutor.php';
 
 $has_admin = isset($_SESSION['user_id']) && hasAdminAccess();
 
@@ -77,6 +78,24 @@ if(isset($_SESSION['user_id'])) {
                             <span class="menu-text">Thuê Gia Sư</span>
                         </a>
                     </li>
+
+                    <!-- Shop -->
+                    <li>
+                        <a href="/shop" class="<?= $current_page === 'shop' ? 'active' : '' ?>" data-tip="Mua điểm VSD">
+                            <i class="fa-solid fa-cart-shopping w-5 h-5"></i>
+                            <span class="menu-text">Mua điểm</span>
+                        </a>
+                    </li>
+
+                    <!-- Withdraw (For Tutors) -->
+                    <!-- <?php if(isset($_SESSION['user_id']) && isTutor($_SESSION['user_id'])): ?>
+                    <li>
+                        <a href="/tutors/withdraw" class="<?= $current_page === 'withdraw' ? 'active' : '' ?>" data-tip="Rút tiền">
+                            <i class="fa-solid fa-money-bill-transfer w-5 h-5"></i>
+                            <span class="menu-text">Rút tiền</span>
+                        </a>
+                    </li>
+                    <?php endif; ?> -->
                     
                     <!-- Saved -->
                     <li>
@@ -149,12 +168,12 @@ if(isset($_SESSION['user_id'])) {
                                     
                                     <div class="mt-2 flex items-center justify-between border-t border-primary/10 pt-2 text-[10px]">
                                         <div class="flex flex-col">
-                                            <span class="text-base-content/50">Đã nhận</span>
-                                            <span class="font-bold"><?= number_format($user_points['total_earned']) ?></span>
+                                            <span class="text-base-content/50 uppercase tracking-tighter font-bold">Đã nhận</span>
+                                            <span class="font-bold"><?= number_format($user_points['total_earned'] ?? 0) ?> VSD</span>
                                         </div>
                                         <div class="flex flex-col text-right">
-                                            <span class="text-base-content/50">Đã dùng</span>
-                                            <span class="font-bold"><?= number_format($user_points['total_spent']) ?></span>
+                                            <span class="text-base-content/50 uppercase tracking-tighter font-bold">Đã dùng</span>
+                                            <span class="font-bold"><?= number_format($user_points['total_spent'] ?? 0) ?> VSD</span>
                                         </div>
                                     </div>
                                 </div>

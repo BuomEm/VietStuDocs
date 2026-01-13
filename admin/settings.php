@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strpos($name, 'notify_') === 0 || strpos($name, 'telegram_') === 0) $category = 'notifications';
             elseif (strpos($name, 'limit_') === 0) $category = 'limits';
             elseif (strpos($name, 'cloudconvert_') === 0) $category = 'apis';
+            elseif (strpos($name, 'tutor_') === 0) $category = 'tutor';
+            elseif (strpos($name, 'shop_') === 0) $category = 'shop';
             setSetting($name, $value, $category);
         }
         $response['success'] = true;
@@ -132,6 +134,16 @@ require_once __DIR__ . '/../includes/admin-header.php';
                         <li>
                             <a onclick="switchTab('limits', this)">
                                 <i class="fa-solid fa-gauge-high w-5"></i> Giới hạn
+                            </a>
+                        </li>
+                        <li>
+                            <a onclick="switchTab('tutor', this)">
+                                <i class="fa-solid fa-graduation-cap w-5"></i> Gia sư
+                            </a>
+                        </li>
+                        <li>
+                            <a onclick="switchTab('shop', this)">
+                                <i class="fa-solid fa-store w-5"></i> Cửa hàng
                             </a>
                         </li>
                         <li>
@@ -302,6 +314,168 @@ require_once __DIR__ . '/../includes/admin-header.php';
                     </div>
                 </div>
 
+                <!-- TAB: Tutor Settings -->
+                <div id="tab-tutor" class="settings-tab hidden animate-fade-in">
+                    <div class="card bg-base-100 shadow-sm border border-base-200">
+                        <div class="card-body">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-bold flex items-center gap-2">
+                                    <span class="w-8 h-8 rounded-lg bg-primary/10 text-primary grid place-items-center"><i class="fa-solid fa-graduation-cap"></i></span>
+                                    Cấu hình Gia sư
+                                </h2>
+                                <label class="label cursor-pointer gap-2">
+                                    <span class="label-text font-bold text-xs uppercase">Chống gian lận</span>
+                                    <input type="checkbox" class="toggle toggle-primary" id="tutor_anti_abuse" <?= isSettingEnabled('tutor_anti_abuse') ? 'checked' : '' ?>>
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <!-- BASIC -->
+                                <div class="p-4 bg-base-200/50 rounded-xl space-y-3">
+                                    <h3 class="font-bold text-sm uppercase opacity-50">Gói Cơ Bản (Basic)</h3>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">Chiết khấu (%)</span></label>
+                                        <input type="number" id="tutor_commission_basic" class="input input-bordered input-sm" value="<?= getSetting('tutor_commission_basic', 25) ?>">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">SLA (Giờ)</span></label>
+                                        <input type="number" step="0.5" id="tutor_sla_basic" class="input input-bordered input-sm" value="<?= getSetting('tutor_sla_basic', 0.5) ?>">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Min Price</span></label>
+                                            <input type="number" id="tutor_min_basic" class="input input-bordered input-sm" value="<?= getSetting('tutor_min_basic', 25) ?>">
+                                        </div>
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Max Price</span></label>
+                                            <input type="number" id="tutor_max_basic" class="input input-bordered input-sm" value="<?= getSetting('tutor_max_basic', 35) ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STANDARD -->
+                                <div class="p-4 bg-base-200/50 rounded-xl space-y-3">
+                                    <h3 class="font-bold text-sm uppercase opacity-50">Gói Tiêu Chuẩn (Standard)</h3>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">Chiết khấu (%)</span></label>
+                                        <input type="number" id="tutor_commission_standard" class="input input-bordered input-sm" value="<?= getSetting('tutor_commission_standard', 20) ?>">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">SLA (Giờ)</span></label>
+                                        <input type="number" step="0.5" id="tutor_sla_standard" class="input input-bordered input-sm" value="<?= getSetting('tutor_sla_standard', 1) ?>">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Min Price</span></label>
+                                            <input type="number" id="tutor_min_standard" class="input input-bordered input-sm" value="<?= getSetting('tutor_min_standard', 35) ?>">
+                                        </div>
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Max Price</span></label>
+                                            <input type="number" id="tutor_max_standard" class="input input-bordered input-sm" value="<?= getSetting('tutor_max_standard', 60) ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PREMIUM -->
+                                <div class="p-4 bg-base-200/50 rounded-xl space-y-3">
+                                    <h3 class="font-bold text-sm uppercase opacity-50 text-warning">Gói VIP (Premium)</h3>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">Chiết khấu (%)</span></label>
+                                        <input type="number" id="tutor_commission_premium" class="input input-bordered input-sm" value="<?= getSetting('tutor_commission_premium', 15) ?>">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text">SLA (Giờ)</span></label>
+                                        <input type="number" step="0.5" id="tutor_sla_premium" class="input input-bordered input-sm" value="<?= getSetting('tutor_sla_premium', 6) ?>">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Min Price</span></label>
+                                            <input type="number" id="tutor_min_premium" class="input input-bordered input-sm" value="<?= getSetting('tutor_min_premium', 60) ?>">
+                                        </div>
+                                        <div class="form-control">
+                                            <label class="label"><span class="label-text">Max Price</span></label>
+                                            <input type="number" id="tutor_max_premium" class="input input-bordered input-sm" value="<?= getSetting('tutor_max_premium', 120) ?>">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Shop Settings -->
+                <div id="tab-shop" class="settings-tab hidden animate-fade-in">
+                    <div class="card bg-base-100 shadow-sm border border-base-200 mb-6">
+                        <div class="card-body">
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-success/10 text-success grid place-items-center"><i class="fa-solid fa-building-columns"></i></span>
+                                Thông tin Thanh toán & Tỷ giá
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Tỷ giá VSD (VNĐ / 1 VSD)</span></label>
+                                    <div class="join">
+                                        <span class="join-item btn btn-disabled bg-base-200 border-base-300 min-h-[3rem]">1 VSD =</span>
+                                        <input type="number" id="shop_exchange_rate" class="input input-bordered join-item w-full font-bold text-success" value="<?= getSetting('shop_exchange_rate', 1000) ?>">
+                                        <span class="join-item btn btn-disabled bg-base-200 border-base-300 min-h-[3rem]">VNĐ</span>
+                                    </div>
+                                    <label class="label"><span class="label-text-alt opacity-60">Dùng để tính toán khi người dùng nạp tiền</span></label>
+                                </div>
+                            </div>
+                            
+                            <div class="divider"></div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Ngân hàng</span></label>
+                                    <input type="text" id="shop_bank_name" class="input input-bordered" value="<?= htmlspecialchars(getSetting('shop_bank_name', 'MB BANK')) ?>">
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Số tài khoản</span></label>
+                                    <input type="text" id="shop_bank_number" class="input input-bordered" value="<?= htmlspecialchars(getSetting('shop_bank_number', '999999999')) ?>">
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Chủ tài khoản</span></label>
+                                    <input type="text" id="shop_bank_owner" class="input input-bordered" value="<?= htmlspecialchars(getSetting('shop_bank_owner', 'VietStuDocs Admin')) ?>">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-base-100 shadow-sm border border-base-200">
+                        <div class="card-body">
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-primary/10 text-primary grid place-items-center"><i class="fa-solid fa-box-archive"></i></span>
+                                Gói nạp VSD
+                            </h2>
+                            <div class="overflow-x-auto">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr class="bg-base-200/50">
+                                            <th>Gói</th>
+                                            <th>Giá (VNĐ)</th>
+                                            <th>Topup VSD</th>
+                                            <th>Bonus VSD</th>
+                                            <th>Phổ biến</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php for($i=1; $i<=5; $i++): ?>
+                                        <tr>
+                                            <td class="font-bold">Gói #<?= $i ?></td>
+                                            <td><input type="number" id="shop_pkg<?= $i ?>_price" class="input input-ghost input-xs w-24 bg-base-100" value="<?= getSetting("shop_pkg{$i}_price") ?>"></td>
+                                            <td><input type="number" id="shop_pkg<?= $i ?>_topup" class="input input-ghost input-xs w-20 bg-base-100" value="<?= getSetting("shop_pkg{$i}_topup") ?>"></td>
+                                            <td><input type="number" id="shop_pkg<?= $i ?>_bonus" class="input input-ghost input-xs w-20 bg-base-100" value="<?= getSetting("shop_pkg{$i}_bonus") ?>"></td>
+                                            <td><input type="checkbox" id="shop_pkg<?= $i ?>_popular" class="checkbox checkbox-xs checkbox-primary" <?= isSettingEnabled("shop_pkg{$i}_popular") ? 'checked' : '' ?>></td>
+                                        </tr>
+                                        <?php endfor; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB: APIs -->
                 <div id="tab-apis" class="settings-tab hidden animate-fade-in">
                     <div class="card bg-base-100 shadow-sm border border-base-200">
@@ -342,12 +516,35 @@ require_once __DIR__ . '/../includes/admin-header.php';
 </div>
 
 <script>
-function switchTab(tabId, el) {
+// Tab handling
+function switchTab(tabId, el = null) {
     document.querySelectorAll('.settings-tab').forEach(t => t.classList.add('hidden'));
     document.getElementById('tab-' + tabId).classList.remove('hidden');
+    
     document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
-    el.classList.add('active');
+    if(el) {
+        el.classList.add('active');
+    } else {
+        // Find link by onclick attribute
+        const link = document.querySelector(`.menu a[onclick*="'${tabId}'"]`);
+        if(link) link.classList.add('active');
+    }
+    
+    // Update hash without scrolling
+    history.replaceState(null, null, '#tab-' + tabId);
 }
+
+// Init tab from hash
+document.addEventListener('DOMContentLoaded', () => {
+    const hash = window.location.hash;
+    if(hash && hash.startsWith('#tab-')) {
+        const tabId = hash.substring(5); // remove #tab-
+        const tabEl = document.getElementById('tab-' + tabId);
+        if(tabEl) {
+            switchTab(tabId);
+        }
+    }
+});
 
 function previewLogo(input) {
     if (input.files && input.files[0]) {
