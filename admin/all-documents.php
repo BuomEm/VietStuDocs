@@ -357,7 +357,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 <?= htmlspecialchars($doc['original_name']) ?>
                                             </a>
                                             <div class="text-xs text-base-content/50 flex flex-wrap items-center gap-2 mt-1">
-                                                <span class="badge badge-xs badge-ghost font-mono">.<?= strtoupper($ext) ?></span>
+                                                <span class="badge badge-xs badge-ghost font-mono">.<?= strtoupper($ext) ?> | <?= ($doc['total_pages'] > 0 ? $doc['total_pages'] : 1) ?> Trang</span>
                                                 <span><?= date('H:i d/m/Y', strtotime($doc['created_at'])) ?></span>
                                                 <?php 
                                                     // user_price can be NULL, 0, or > 0
