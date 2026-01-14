@@ -111,13 +111,27 @@ include __DIR__ . '/../includes/admin-header.php';
                             <div class="w-12 h-12 rounded-xl <?= $bg_soft ?> flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                                 <i class="fa-solid <?= $icon_class ?>"></i>
                             </div>
-                            <div class="flex flex-col items-end">
+                            <div class="flex flex-col items-end gap-2">
                                 <span class="badge badge-warning badge-sm gap-1">
                                     <i class="fa-solid fa-hourglass-half text-[10px]"></i> Chờ duyệt
                                 </span>
-                                <span class="text-xs text-base-content/50 mt-1">
-                                    <?= date('H:i - d/m', strtotime($doc['created_at'])) ?>
-                                </span>
+                                <?php if($doc['ai_status'] === 'completed'): ?>
+                                    <?php 
+                                        $ai_dec = strtoupper($doc['ai_decision'] ?? '');
+                                        $ai_badge = match(true) {
+                                            str_contains($ai_dec, 'CHẤP') || str_contains($ai_dec, 'APPROV') => 'badge-success',
+                                            str_contains($ai_dec, 'XEM') || str_contains($ai_dec, 'CONDIT') => 'badge-warning',
+                                            str_contains($ai_dec, 'TỪ') || str_contains($ai_dec, 'REJECT') => 'badge-error',
+                                            default => 'badge-ghost'
+                                        };
+                                    ?>
+                                    <div class="flex flex-col items-end">
+                                        <div class="badge <?= $ai_badge ?> badge-xs font-bold py-2 whitespace-nowrap">AI: <?= $doc['ai_decision'] ?></div>
+                                        <div class="text-[10px] font-bold mt-1 text-primary"><?= $doc['ai_score'] ?>/100 pts</div>
+                                    </div>
+                                <?php elseif($doc['ai_status'] === 'processing'): ?>
+                                    <span class="badge badge-info badge-xs p-2 animate-pulse">AI Đang chấm...</span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -128,6 +142,17 @@ include __DIR__ . '/../includes/admin-header.php';
                         <p class="text-sm text-base-content/60 line-clamp-2 mt-2 min-h-[2.5rem]">
                             <?= !empty($doc['description']) ? htmlspecialchars($doc['description']) : 'Không có mô tả...' ?>
                         </p>
+
+                        <!-- AI Suggestion Box -->
+                        <?php if($doc['ai_status'] === 'completed' && $doc['ai_price'] > 0): ?>
+                            <div class="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/10 border-dashed flex items-center justify-between">
+                                <div class="text-[10px] uppercase font-bold text-primary/60">AI Gợi ý giá</div>
+                                <div class="text-sm font-black text-primary flex items-center gap-1">
+                                    <i class="fa-solid fa-coins text-warning"></i>
+                                    <?= number_format($doc['ai_price']) ?> VSD
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Uploader -->
                         <div class="flex items-center gap-2 mt-4 pt-4 border-t border-base-200">
@@ -150,7 +175,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             <button onclick="openRejectModal(<?= $doc['id'] ?>)" class="btn btn-outline btn-error btn-sm">
                                 Từ chối
                             </button>
-                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" class="btn btn-success btn-sm text-white">
+                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>', <?= (int)($doc['ai_price'] ?? 5) ?>)" class="btn btn-success btn-sm text-white">
                                 Duyệt
                             </button>
                         </div>
@@ -235,9 +260,16 @@ include __DIR__ . '/../includes/admin-header.php';
 </dialog>
 
 <script>
-function openApproveModal(id, title) {
+function openApproveModal(id, title, suggestedPrice = 5) {
     document.getElementById('approve_doc_id').value = id;
     document.getElementById('doc_title_display').innerText = title;
+    
+    // Set suggested price from AI if available
+    const pointsInput = document.querySelector('#approveModal input[name="points"]');
+    if (pointsInput) {
+        pointsInput.value = suggestedPrice;
+    }
+    
     document.getElementById('approveModal').showModal();
 }
 function openRejectModal(id) {

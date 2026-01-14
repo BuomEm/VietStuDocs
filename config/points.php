@@ -249,6 +249,7 @@ function setDocumentPoints($document_id, $points, $admin_id, $notes = '') {
 function getPendingDocuments() {
     return db_get_results("
         SELECT d.id, d.original_name, d.description, u.username, d.created_at, d.file_name,
+               d.ai_status, d.ai_score, d.ai_decision, d.ai_price,
                aa.reviewed_by, aa.reviewed_at
         FROM documents d
         JOIN users u ON d.user_id = u.id
