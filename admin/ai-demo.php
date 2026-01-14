@@ -75,55 +75,65 @@ require_once __DIR__ . '/../config/settings.php';
 $config_judge = getSetting('ai_model_judge', 'gpt-4o');
 $config_mod = getSetting('ai_model_moderator', 'gpt-4o-mini');
 
-// Fetch some documents to test
-$docs = $VSD->get_list("SELECT d.*, u.username 
-                           FROM documents d 
-                           JOIN users u ON d.user_id = u.id 
-                           ORDER BY d.created_at DESC 
-                           LIMIT 10");
+        // Fetch some documents to test
+        $docs = $VSD->get_list("SELECT d.*, u.username 
+                                FROM documents d 
+                                JOIN users u ON d.user_id = u.id 
+                                ORDER BY d.created_at DESC 
+                                LIMIT 30"); // Increased limit to fill scroll list
 
-require_once __DIR__ . '/../includes/admin-header.php';
-?>
+        require_once __DIR__ . '/../includes/admin-header.php';
+        ?>
 
-<div class="p-4 lg:p-8 animate-fade-in">
-    <div class="max-w-6xl mx-auto space-y-8">
-        
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    AI Review Demo Center
-                </h1>
-                <p class="text-base-content/60 mt-2">Phòng thử nghiệm và kiểm soát chất lượng AI Judge & Moderator</p>
-            </div>
-            <div class="badge badge-lg badge-outline badge-primary font-mono pulse">LIVE TESTING</div>
-        </div>
+        <div class="p-4 lg:p-8 animate-fade-in">
+            <div class="max-w-6xl mx-auto space-y-8">
+                
+                <!-- Header -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                            AI Review Demo Center
+                        </h1>
+                        <p class="text-base-content/60 mt-2">Phòng thử nghiệm và kiểm soát chất lượng AI Judge & Moderator</p>
+                    </div>
+                    <div class="badge badge-lg badge-outline badge-primary font-mono pulse">LIVE TESTING</div>
+                </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Left: Document List -->
-            <div class="lg:col-span-1 space-y-4">
-                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
-                    <div class="card-body p-4">
-                        <h2 class="card-title text-sm uppercase opacity-50 mb-4">Danh sách tài liệu gần đây</h2>
-                        <div class="space-y-2">
-                            <?php foreach($docs as $doc): ?>
-                            <div class="group p-3 bg-base-200/50 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all cursor-pointer"
-                                 onclick="selectDocument(<?= $doc['id'] ?>, '<?= htmlspecialchars($doc['original_name']) ?>')">
-                                <div class="flex justify-between items-start gap-2">
-                                    <div class="flex-1">
-                                        <div class="font-bold text-sm line-clamp-1"><?= htmlspecialchars($doc['original_name']) ?></div>
-                                        <div class="text-[10px] opacity-60">ID: <?= $doc['id'] ?> | @<?= $doc['username'] ?></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left: Document List -->
+                    <div class="lg:col-span-1 space-y-4">
+                        <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden flex flex-col h-full max-h-[700px]">
+                            <div class="card-body p-4 overflow-hidden flex flex-col">
+                                <h2 class="card-title text-sm uppercase opacity-50 mb-4 border-b border-base-200 pb-2">Danh sách tài liệu gần đây</h2>
+                                <div class="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                                    <?php foreach($docs as $doc): ?>
+                                    <div class="group p-3 bg-base-200/50 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all cursor-pointer"
+                                         onclick="selectDocument(<?= $doc['id'] ?>, '<?= htmlspecialchars($doc['original_name']) ?>')">
+                                        <div class="flex justify-between items-start gap-2">
+                                            <div class="flex-1">
+                                                <div class="font-bold text-sm line-clamp-2"><?= htmlspecialchars($doc['original_name']) ?></div>
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    <div class="text-[10px] font-black opacity-30 tracking-widest uppercase">ID: <?= $doc['id'] ?></div>
+                                                    <div class="w-1 h-1 rounded-full bg-base-content/20"></div>
+                                                    <div class="text-[10px] font-bold text-primary/70"><i class="fa-solid fa-file-lines mr-1 opacity-50"></i><?= ($doc['total_pages'] ?? 0) ?> trang</div>
+                                                </div>
+                                                <div class="text-[9px] font-bold opacity-40 italic mt-0.5">@<?= $doc['username'] ?></div>
+                                            </div>
+                                            <div class="flex flex-col items-end gap-1">
+                                                <div class="badge badge-xs <?= $doc['ai_status'] == 'completed' ? 'badge-success' : 'badge-ghost' ?> font-black text-[8px] tracking-tight">
+                                                    <?= strtoupper($doc['ai_status'] ?: 'None') ?>
+                                                </div>
+                                                <div class="text-[8px] font-black <?= $doc['ai_decision'] == 'APPROVED' ? 'text-success' : ($doc['ai_decision'] == 'REJECTED' ? 'text-error' : 'text-warning') ?>">
+                                                    <?= $doc['ai_decision'] ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="badge badge-xs <?= $doc['ai_status'] == 'completed' ? 'badge-success' : 'badge-ghost' ?>">
-                                        <?= $doc['ai_status'] ?: 'None' ?>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
-                            <?php endforeach; ?>
                         </div>
-                    </div>
-                </div>
                 
                 <div class="alert alert-info bg-info/10 border-info/20 text-xs">
                     <i class="fa-solid fa-circle-info"></i>

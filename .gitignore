@@ -9,6 +9,7 @@ uploads/tutors/*
 !uploads/tutors/.gitkeep
 config/db.php
 .env
+*.log
 API/pdfservices-api-credentials.json
 
 # Test & Debug Files

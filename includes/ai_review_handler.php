@@ -151,6 +151,7 @@ class AIReviewHandler {
      */
     public function calculateVSDPrice($score, $decision = 'APPROVED') {
         $score = intval($score);
+        $is_conditional = ($decision === 'CONDITIONAL' || $decision === 'Xem Xét');
         
         // Lấy cấu hình từ settings (với giá trị mặc định)
         $threshold_reject = intval(getSetting('ai_price_threshold_reject', 45));
@@ -167,37 +168,41 @@ class AIReviewHandler {
         $price_excellent_min = intval(getSetting('ai_price_excellent_min', 25));
         $price_excellent_max = intval(getSetting('ai_price_excellent_max', 50));
         
-        // Tài liệu bị reject không có giá
+        // 1. Tài liệu bị reject hoặc điểm quá thấp -> 0 VSD
         if ($decision === 'REJECTED' || $decision === 'Từ Chối' || $score < $threshold_reject) {
             return 0;
         }
         
-        // CONDITIONAL: threshold_reject → threshold_conditional
-        if ($decision === 'CONDITIONAL' || $decision === 'Xem Xét' || $score < $threshold_conditional) {
-            $range = $threshold_conditional - $threshold_reject;
-            $price_range = $price_conditional_max - $price_conditional_min;
-            return max($price_conditional_min, min($price_conditional_max, 
-                round($price_conditional_min + ($score - $threshold_reject) * ($price_range / max(1, $range)))));
-        }
-        
-        // EXCELLENT: >= threshold_excellent
+        $base_price = 0;
+
+        // 2. Tính giá cơ sở dựa trên các bậc điểm số (Standard -> Excellent)
         if ($score >= $threshold_excellent) {
             $range = 100 - $threshold_excellent;
             $price_range = $price_excellent_max - $price_excellent_min;
-            return round($price_excellent_min + ($score - $threshold_excellent) * ($price_range / max(1, $range)));
-        }
-        
-        // GOOD: threshold_good → threshold_excellent
-        if ($score >= $threshold_good) {
+            $base_price = $price_excellent_min + ($score - $threshold_excellent) * ($price_range / max(1, $range));
+        } elseif ($score >= $threshold_good) {
             $range = $threshold_excellent - $threshold_good;
             $price_range = $price_good_max - $price_good_min;
-            return round($price_good_min + ($score - $threshold_good) * ($price_range / max(1, $range)));
+            $base_price = $price_good_min + ($score - $threshold_good) * ($price_range / max(1, $range));
+        } elseif ($score >= $threshold_conditional) {
+            $range = $threshold_good - $threshold_conditional;
+            $price_range = $price_standard_max - $price_standard_min;
+            $base_price = $price_standard_min + ($score - $threshold_conditional) * ($price_range / max(1, $range));
+        } else {
+            // Dưới ngưỡng standard nhưng trên ngưỡng reject
+            $range = $threshold_conditional - $threshold_reject;
+            $price_range = $price_conditional_max - $price_conditional_min;
+            $base_price = $price_conditional_min + ($score - $threshold_reject) * ($price_range / max(1, $range));
+        }
+
+        // 3. Áp dụng giảm trừ nếu là CONDITIONAL (Thay vì chặn cứng)
+        if ($is_conditional) {
+            // Giảm 40% giá trị để khuyến khích người dùng hoàn thiện tài liệu
+            // Nhưng vẫn đảm bảo không thấp hơn mức tối thiểu của conditional
+            $base_price = max($price_conditional_min, $base_price * 0.8);
         }
         
-        // STANDARD: threshold_conditional → threshold_good
-        $range = $threshold_good - $threshold_conditional;
-        $price_range = $price_standard_max - $price_standard_min;
-        return round($price_standard_min + ($score - $threshold_conditional) * ($price_range / max(1, $range)));
+        return round($base_price);
     }
 
     /**

@@ -20,16 +20,26 @@ if($doc_id <= 0) {
 }
 
 // Get document - only owner can edit
-$doc = db_get_row("SELECT d.*, aa.rejection_reason, dp.notes as admin_notes, dp.admin_points
-     FROM documents d 
-     LEFT JOIN admin_approvals aa ON d.id = aa.document_id AND d.status = 'rejected'
-     LEFT JOIN docs_points dp ON d.id = dp.document_id
-     WHERE d.id=$doc_id AND d.user_id=$user_id");
+$doc = db_get_row("SELECT d.*, aa.rejection_reason, dp.notes as admin_notes, dp.admin_points,
+      ar.judge_result as review_judge, ar.moderator_result as review_moderator, ar.score as review_score
+      FROM documents d 
+      LEFT JOIN admin_approvals aa ON d.id = aa.document_id AND d.status = 'rejected'
+      LEFT JOIN docs_points dp ON d.id = dp.document_id
+      LEFT JOIN ai_reviews ar ON d.id = ar.document_id
+      WHERE d.id=$doc_id AND d.user_id=$user_id
+      ORDER BY ar.created_at DESC LIMIT 1");
 
 if(!$doc) {
     header("Location: dashboard.php?error=not_found");
     exit;
 }
+
+// Decode AI results (Prefer data from ai_reviews table if joined, fallback to documents table)
+$judge_raw = !empty($doc['review_judge']) ? $doc['review_judge'] : ($doc['ai_judge_result'] ?? null);
+$moderator_raw = !empty($doc['review_moderator']) ? $doc['review_moderator'] : ($doc['ai_moderator_result'] ?? null);
+$ai_judge = !empty($judge_raw) ? json_decode($judge_raw, true) : null;
+$ai_moderator = !empty($moderator_raw) ? json_decode($moderator_raw, true) : null;
+$ai_score = $doc['review_score'] ?? ($doc['ai_score'] ?? 0);
 
 // Get current document category
 $current_category = getDocumentCategory($doc_id);
@@ -503,6 +513,338 @@ $current_page = 'dashboard';
                     </div>
                 </div>
             </div>
+            <!-- AI Review Analysis Card (Full Width Span) -->
+            <?php if ($ai_judge): ?>
+                <div class="xl:col-span-full">
+                    <div class="bg-base-100 rounded-[3rem] border border-base-200 shadow-xl shadow-base-200/50 relative overflow-hidden">
+                        <div class="absolute -right-20 -top-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                        
+                        <!-- Header -->
+                        <div class="relative z-10 p-8 md:px-12 md:pt-12 md:pb-6 flex items-center justify-between border-b border-base-200/50">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                                    <i class="fa-solid fa-robot text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-black uppercase tracking-tight text-base-content">Kết quả thẩm định AI</h3>
+                                    <p class="text-[10px] font-bold text-base-content/30 uppercase tracking-widest">Hệ thống đánh giá tự động (Judge & Moderator)</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-6">
+                                <?php if (!empty($ai_moderator['decision'])): ?>
+                                    <div class="text-right">
+                                        <div class="text-[9px] font-black text-base-content/30 uppercase tracking-widest mb-1">Quyết định</div>
+                                        <?php 
+                                            $decision_colors = [
+                                                'APPROVED' => 'text-success', 'Chấp Nhận' => 'text-success',
+                                                'REJECTED' => 'text-error', 'Từ Chối' => 'text-error',
+                                                'CONDITIONAL' => 'text-warning', 'Xem Xét' => 'text-warning'
+                                            ];
+                                            $d_color = $decision_colors[$ai_moderator['decision']] ?? 'text-primary';
+                                        ?>
+                                        <div class="text-sm font-black uppercase tracking-tighter <?= $d_color ?>"><?= $ai_moderator['decision'] ?></div>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="w-px h-8 bg-base-200"></div>
+                                <div class="flex flex-col items-end">
+                                    <div class="text-[10px] font-black text-primary uppercase tracking-widest mb-1 opacity-40">Điểm tổng kết</div>
+                                    <div class="badge badge-lg h-12 px-6 bg-primary text-primary-content border-none font-black text-xl rounded-xl shadow-lg shadow-primary/20">
+                                        <?= $ai_score ?>/100
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-8 md:p-12 relative z-10 space-y-10">
+                            <!-- AI Content Summary -->
+                            <?php if (!empty($ai_judge['summary'])): ?>
+                                <div class="form-control">
+                                    <label class="label mb-2">
+                                        <span class="text-xs font-black uppercase tracking-widest text-base-content/40">Tóm tắt nội dung & Nhận xét</span>
+                                    </label>
+                                    <div class="bg-base-200/30 p-8 rounded-[2.5rem] border border-base-200/50 italic leading-relaxed text-base-content/80 font-medium">
+                                        "<?= htmlspecialchars($ai_judge['summary']) ?>"
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Multi-dimensional Scores Grid -->
+                            <div>
+                                <label class="label mb-4">
+                                    <span class="text-xs font-black uppercase tracking-widest text-base-content/40">Chi tiết các chỉ số chất lượng</span>
+                                </label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <?php 
+                                    $score_mapping = [
+                                        'clarity' => 'Độ rõ ràng',
+                                        'structure_logic' => 'Cấu trúc & Logic',
+                                        'academic_accuracy' => 'Độ chính xác',
+                                        'pedagogical_value' => 'Giá trị giáo dục',
+                                        'self_learning_support' => 'Hỗ trợ tự học',
+                                        'knowledge_completeness' => 'Độ đầy đủ',
+                                        'learning_objective_fit' => 'Phù hợp mục tiêu'
+                                    ];
+                                    $display_scores = $ai_moderator['final_scores'] ?? ($ai_judge['scores'] ?? []);
+                                    foreach($score_mapping as $key => $label): 
+                                        if(!isset($display_scores[$key])) continue;
+                                        $val = intval($display_scores[$key]);
+                                        $color = $val >= 80 ? 'bg-success' : ($val >= 50 ? 'bg-warning' : 'bg-error');
+                                    ?>
+                                        <div class="bg-base-200/50 p-4 rounded-2xl border border-base-200/50">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <span class="text-[9px] font-black uppercase tracking-tight opacity-50"><?= $label ?></span>
+                                                <span class="text-xs font-black"><?= $val ?>%</span>
+                                            </div>
+                                            <div class="w-full h-1.5 bg-base-300 rounded-full overflow-hidden">
+                                                <div class="<?= $color ?> h-full rounded-full" style="width: <?= $val ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <!-- Strengths & Weaknesses Detailed -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <!-- Strengths Column -->
+                                <div class="space-y-4">
+                                    <label class="label py-0">
+                                        <span class="text-[10px] font-black text-success uppercase tracking-widest flex items-center gap-2">
+                                            <i class="fa-solid fa-circle-check"></i> Ưu điểm nổi bật
+                                        </span>
+                                    </label>
+                                    <div class="bg-success/5 border border-success/10 rounded-[2rem] p-6 space-y-3 h-full">
+                                        <?php 
+                                        $strengths = $ai_judge['strengths'] ?? ($ai_judge['pros'] ?? []);
+                                        $strengths = is_array($strengths) ? $strengths : explode("\n", (string)$strengths);
+                                        foreach($strengths as $item): if(empty(trim($item))) continue;
+                                        ?>
+                                            <div class="flex gap-3 text-[11px] font-bold text-success/80 leading-relaxed">
+                                                <i class="fa-solid fa-check mt-1"></i>
+                                                <span><?= htmlspecialchars(ltrim(trim($item), '-•* ')) ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <?php if(empty($strengths)): ?>
+                                            <p class="text-[10px] italic opacity-30">Không có dữ liệu</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Weaknesses Column -->
+                                <div class="space-y-4">
+                                    <label class="label py-0">
+                                        <span class="text-[10px] font-black text-error uppercase tracking-widest flex items-center gap-2">
+                                            <i class="fa-solid fa-circle-minus"></i> Hạn chế / Điểm yếu
+                                        </span>
+                                    </label>
+                                    <div class="bg-error/5 border border-error/10 rounded-[2rem] p-6 space-y-3 h-full">
+                                        <?php 
+                                        $weaknesses = $ai_judge['weaknesses'] ?? ($ai_judge['cons'] ?? []);
+                                        $weaknesses = is_array($weaknesses) ? $weaknesses : explode("\n", (string)$weaknesses);
+                                        foreach($weaknesses as $item): if(empty(trim($item))) continue;
+                                        ?>
+                                            <div class="flex gap-3 text-[11px] font-bold text-error/80 leading-relaxed">
+                                                <i class="fa-solid fa-xmark mt-1"></i>
+                                                <span><?= htmlspecialchars(ltrim(trim($item), '-•* ')) ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <?php if(empty($weaknesses)): ?>
+                                            <p class="text-[10px] italic opacity-30">Không có dữ liệu</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Moderator Details: Required Fixes, Notes, Risks & Adjustments -->
+                            <?php if (!empty($ai_moderator['required_fixes']) || !empty($ai_moderator['moderator_notes']) || !empty($ai_moderator['risk_flags']) || !empty($ai_moderator['adjustments'])): ?>
+                                <div class="p-8 rounded-[2.5rem] bg-warning/5 border border-warning/10 border-dashed">
+                                    <div class="flex items-center justify-between mb-8">
+                                        <h3 class="text-xs font-black uppercase tracking-widest text-warning flex items-center gap-2">
+                                            <i class="fa-solid fa-user-shield text-base"></i> Ý kiến từ hệ thống Moderator
+                                        </h3>
+                                        <?php if(!empty($ai_moderator['risk_flags'])): ?>
+                                            <div class="flex gap-2">
+                                                <?php foreach($ai_moderator['risk_flags'] as $risk): ?>
+                                                    <span class="badge badge-error badge-sm font-black text-[9px] uppercase tracking-tighter p-3">
+                                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars($risk) ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                        <!-- Fixes & Notes -->
+                                        <div class="space-y-6">
+                                            <?php if (!empty($ai_moderator['required_fixes'])): ?>
+                                                <div>
+                                                    <div class="text-[10px] font-black text-warning/70 uppercase tracking-tight mb-3">Yêu cầu sửa đổi</div>
+                                                    <ul class="space-y-2">
+                                                        <?php 
+                                                        $fixes = is_array($ai_moderator['required_fixes']) ? $ai_moderator['required_fixes'] : [$ai_moderator['required_fixes']];
+                                                        foreach($fixes as $fix): 
+                                                        ?>
+                                                            <li class="flex gap-2 text-[11px] font-bold text-warning/80">
+                                                                <i class="fa-solid fa-wrench text-[9px] mt-1.5 opacity-50"></i>
+                                                                <?= htmlspecialchars($fix) ?>
+                                                            </li>
+                                                        <?php endforeach; ?>
+                                                    </ul>
+                                                </div>
+                                            <?php endif; ?>
+
+                                            <?php if (!empty($ai_moderator['moderator_notes'])): ?>
+                                                <div>
+                                                    <div class="text-[10px] font-black text-warning/70 uppercase tracking-tight mb-3">Ghi chú bổ sung</div>
+                                                    <ul class="space-y-2">
+                                                        <?php 
+                                                        $notes = is_array($ai_moderator['moderator_notes']) ? $ai_moderator['moderator_notes'] : [$ai_moderator['moderator_notes']];
+                                                        foreach($notes as $note): 
+                                                        ?>
+                                                            <li class="flex gap-2 text-[11px] font-bold text-warning/80">
+                                                                <i class="fa-solid fa-note-sticky text-[9px] mt-1.5 opacity-50"></i>
+                                                                <?= htmlspecialchars($note) ?>
+                                                            </li>
+                                                        <?php endforeach; ?>
+                                                    </ul>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <!-- Adjustments Table -->
+                                        <?php if(!empty($ai_moderator['adjustments'])): ?>
+                                            <div>
+                                                <div class="text-[10px] font-black text-warning/70 uppercase tracking-tight mb-3">Điều chỉnh điểm số</div>
+                                                <div class="overflow-hidden rounded-2xl border border-warning/10 bg-white/30 backdrop-blur">
+                                                    <table class="w-full text-[10px] text-left">
+                                                        <thead class="bg-warning/10 font-black uppercase tracking-widest text-[8px] opacity-60">
+                                                            <tr>
+                                                                <th class="px-4 py-2">Tiêu chí</th>
+                                                                <th class="px-4 py-2 text-right">Mức chỉnh</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="font-bold">
+                                                            <?php foreach($ai_moderator['adjustments'] as $adj_key => $adj_val): 
+                                                                if($adj_val == 0) continue;
+                                                            ?>
+                                                                <tr class="border-t border-warning/5">
+                                                                    <td class="px-4 py-2 opacity-60"><?= $score_mapping[$adj_key] ?? $adj_key ?></td>
+                                                                    <td class="px-4 py-2 text-right <?= $adj_val > 0 ? 'text-success' : 'text-error' ?>">
+                                                                        <?= $adj_val > 0 ? '+' : '' ?><?= $adj_val ?> pts
+                                                                    </td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Metadata, Missing Topics & Recommendations -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
+                                <!-- Target, Grade, Difficulty & Missing Topics -->
+                                <div class="space-y-6">
+                                    <div class="space-y-4">
+                                        <label class="label py-0">
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                                                <i class="fa-solid fa-users"></i> Thông tin chung
+                                            </span>
+                                        </label>
+                                        <div class="bg-primary/5 border border-primary/10 rounded-[2rem] p-6 space-y-3 shadow-sm shadow-primary/5">
+                                            <div class="flex justify-between items-center text-[11px] font-bold">
+                                                <span class="opacity-40">Đối tượng:</span>
+                                                <span class="text-primary"><?= htmlspecialchars($ai_judge['target_learner'] ?? ($ai_judge['target_audience'] ?? 'N/A')) ?></span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-[11px] font-bold">
+                                                <span class="opacity-40">Lớp gợi ý:</span>
+                                                <span class="text-primary"><?= htmlspecialchars($ai_judge['recommended_grade'] ?? 'N/A') ?></span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-[11px] font-bold">
+                                                <span class="opacity-40">Độ khó:</span>
+                                                <span class="badge badge-sm badge-outline font-black text-[9px] border-primary/20 text-primary uppercase"><?= htmlspecialchars($ai_judge['difficulty_level'] ?? 'N/A') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <?php if(!empty($ai_judge['missing_topics'])): ?>
+                                        <div class="space-y-4">
+                                            <label class="label py-0">
+                                                <span class="text-[10px] font-black text-error/60 uppercase tracking-widest flex items-center gap-2">
+                                                    <i class="fa-solid fa-puzzle-piece"></i> Kiến thức thiếu sót
+                                                </span>
+                                            </label>
+                                            <div class="bg-error/5 border border-error/10 rounded-[2rem] p-6">
+                                                <div class="flex flex-wrap gap-2">
+                                                    <?php foreach($ai_judge['missing_topics'] as $topic): ?>
+                                                        <span class="text-[10px] font-bold px-3 py-1 bg-error/10 text-error/70 rounded-full border border-error/5">
+                                                            <?= htmlspecialchars($topic) ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Recommendation -->
+                                <div class="md:col-span-2 space-y-4">
+                                    <label class="label py-0">
+                                        <span class="text-[10px] font-black text-success uppercase tracking-widest flex items-center gap-2">
+                                            <i class="fa-solid fa-lightbulb"></i> Lời khuyên học tập & Cải thiện
+                                        </span>
+                                    </label>
+                                    <div class="bg-success/5 border border-success/10 rounded-[2rem] p-6">
+                                        <?php if(!empty($ai_judge['study_recommendation'])): ?>
+                                            <div class="text-[11px] font-bold text-success/70 leading-relaxed mb-4 italic">
+                                                "<?= htmlspecialchars($ai_judge['study_recommendation']) ?>"
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <?php if(!empty($ai_judge['improvement_suggestions'])): ?>
+                                            <div class="grid grid-cols-1 gap-2">
+                                                <?php 
+                                                $suggs = is_array($ai_judge['improvement_suggestions']) ? $ai_judge['improvement_suggestions'] : [$ai_judge['improvement_suggestions']];
+                                                foreach($suggs as $s): 
+                                                ?>
+                                                    <div class="text-[10px] font-bold text-success/60 flex gap-2">
+                                                        <i class="fa-solid fa-wand-magic-sparkles mt-0.5 opacity-50"></i>
+                                                        <?= htmlspecialchars($s) ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Pricing Justification -->
+                            <?php if (!empty($doc['ai_price'])): ?>
+                                <div class="pt-6 border-t border-base-200">
+                                    <div class="bg-warning/5 border border-warning/10 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/10">
+                                                <i class="fa-solid fa-scale-balanced"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[9px] font-black text-warning uppercase tracking-widest">Đề xuất định giá VSD</div>
+                                                <p class="text-[11px] font-bold text-warning/70 leading-relaxed italic max-w-xl">
+                                                    "<?= htmlspecialchars($ai_judge['price_justification'] ?? 'Định giá tự động dựa trên chất lượng học thuật, cấu trúc và tính ứng dụng thực tế của tài liệu.') ?>"
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 bg-white/50 p-4 rounded-2xl shadow-sm border border-warning/5 self-end md:self-center">
+                                            <div class="text-[10px] font-black uppercase opacity-60">Ước tính:</div>
+                                            <div class="text-2xl font-black text-warning"><?= number_format($doc['ai_price']) ?> <span class="text-xs">VSD</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
         </form>
 
         <!-- Delete Confirmation Form -->

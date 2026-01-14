@@ -16,6 +16,7 @@ if (!isTutor($user_id)) {
 
 $points_data = getUserPoints($user_id);
 $page_title = 'Rút tiền - Gia Sư';
+$exchange_rate = intval(getSetting('shop_exchange_rate', 1000));
 
 // Basic validation for existing pending requests
 $pdo = getTutorDBConnection();
@@ -145,8 +146,8 @@ include __DIR__ . '/../includes/head.php';
 
                             <div class="withdraw-info-box flex justify-between items-center">
                                 <div>
-                                    <div class="text-[10px] font-black opacity-40 uppercase tracking-widest">Tiền thực nhận (1 VSD = 500đ)</div>
-                                    <div class="text-3xl font-black text-primary" id="received_value">25,000 VNĐ</div>
+                                    <div class="text-[10px] font-black opacity-40 uppercase tracking-widest">Tiền thực nhận (1 VSD = <?= number_format($exchange_rate) ?>đ)</div>
+                                    <div class="text-3xl font-black text-primary" id="received_value">0 VNĐ</div>
                                 </div>
                                 <i class="fa-solid fa-arrow-right-arrow-left text-2xl opacity-10"></i>
                             </div>
@@ -162,8 +163,9 @@ include __DIR__ . '/../includes/head.php';
     </div>
 
     <script>
+        const EXCHANGE_RATE = <?= $exchange_rate ?>;
         function updateReceivedValue(pts) {
-            const val = pts * 500;
+            const val = pts * EXCHANGE_RATE;
             document.getElementById('received_value').innerText = val.toLocaleString() + ' VNĐ';
         }
 
