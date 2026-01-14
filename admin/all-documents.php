@@ -62,6 +62,19 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         }
         header("Location: all-documents.php?msg=deleted"); exit;
     }
+    // Logic: AI Review
+    elseif($action === 'ai_review') {
+        header('Content-Type: application/json');
+        try {
+            require_once __DIR__ . '/../includes/ai_review_handler.php';
+            $handler = new AIReviewHandler($VSD);
+            $result = $handler->reviewDocument($document_id);
+            echo json_encode($result);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
 }
 
 // --- LOGIC LẤY DỮ LIỆU ---
@@ -328,6 +341,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             <th>Người đăng</th>
                             <th class="text-center">Thống kê</th>
                             <th>Trạng thái</th>
+                            <th class="text-center">AI Review</th>
                             <th class="text-right">Thao tác</th>
                         </tr>
                     </thead>
@@ -456,6 +470,47 @@ include __DIR__ . '/../includes/admin-header.php';
                                         <?php endif; ?>
                                     </div>
                                 </td>
+                                <td class="text-center">
+                                    <div id="ai-cell-<?= $doc['id'] ?>" class="flex flex-col items-center gap-1">
+                                        <?php if($doc['ai_status'] === 'completed'): ?>
+                                            <div class="tooltip" data-tip="Điểm: <?= $doc['ai_score'] ?>/100">
+                                                <div class="radial-progress <?= $doc['ai_score'] >= 60 ? 'text-success' : 'text-error' ?> bg-base-200" style="--value:<?= $doc['ai_score'] ?>; --size:2.8rem; --thickness: 4px;">
+                                                    <span class="text-[10px] font-bold"><?= $doc['ai_score'] ?></span>
+                                                </div>
+                                            </div>
+                                            <?php
+                                            $decision_label = $doc['ai_decision'];
+                                            $decision_class = '';
+                                            if ($decision_label === 'APPROVED' || $decision_label === 'Chấp Nhận') {
+                                                $decision_label = 'Chấp Nhận';
+                                                $decision_class = 'bg-success/20 text-success border-success/30';
+                                            } elseif ($decision_label === 'CONDITIONAL' || $decision_label === 'Xem Xét') {
+                                                $decision_label = 'Xem Xét';
+                                                $decision_class = 'bg-warning/20 text-warning border-warning/30';
+                                            } elseif ($decision_label === 'REJECTED' || $decision_label === 'Từ Chối') {
+                                                $decision_label = 'Từ Chối';
+                                                $decision_class = 'bg-error/20 text-error border-error/30';
+                                            }
+                                            ?>
+                                            <span class="px-2 py-0.5 rounded-md text-[8px] font-extrabold border uppercase tracking-tighter <?= $decision_class ?> inline-block leading-tight">
+                                                <?= $decision_label ?>
+                                            </span>
+                                        <?php elseif($doc['ai_status'] === 'processing'): ?>
+                                            <div class="flex flex-col items-center gap-2">
+                                                <span class="loading loading-spinner loading-sm text-primary"></span>
+                                                <span class="text-[10px] animate-pulse">Đang chấm...</span>
+                                            </div>
+                                        <?php elseif($doc['ai_status'] === 'failed'): ?>
+                                            <button onclick="runAIReview(<?= $doc['id'] ?>, this)" class="btn btn-xs btn-error btn-outline" title="<?= htmlspecialchars($doc['error_message'] ?? 'Lỗi không xác định') ?>">
+                                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Thử lại
+                                            </button>
+                                        <?php else: ?>
+                                            <button onclick="runAIReview(<?= $doc['id'] ?>, this)" class="btn btn-xs btn-primary btn-outline gap-1">
+                                                <i class="fa-solid fa-robot"></i> Chấm AI
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
                                 <td class="text-right">
                                     <div class="join shadow-sm">
                                         <?php if($doc['status'] === 'pending'): ?>
@@ -475,7 +530,7 @@ include __DIR__ . '/../includes/admin-header.php';
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center py-16 text-base-content/50">
+                                <td colspan="8" class="text-center py-16 text-base-content/50">
                                     <div class="flex flex-col items-center justify-center">
                                         <div class="w-16 h-16 bg-base-200 rounded-full flex items-center justify-center mb-4">
                                             <i class="fa-solid fa-folder-open text-3xl opacity-50"></i>
@@ -604,6 +659,43 @@ include __DIR__ . '/../includes/admin-header.php';
             document.body.appendChild(form);
             form.submit();
         }
+    }
+
+    function runAIReview(id, btn) {
+        const cell = document.getElementById(`ai-cell-${id}`);
+        const originalContent = cell.innerHTML;
+        
+        cell.innerHTML = `
+            <div class="flex flex-col items-center gap-2">
+                <span class="loading loading-spinner loading-sm text-primary"></span>
+                <span class="text-[10px] animate-pulse">Đang gọi AI...</span>
+            </div>
+        `;
+
+        const formData = new FormData();
+        formData.append('action', 'ai_review');
+        formData.append('document_id', id);
+
+        fetch('all-documents.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to see results or update DOM dynamically
+                // For better UX, let's just reload this specific row or the whole page
+                window.location.reload();
+            } else {
+                alert('Lỗi AI: ' + (data.error || 'Không xác định'));
+                cell.innerHTML = originalContent;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Lỗi hệ thống khi gọi AI');
+            cell.innerHTML = originalContent;
+        });
     }
 </script>
 

@@ -58,10 +58,15 @@ $menu_items = [
         ['id' => 'users', 'icon' => 'fa-solid fa-users', 'label' => 'Người dùng', 'href' => 'users.php', 'badge' => null],
         ['id' => 'categories', 'icon' => 'fa-solid fa-tags', 'label' => 'Danh mục', 'href' => 'categories.php', 'badge' => null],
     ],
+    'ai' => [
+        ['id' => 'ai-demo', 'icon' => 'fa-solid fa-flask', 'label' => 'AI Demo', 'href' => 'ai-demo.php', 'badge' => null],
+        ['id' => 'ai-queue', 'icon' => 'fa-solid fa-list-check', 'label' => 'AI Review Queue', 'href' => 'ai-queue.php', 'badge' => null],
+        ['id' => 'ai-stats', 'icon' => 'fa-solid fa-chart-pie', 'label' => 'Thống kê AI', 'href' => 'ai-stats.php', 'badge' => null],
+    ],
     'analytics' => [
         ['id' => 'reports', 'icon' => 'fa-solid fa-flag', 'label' => 'Báo cáo', 'href' => 'reports.php', 'badge' => $pending_reports, 'badge_type' => 'error'],
         ['id' => 'transactions', 'icon' => 'fa-solid fa-receipt', 'label' => 'Giao dịch', 'href' => 'transactions.php', 'badge' => null],
-        ['id' => 'notifications', 'icon' => 'fa-solid fa-bell', 'label' => 'Thông báo', 'href' => 'notifications.php', 'badge' => $unread_notifications, 'badge_type' => 'info'],
+        ['id' => 'notifications', 'icon' => 'fa-solid fa-bell', 'label' => 'Thông báo', 'badge' => $unread_notifications, 'badge_type' => 'info', 'href' => 'notifications.php'],
     ],
 ];
 ?>
@@ -247,6 +252,22 @@ $menu_items = [
                         </a>
                     </li>
                 <?php endforeach; ?>
+            </ul>
+            
+            <!-- AI Section -->
+            <div class="menu-section-title mt-4">QUẢN LÝ AI</div>
+            <ul class="menu w-full p-0">
+                <?php if(isset($menu_items['ai'])): foreach($menu_items['ai'] as $item): ?>
+                    <li>
+                        <a href="<?= $item['href'] ?>" class="<?= $admin_active_page === $item['id'] ? 'active' : '' ?>">
+                            <span class="menu-icon"><i class="<?= $item['icon'] ?>"></i></span>
+                            <span class="menu-text flex-1"><?= $item['label'] ?></span>
+                            <?php if(isset($item['badge']) && $item['badge'] > 0): ?>
+                                <span class="badge badge-sm badge-<?= $item['badge_type'] ?? 'primary' ?> badge-pulse"><?= $item['badge'] ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                <?php endforeach; endif; ?>
             </ul>
 
             <!-- Analytics Section -->

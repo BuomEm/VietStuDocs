@@ -15,9 +15,7 @@ checkSLAExpirations();
 $admin_id = getCurrentUserId();
 $page_title = "Dashboard";
 
-// Get statistics
-$pending_docs = getPendingDocumentsCount();
-
+// Get Core Statistics early for usage in logic
 $stats = $VSD->get_row("
     SELECT 
         COUNT(DISTINCT d.id) as total_documents,
@@ -28,83 +26,69 @@ $stats = $VSD->get_row("
     FROM documents d
 ");
 
-// Get recent activities
-$recent_activities = $VSD->get_list("
-    SELECT 
-        'document_approved' as activity_type,
-        aa.reviewed_at as timestamp,
-        d.original_name,
-        d.id as doc_id,
-        u.username,
-        u.avatar,
-        aa.admin_points as value
-    FROM admin_approvals aa
-    JOIN documents d ON aa.document_id = d.id
-    JOIN users u ON d.user_id = u.id
-    WHERE aa.status = 'approved'
-    ORDER BY aa.reviewed_at DESC
-    LIMIT 8
-");
+// 1. Document Growth (Last 7 days)
+$chart_growth = [];
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $count = (int)$VSD->num_rows("SELECT id FROM documents WHERE DATE(created_at) = '$date'");
+    $chart_growth[] = [
+        'label' => date('d/m', strtotime($date)),
+        'value' => $count
+    ];
+}
 
-// Get top documents by sales
-$top_documents = $VSD->get_list("
-    SELECT 
-        d.id,
-        d.original_name,
-        d.admin_points,
-        u.username,
-        u.avatar,
-        COUNT(ds.id) as sales_count,
-        SUM(ds.points_paid) as total_points_earned
-    FROM documents d
-    JOIN users u ON d.user_id = u.id
-    LEFT JOIN document_sales ds ON d.id = ds.document_id
-    WHERE d.status = 'approved'
-    GROUP BY d.id
-    ORDER BY sales_count DESC
+// 2. Revenue Trend (VSD Earned from Sales - Last 7 days)
+$chart_revenue = [];
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $earned = $VSD->get_row("SELECT SUM(points_paid) as total FROM document_sales WHERE DATE(purchased_at) = '$date'")['total'] ?? 0;
+    $chart_revenue[] = [
+        'label' => date('d/m', strtotime($date)),
+        'value' => (int)$earned
+    ];
+}
+
+// 3. Category Distribution (Education Levels)
+$category_stats = $VSD->get_results("
+    SELECT education_level, COUNT(*) as count 
+    FROM document_categories 
+    GROUP BY education_level 
+    ORDER BY count DESC 
     LIMIT 5
 ");
+// Map level codes to names
+require_once __DIR__ . '/../config/categories.php';
+$chart_categories = [];
+foreach($category_stats as $cs) {
+    $lv_info = getEducationLevelInfo($cs['education_level']);
+    $chart_categories[] = [
+        'label' => $lv_info['name'] ?? $cs['education_level'],
+        'value' => (int)$cs['count']
+    ];
+}
 
-// Get user statistics
-$user_stats = $VSD->get_row("
-    SELECT 
-        COUNT(*) as total_users,
-        SUM(CASE WHEN role='admin' THEN 1 ELSE 0 END) as admin_count,
-        SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as new_users_week
-    FROM users
-");
-
-// Get transaction stats
-$transaction_stats = $VSD->get_row("
-    SELECT 
-        COALESCE(SUM(CASE WHEN transaction_type='earn' THEN points ELSE 0 END), 0) as total_earned,
-        COALESCE(SUM(CASE WHEN transaction_type='spend' THEN points ELSE 0 END), 0) as total_spent,
-        COUNT(*) as total_transactions
-    FROM point_transactions
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-");
-
-// Get recent users
-$recent_users = $VSD->get_list("
-    SELECT id, username, avatar, email, created_at, role
-    FROM users
-    ORDER BY created_at DESC
-    LIMIT 5
-");
-
-// ACTIONABLE STATS
-$pending_withdrawals = $VSD->get_row("SELECT COUNT(*) as count, SUM(amount_vsd) as total_vsd FROM withdrawal_requests WHERE status='pending'");
-$disputed_requests = $VSD->get_row("SELECT COUNT(*) as count FROM tutor_requests WHERE status='disputed'");
-$pending_tutors = $VSD->get_row("SELECT COUNT(*) as count FROM tutors WHERE status='pending'");
-
-$unread_notifications = $VSD->num_rows("SELECT id FROM admin_notifications WHERE admin_id=$admin_id AND is_read=0");
+// 4. AI Decision Distribution
+$ai_stats = [
+    'approved' => (int)$VSD->num_rows("SELECT id FROM documents WHERE ai_decision IN ('APPROVED', 'Chấp Nhận')"),
+    'conditional' => (int)$VSD->num_rows("SELECT id FROM documents WHERE ai_decision IN ('CONDITIONAL', 'Xem Xét')"),
+    'rejected' => (int)$VSD->num_rows("SELECT id FROM documents WHERE ai_decision IN ('REJECTED', 'Từ Chối')"),
+];
 
 // For shared admin sidebar
 $admin_active_page = 'dashboard';
-$admin_pending_count = $stats['pending_documents'];
+$admin_pending_count = (int)($stats['pending_documents'] ?? 0);
 
 // Include header
 include __DIR__ . '/../includes/admin-header.php';
+
+// Re-fetch remaining data for display
+$user_stats = $VSD->get_row("SELECT COUNT(*) as total_users, SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as new_users_week FROM users");
+$pending_withdrawals = $VSD->get_row("SELECT COUNT(*) as count, SUM(points) as total_vsd FROM withdrawal_requests WHERE status='pending'");
+$disputed_requests = $VSD->get_row("SELECT COUNT(*) as count FROM tutor_requests WHERE status='disputed'");
+$pending_tutors = $VSD->get_row("SELECT COUNT(*) as count FROM tutors WHERE status='pending'");
+$top_documents = $VSD->get_list("SELECT d.id, d.original_name, d.admin_points, u.username, COUNT(ds.id) as sales_count, SUM(ds.points_paid) as total_points_earned FROM documents d JOIN users u ON d.user_id = u.id LEFT JOIN document_sales ds ON d.id = ds.document_id WHERE d.status = 'approved' GROUP BY d.id ORDER BY sales_count DESC LIMIT 5");
+$recent_users = $VSD->get_list("SELECT id, username, avatar, email, created_at, role FROM users ORDER BY created_at DESC LIMIT 5");
+$recent_activities = $VSD->get_list("SELECT 'document_approved' as activity_type, aa.reviewed_at as timestamp, d.original_name, d.id as doc_id, u.username, aa.admin_points as value FROM admin_approvals aa JOIN documents d ON aa.document_id = d.id JOIN users u ON d.user_id = u.id WHERE aa.status = 'approved' ORDER BY aa.reviewed_at DESC LIMIT 8");
 ?>
 
 <style>
@@ -445,6 +429,72 @@ include __DIR__ . '/../includes/admin-header.php';
                 </a>
             </div>
 
+            <!-- Charts Row 1: Content & AI -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Document Growth Chart -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title text-sm">
+                            <i class="fa-solid fa-chart-line text-primary"></i>
+                            Tăng trưởng tài liệu (7 ngày qua)
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="h-[200px] w-full">
+                            <canvas id="growthChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Statistics Pie Chart -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title text-sm">
+                            <i class="fa-solid fa-robot text-secondary"></i>
+                            Phân bổ kết quả AI Review
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="h-[200px] w-full">
+                            <canvas id="aiPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 2: Revenue & Categories -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Revenue Trend Chart -->
+                <div class="dashboard-card border-l-4 border-warning">
+                    <div class="card-header">
+                        <h3 class="card-title text-sm">
+                            <i class="fa-solid fa-coins text-warning"></i>
+                            Doanh thu hệ thống (VSD)
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="h-[200px] w-full">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Distribution Chart -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title text-sm">
+                            <i class="fa-solid fa-layer-group text-info"></i>
+                            Phân bổ theo Cấp học
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="h-[200px] w-full">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick Actions -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <a href="pending-docs.php" class="quick-action-card" style="--action-from: #f59e0b; --action-to: #d97706; --action-shadow: rgba(245, 158, 11, 0.4)">
@@ -595,3 +645,99 @@ include __DIR__ . '/../includes/admin-header.php';
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';
 ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Growth Chart
+    const growthCtx = document.getElementById('growthChart').getContext('2d');
+    const growthData = <?= json_encode($chart_growth) ?>;
+    const growthGradient = growthCtx.createLinearGradient(0, 0, 0, 200);
+    growthGradient.addColorStop(0, 'rgba(150, 241, 176, 0.3)');
+    growthGradient.addColorStop(1, 'rgba(150, 241, 176, 0)');
+    new Chart(growthCtx, {
+        type: 'line',
+        data: {
+            labels: growthData.map(d => d.label),
+            datasets: [{
+                label: 'Tài liệu',
+                data: growthData.map(d => d.value),
+                borderColor: '#96f1b0',
+                backgroundColor: growthGradient,
+                fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', stepSize: 1 } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+            }
+        }
+    });
+
+    // 2. AI Pie Chart
+    const aiCtx = document.getElementById('aiPieChart').getContext('2d');
+    const aiDataValue = <?= json_encode(array_values($ai_stats)) ?>;
+    new Chart(aiCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Chấp Nhận', 'Xem Xét', 'Từ Chối'],
+            datasets: [{
+                data: aiDataValue,
+                backgroundColor: ['#34d399', '#fbbf24', '#fb7185'],
+                borderWidth: 0, hoverOffset: 10
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: { legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.6)', usePointStyle: true, font: { size: 10 } } } }
+        }
+    });
+
+    // 3. Revenue Chart
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    const revData = <?= json_encode($chart_revenue) ?>;
+    const revGradient = revCtx.createLinearGradient(0, 0, 0, 200);
+    revGradient.addColorStop(0, 'rgba(251, 191, 36, 0.3)');
+    revGradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
+    new Chart(revCtx, {
+        type: 'line',
+        data: {
+            labels: revData.map(d => d.label),
+            datasets: [{
+                label: 'VSD Earned',
+                data: revData.map(d => d.value),
+                borderColor: '#fbbf24',
+                backgroundColor: revGradient,
+                fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)' } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)' } }
+            }
+        }
+    });
+
+    // 4. Category Chart
+    const catCtx = document.getElementById('categoryChart').getContext('2d');
+    const catData = <?= json_encode($chart_categories) ?>;
+    new Chart(catCtx, {
+        type: 'bar',
+        data: {
+            labels: catData.map(d => d.label),
+            datasets: [{
+                data: catData.map(d => d.value),
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: '#3b82f6',
+                borderWidth: 1, borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', stepSize: 1 } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } } }
+            }
+        }
+    });
+});
+</script>

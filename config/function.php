@@ -118,6 +118,7 @@ class DB
         mysqli_free_result($result);
         return $return;
     }
+    public function get_results($sql) { return $this->get_list($sql); }
     public function get_row($sql)
     {
         $this->connect();
