@@ -370,22 +370,31 @@ function updateProgress(val, text) {
 }
 
 function renderResults(data) {
-    const res = data.result;
-    const full = data.full_review;
+    if (!data || !data.full_review) {
+        addLog('Lỗi: Dữ liệu kết quả không hợp lệ hoặc bị thiếu.', 'error');
+        return;
+    }
+    
+    const res = data.result || {};
+    const full = data.full_review || {};
+    const judge = full.judge || {};
+    const moderator = full.moderator || {};
 
     // Banner
-    document.getElementById('res-decision').textContent = res.decision;
-    document.getElementById('res-score').textContent = res.score + ' / 100';
-    document.getElementById('res-diff').textContent = full.judge.difficulty_level || 'N/A';
+    document.getElementById('res-decision').textContent = res.decision || 'N/A';
+    document.getElementById('res-score').textContent = (res.score !== undefined ? res.score : '---') + ' / 100';
+    document.getElementById('res-diff').textContent = judge.difficulty_level || 'N/A';
     
     // Style decision - Support both EN and VN terms
     const dCard = document.getElementById('res-decision').parentElement;
     let colorClass = 'bg-base-200 border-base-300 text-base-content';
-    if (res.decision === 'APPROVED' || res.decision === 'Chấp Nhận') {
+    const decision = (res.decision || '').toUpperCase();
+    
+    if (['APPROVED', 'CHẤP NHẬN'].includes(decision)) {
         colorClass = 'bg-success/10 border-success/20 text-success';
-    } else if (res.decision === 'CONDITIONAL' || res.decision === 'Xem Xét') {
+    } else if (['CONDITIONAL', 'XEM XÉT'].includes(decision)) {
         colorClass = 'bg-warning/10 border-warning/20 text-warning';
-    } else if (res.decision === 'REJECTED' || res.decision === 'Từ Chối') {
+    } else if (['REJECTED', 'TỪ CHỐI'].includes(decision)) {
         colorClass = 'bg-error/10 border-error/20 text-error';
     }
     dCard.className = 'card p-4 border ' + colorClass;
@@ -393,19 +402,25 @@ function renderResults(data) {
     // Moderator Notes
     const notesDiv = document.getElementById('res-mod-notes');
     notesDiv.innerHTML = '';
-    (full.moderator.moderator_notes || []).forEach(n => {
+    (moderator.moderator_notes || []).forEach(n => {
         notesDiv.innerHTML += `<div class="p-2 bg-base-200 rounded text-sm"><i class="fa-solid fa-check text-success mr-2"></i> ${n}</div>`;
     });
+    if (!(moderator.moderator_notes || []).length) {
+        notesDiv.innerHTML = '<div class="text-[10px] opacity-30 italic">Không có ghi chú từ Moderator</div>';
+    }
 
     // Risks
     const risksDiv = document.getElementById('res-risks');
     risksDiv.innerHTML = '';
-    (full.moderator.risk_flags || []).forEach(f => {
+    (moderator.risk_flags || []).forEach(f => {
         risksDiv.innerHTML += `<span class="badge badge-error badge-outline text-[10px] font-bold">${f.toUpperCase()}</span>`;
     });
+    if (!(moderator.risk_flags || []).length) {
+        risksDiv.innerHTML = '<div class="text-[10px] opacity-30 italic">Không có cảnh báo rủi ro</div>';
+    }
 
     // RAW JSON
-    document.getElementById('json-judge').textContent = JSON.stringify(full.judge, null, 2);
+    document.getElementById('json-judge').textContent = JSON.stringify(judge, null, 2);
 
     // Metadata
     const metaDiv = document.getElementById('res-meta-content');

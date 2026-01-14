@@ -221,6 +221,25 @@ if ($category_data) {
     );
 }
 
+// Tự động thẩm định AI ngay khi upload
+$ai_processed = false;
+try {
+    // Tăng thời gian chờ cho PHP vì AI Assistants có thể mất 30-60s
+    @set_time_limit(180); 
+    
+    require_once __DIR__ . '/../includes/ai_review_handler.php';
+    $ai_handler = new AIReviewHandler($VSD);
+    $ai_result = $ai_handler->reviewDocument($doc_id);
+    
+    if ($ai_result && $ai_result['success']) {
+        $ai_processed = true;
+        error_log("Document $doc_id: Auto AI Review completed. Decision: " . $ai_result['decision']);
+    }
+} catch (Exception $e) {
+    error_log("AI Auto-Review Error for doc $doc_id: " . $e->getMessage());
+    // Không chặn quy trình upload chính nếu AI lỗi
+}
+
 // Create admin notification for new document using unified sender
 require_once __DIR__ . '/../config/notifications.php';
 $notification_message = "Tài liệu mới cần duyệt: " . $original_name;
