@@ -46,7 +46,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
     <!-- Search Box -->
     <div class="flex-1 max-w-md mx-auto px-2 relative group/search">
         <div class="relative">
-            <form action="/search.php" method="GET" class="flex gap-0 w-full">
+            <form action="/search" method="GET" class="flex gap-0 w-full">
                 <input 
                     type="text" 
                     name="q" 
@@ -216,7 +216,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 
     function displaySuggestions(suggestions) {
         searchSuggestions.innerHTML = suggestions.map(s => `
-            <a href="/search.php?q=${encodeURIComponent(s.keyword)}" class="group block px-4 py-3 hover:bg-primary/5 transition-colors border-b last:border-0 border-base-200">
+            <a href="/search?q=${encodeURIComponent(s.keyword)}" class="group block px-4 py-3 hover:bg-primary/5 transition-colors border-b last:border-0 border-base-200">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-base-content/50 group-hover:bg-primary group-hover:text-primary-content transition-colors">
                         <i class="fa-solid fa-magnifying-glass text-sm"></i>

@@ -6,9 +6,9 @@ php_value session.cookie_lifetime 604800
 RewriteEngine On
 
 # 1. Redirect .php to extensionless (Redirect public URL)
-# For specific files in /page folder
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/page/(contact|dashboard|edit-document|error|faq|history|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|transaction-details|upload|user_profile|view)\.php [NC]
-RewriteRule ^page/(.*)\.php$ /%1 [R=301,L]
+# Redirect /page/filename.php OR /filename.php to /filename
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(?:page/)?(contact|dashboard|edit-document|error|faq|history|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|transaction-details|upload|user_profile|view)\.php [NC]
+RewriteRule ^ /%1 [R=301,L]
 
 # For remaining root files (like index.php)
 RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(index|testapi)\.php [NC]

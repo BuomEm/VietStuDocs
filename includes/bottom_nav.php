@@ -1,7 +1,7 @@
 <?php
 // Validating active state
 $current_uri = $_SERVER['REQUEST_URI'];
-$is_dashboard = strpos($current_uri, 'dashboard.php') !== false || $current_uri == '/' || $current_uri == '/index.php';
+$is_dashboard = strpos($current_uri, 'dashboard') !== false || $current_uri == '/' || $current_uri == '/index.php';
 $is_tutor = strpos($current_uri, 'tutor') !== false;
 $is_upload = strpos($current_uri, 'upload') !== false;
 $is_profile = strpos($current_uri, 'profile') !== false;
@@ -13,13 +13,13 @@ $is_logged_in_nav = isset($_SESSION['user_id']);
     <div class="flex items-center justify-around p-2 h-[4.5rem]">
         
         <!-- Home -->
-        <a href="/dashboard.php" class="flex flex-col items-center gap-1 p-2 w-[20%] <?= $is_dashboard ? 'text-primary' : 'text-base-content/50' ?> hover:text-primary transition-colors">
+        <a href="/dashboard" class="flex flex-col items-center gap-1 p-2 w-[20%] <?= $is_dashboard ? 'text-primary' : 'text-base-content/50' ?> hover:text-primary transition-colors">
             <i class="fa-solid fa-house text-base mb-0.5"></i>
             <span class="text-[10px] font-medium">Trang chủ</span>
         </a>
 
         <!-- Tutor -->
-        <a href="/tutors/dashboard.php" class="flex flex-col items-center gap-1 p-2 w-[20%] <?= $is_tutor ? 'text-primary' : 'text-base-content/50' ?> hover:text-primary transition-colors">
+        <a href="/tutors/dashboard" class="flex flex-col items-center gap-1 p-2 w-[20%] <?= $is_tutor ? 'text-primary' : 'text-base-content/50' ?> hover:text-primary transition-colors">
             <i class="fa-solid fa-user-graduate text-base mb-0.5"></i>
             <span class="text-[10px] font-medium">Gia Sư</span>
         </a>
@@ -30,13 +30,13 @@ $is_logged_in_nav = isset($_SESSION['user_id']);
             <!-- Glow Effect -->
             <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-gradient-to-tr from-red-600 via-orange-500 to-yellow-400 rounded-full blur-2xl opacity-60 animate-pulse-slow pointer-events-none"></div>
             
-            <a href="/upload.php" class="absolute -top-8 flex items-center justify-center w-14 h-14 rounded-full bg-white text-primary shadow-lg shadow-primary/40 hover:scale-110 active:scale-95 transition-all outline outline-4 outline-base-100/50 z-10">
+            <a href="/upload" class="absolute -top-8 flex items-center justify-center w-14 h-14 rounded-full bg-white text-primary shadow-lg shadow-primary/40 hover:scale-110 active:scale-95 transition-all outline outline-4 outline-base-100/50 z-10">
                 <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
             </a>
         </div>
 
         <!-- Points Display -->
-        <a href="/history.php" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors group">
+        <a href="/history" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors group">
             <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-content transition-colors">
                 <i class="fa-solid fa-coins text-xs"></i>
             </div>
@@ -59,7 +59,7 @@ $is_logged_in_nav = isset($_SESSION['user_id']);
                 <?php if(isset($has_admin) && $has_admin): ?>
                     <li><a href="/admin/" class="py-3 font-semibold"><i class="fa-solid fa-user-shield w-6 text-center text-error"></i> Quản trị</a></li>
                 <?php endif; ?>
-                <li><a href="/logout.php" class="py-3 font-semibold text-error"><i class="fa-solid fa-power-off w-6 text-center"></i> Đăng xuất</a></li>
+                <li><a href="/logout" class="py-3 font-semibold text-error"><i class="fa-solid fa-power-off w-6 text-center"></i> Đăng xuất</a></li>
             </ul>
         </div>
         <?php else: ?>
@@ -74,7 +74,7 @@ $is_logged_in_nav = isset($_SESSION['user_id']);
         </div>
 
         <!-- Search -->
-        <a href="/search.php" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors">
+        <a href="/search" class="flex flex-col items-center gap-1 p-2 w-[20%] text-base-content/50 hover:text-primary transition-colors">
             <i class="fa-solid fa-magnifying-glass text-base mb-0.5"></i>
             <span class="text-[10px] font-medium">Tìm kiếm</span>
         </a>
