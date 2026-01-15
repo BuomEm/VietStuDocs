@@ -464,7 +464,15 @@ class AIReviewHandler {
             
             if (empty($content)) throw new Exception("Không nhận được kết quả từ AI Judge (Content Empty).");
 
-            return json_decode($content, true);
+            // Làm sạch nếu AI trả về dạng ```json ... ```
+            $content = preg_replace('/^```json\s*|\s*```$/i', '', trim($content));
+            
+            $decoded = json_decode($content, true);
+            if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception("Lỗi Giải mã JSON Vòng 1. Raw Content: " . substr($content, 0, 2000));
+            }
+
+            return $decoded;
 
         } finally {
             // Dọn dẹp Assistant & Thread
@@ -494,7 +502,15 @@ class AIReviewHandler {
         $result = $this->request('chat/completions', 'POST', $data);
         $content = $result['choices'][0]['message']['content'] ?? '';
         
-        return json_decode($content, true);
+        // Làm sạch nếu AI trả về dạng ```json ... ```
+        $content = preg_replace('/^```json\s*|\s*```$/i', '', trim($content));
+        
+        $decoded = json_decode($content, true);
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception("Lỗi Giải mã JSON Vòng 2. Raw Content: " . substr($content, 0, 2000));
+        }
+        
+        return $decoded;
     }
 
     private function deleteFile($file_id) {

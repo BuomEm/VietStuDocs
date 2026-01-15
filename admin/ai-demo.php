@@ -21,11 +21,16 @@ if (isset($_GET['ajax_review']) && isset($_GET['document_id'])) {
     header('Content-Type: application/json');
     try {
         $document_id = intval($_GET['document_id']);
-        $handler = new AIReviewHandler($VSD);
+        
+        // Cấu hình tăng timeout cho request thí nghiệm (Shared Hosting)
+        @set_time_limit(300);
+        ignore_user_abort(true);
+        
+        $handler = new AIReviewHandler($conn);
         $result = $handler->reviewDocument($document_id);
         
-        // Fetch the review details from database to show full logs
-        $review = $VSD->get_row("SELECT * FROM documents WHERE id = $document_id");
+        // Fetch newly updated review details
+        $review = db_get_row("SELECT * FROM documents WHERE id = $document_id");
         
         if (ob_get_length()) ob_clean();
         echo json_encode([
@@ -35,7 +40,9 @@ if (isset($_GET['ajax_review']) && isset($_GET['document_id'])) {
                 'judge' => json_decode($review['ai_judge_result'], true),
                 'moderator' => json_decode($review['ai_moderator_result'], true),
                 'score' => $review['ai_score'],
-                'decision' => $review['ai_decision']
+                'decision' => $review['ai_decision'],
+                'status' => $review['ai_status'],
+                'error' => $review['error_message']
             ] : null
         ]);
     } catch (Exception $e) {
@@ -49,23 +56,25 @@ if (isset($_GET['ajax_review']) && isset($_GET['document_id'])) {
 if (isset($_GET['ajax_get_details']) && isset($_GET['document_id'])) {
     header('Content-Type: application/json');
     $document_id = intval($_GET['document_id']);
-    $doc = $VSD->get_row("SELECT * FROM documents WHERE id = $document_id");
+    $doc = db_get_row("SELECT * FROM documents WHERE id = $document_id");
     
-    if($doc && $doc['ai_status'] === 'completed') {
+    if($doc) {
         if (ob_get_length()) ob_clean();
         echo json_encode([
             'success' => true,
-            'has_history' => true,
+            'has_history' => ($doc['ai_status'] === 'completed' || $doc['ai_status'] === 'failed'),
+            'status' => $doc['ai_status'],
             'full_review' => [
-                'judge' => json_decode($doc['ai_judge_result'], true),
-                'moderator' => json_decode($doc['ai_moderator_result'], true),
+                'judge' => json_decode($doc['ai_judge_result'] ?? '', true),
+                'moderator' => json_decode($doc['ai_moderator_result'] ?? '', true),
                 'score' => $doc['ai_score'],
-                'decision' => $doc['ai_decision']
+                'decision' => $doc['ai_decision'],
+                'error' => $doc['error_message']
             ]
         ]);
     } else {
         if (ob_get_length()) ob_clean();
-        echo json_encode(['success' => true, 'has_history' => false]);
+        echo json_encode(['success' => false, 'message' => 'Document not found']);
     }
     exit;
 }
@@ -107,7 +116,13 @@ $config_mod = getSetting('ai_model_moderator', 'gpt-4o-mini');
                             <div class="card-body p-4 overflow-hidden flex flex-col">
                                 <h2 class="card-title text-sm uppercase opacity-50 mb-4 border-b border-base-200 pb-2">Danh sách tài liệu gần đây</h2>
                                 <div class="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                                    <?php foreach($docs as $doc): ?>
+                                    <?php foreach($docs as $doc): 
+                                        $status_color = 'badge-ghost';
+                                        if($doc['ai_status'] == 'completed') $status_color = 'badge-success';
+                                        elseif($doc['ai_status'] == 'processing') $status_color = 'badge-warning';
+                                        elseif($doc['ai_status'] == 'pending') $status_color = 'badge-info';
+                                        elseif($doc['ai_status'] == 'failed') $status_color = 'badge-error';
+                                    ?>
                                     <div class="group p-3 bg-base-200/50 hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/30 transition-all cursor-pointer"
                                          onclick="selectDocument(<?= $doc['id'] ?>, '<?= htmlspecialchars($doc['original_name']) ?>')">
                                         <div class="flex justify-between items-start gap-2">
@@ -121,7 +136,7 @@ $config_mod = getSetting('ai_model_moderator', 'gpt-4o-mini');
                                                 <div class="text-[9px] font-bold opacity-40 italic mt-0.5">@<?= $doc['username'] ?></div>
                                             </div>
                                             <div class="flex flex-col items-end gap-1">
-                                                <div class="badge badge-xs <?= $doc['ai_status'] == 'completed' ? 'badge-success' : 'badge-ghost' ?> font-black text-[8px] tracking-tight">
+                                                <div class="badge badge-xs <?= $status_color ?> font-black text-[8px] tracking-tight">
                                                     <?= strtoupper($doc['ai_status'] ?: 'None') ?>
                                                 </div>
                                                 <div class="text-[8px] font-black <?= $doc['ai_decision'] == 'APPROVED' ? 'text-success' : ($doc['ai_decision'] == 'REJECTED' ? 'text-error' : 'text-warning') ?>">
@@ -268,10 +283,19 @@ function selectDocument(id, title) {
         .then(r => r.json())
         .then(data => {
             if(data.success && data.has_history) {
-                addLog('Phát hiện kết quả chấm điểm trước đó trong Database. Đang hiển thị lại...', 'warning');
-                renderResults({ success: true, result: { decision: data.full_review.decision, score: data.full_review.score }, full_review: data.full_review });
+                if(data.status === 'completed') {
+                    addLog('Phát hiện kết quả thẩm định hoàn tất. Đang hiển thị...', 'success');
+                    renderResults(data);
+                } else if(data.status === 'failed') {
+                    addLog('Thẩm định lần trước bị LỖI: ' + (data.full_review.error || 'Unknown'), 'error');
+                    renderResults(data);
+                }
+            } else if(data.status === 'pending') {
+                addLog('Tài liệu đang nằm trong HÀNG ĐỢI (Pending). Cron Job sẽ xử lý sau 1-2 phút.', 'info');
+            } else if(data.status === 'processing') {
+                addLog('Tài liệu đang được XỬ LÝ ngầm bởi một tiến trình khác...', 'warning');
             } else {
-                addLog('Tài liệu chưa được kiểm duyệt bởi AI hoặc chưa có dữ liệu RAW JSON.', 'info');
+                addLog('Tài liệu chưa được kiểm duyệt bởi AI. Nhấn "Chạy Thẩm Định" để thử nghiệm thủ công.', 'info');
             }
         });
 }
@@ -303,7 +327,7 @@ function runAI() {
     const btnOld = btn.innerHTML;
     
     btn.disabled = true;
-    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Đang xử lý...';
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Đang chạy...';
     prog.classList.remove('hidden');
     document.getElementById('result-area').classList.add('hidden');
     document.getElementById('ai-logs-container').innerHTML = '';
@@ -314,46 +338,52 @@ function runAI() {
         document.getElementById(s).classList.add('opacity-30', 'bg-base-200');
     });
 
-    addLog('Bắt đầu quy trình kiểm tra AI cho Document ID: ' + currentDocId);
-    updateProgress(5, 'Đang chuẩn bị Metadata...');
+    addLog('Bắt đầu thử nghiệm AI trực tiếp (Manual Trigger)...');
+    updateProgress(10, 'Khởi tạo API...');
     
-    setTimeout(() => {
-        addLog('Tải File lên bộ nhớ tạm OpenAI Assistants...');
-        document.getElementById('step-upload').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
-        updateProgress(15, 'Đang upload file...');
-    }, 1000);
-
-    setTimeout(() => {
-        addLog(`Khởi tạo AI Judge [${CONFIG_JUDGE_MODEL}] - Đang phân tích nội dung chuyên sâu...`);
-        document.getElementById('step-judge').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
-        updateProgress(45, 'Vòng 1: AI Judge đang chấm điểm...');
-    }, 3000);
-
-    setTimeout(() => {
-        addLog(`Nhận kết quả Vòng 1. Khởi tạo AI Moderator [${CONFIG_MOD_MODEL}] để hậu kiểm...`);
-        document.getElementById('step-mod').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
-        updateProgress(80, 'Vòng 2: Moderator đang phê duyệt...');
-    }, 8000);
+    // Simulate steps locally for UI feedback while waiting for long AJAX
+    let step = 1;
+    const stepInterval = setInterval(() => {
+        if (step === 1) {
+            addLog('Đang upload/kiểm tra file trên OpenAI...');
+            document.getElementById('step-upload').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
+            updateProgress(25, 'Upload file...');
+        } else if (step === 2) {
+            addLog('Gửi yêu cầu Vòng 1: AI Judge... (Có thể mất 30-60s)');
+            document.getElementById('step-judge').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
+            updateProgress(50, 'Vòng 1 đang chạy...');
+        } else if (step === 3) {
+            addLog('Vòng 1 hoàn tất (giả định), đang đợi server phản hồi Vòng 2...');
+            document.getElementById('step-mod').classList.add('bg-primary', 'text-primary-content', 'opacity-100');
+            updateProgress(75, 'Vòng 2 đang phê duyệt...');
+        }
+        step++;
+        if (step > 3) clearInterval(stepInterval);
+    }, 5000);
 
     fetch(`ai-demo.php?ajax_review=1&document_id=${currentDocId}`)
         .then(r => r.json())
         .then(data => {
-            if(data.success && data.result.success !== false) {
+            clearInterval(stepInterval);
+            if(data.success) {
                 const full = data.full_review;
-                addLog('Dữ liệu Vòng 1 (Judge RAW):', 'info', full.judge);
-                addLog('Dữ liệu Vòng 2 (Moderator RAW):', 'info', full.moderator);
-                addLog('Quy trình hoàn tất. Decision: ' + data.result.decision, 'success');
-                updateProgress(100, 'Hoàn tất!');
-                renderResults(data);
+                if(full.status === 'completed') {
+                    addLog('Quy trình hoàn tất thành công!', 'success');
+                    updateProgress(100, 'Hoàn tất!');
+                    renderResults(data);
+                } else {
+                    addLog('Kết quả không như mong đợi. Status: ' + full.status, 'warning');
+                    if(full.error) addLog('Chi tiết lỗi: ' + full.error, 'error');
+                    renderResults(data);
+                }
             } else {
-                const errorMsg = data.error || (data.result && data.result.error) || 'Lỗi không xác định';
-                addLog('Lỗi hệ thống: ' + errorMsg, 'error');
-                updateProgress(0, 'Lỗi: ' + errorMsg);
+                addLog('LỖI: ' + (data.error || 'Server error'), 'error');
+                updateProgress(0, 'Lỗi!');
             }
         })
         .catch(err => {
-            console.error(err);
-            addLog('Lỗi phản hồi hệ thống (Có thể do PHP Error): ' + err.message, 'error');
+            clearInterval(stepInterval);
+            addLog('Lỗi kết nối: ' + err.message, 'error');
             updateProgress(0, 'Lỗi hệ thống!');
         })
         .finally(() => {
@@ -364,9 +394,11 @@ function runAI() {
 
 function updateProgress(val, text) {
     const bar = document.querySelector('#ai-progress progress');
-    bar.value = val;
-    document.getElementById('progress-percent').textContent = val + '%';
-    document.getElementById('progress-status').textContent = text;
+    if (bar) {
+        bar.value = val;
+        document.getElementById('progress-percent').textContent = val + '%';
+        document.getElementById('progress-status').textContent = text;
+    }
 }
 
 function renderResults(data) {
@@ -375,28 +407,24 @@ function renderResults(data) {
         return;
     }
     
-    const res = data.result || {};
     const full = data.full_review || {};
     const judge = full.judge || {};
     const moderator = full.moderator || {};
 
-    // Banner
-    document.getElementById('res-decision').textContent = res.decision || 'N/A';
-    document.getElementById('res-score').textContent = (res.score !== undefined ? res.score : '---') + ' / 100';
+    // Banner Summary
+    document.getElementById('res-decision').textContent = full.decision || 'N/A';
+    document.getElementById('res-score').textContent = (full.score !== undefined ? full.score : '---') + ' / 100';
     document.getElementById('res-diff').textContent = judge.difficulty_level || 'N/A';
     
-    // Style decision - Support both EN and VN terms
+    // Style decision banner
     const dCard = document.getElementById('res-decision').parentElement;
     let colorClass = 'bg-base-200 border-base-300 text-base-content';
-    const decision = (res.decision || '').toUpperCase();
+    const decision = (full.decision || '').toUpperCase();
     
-    if (['APPROVED', 'CHẤP NHẬN'].includes(decision)) {
-        colorClass = 'bg-success/10 border-success/20 text-success';
-    } else if (['CONDITIONAL', 'XEM XÉT'].includes(decision)) {
-        colorClass = 'bg-warning/10 border-warning/20 text-warning';
-    } else if (['REJECTED', 'TỪ CHỐI'].includes(decision)) {
-        colorClass = 'bg-error/10 border-error/20 text-error';
-    }
+    if (['APPROVED', 'CHẤP NHẬN'].includes(decision)) colorClass = 'bg-success/10 border-success/20 text-success';
+    else if (['CONDITIONAL', 'XEM XÉT'].includes(decision)) colorClass = 'bg-warning/10 border-warning/20 text-warning';
+    else if (['REJECTED', 'TỪ CHỐI'].includes(decision)) colorClass = 'bg-error/10 border-error/20 text-error';
+    
     dCard.className = 'card p-4 border ' + colorClass;
 
     // Moderator Notes
@@ -405,18 +433,20 @@ function renderResults(data) {
     (moderator.moderator_notes || []).forEach(n => {
         notesDiv.innerHTML += `<div class="p-2 bg-base-200 rounded text-sm"><i class="fa-solid fa-check text-success mr-2"></i> ${n}</div>`;
     });
-    if (!(moderator.moderator_notes || []).length) {
-        notesDiv.innerHTML = '<div class="text-[10px] opacity-30 italic">Không có ghi chú từ Moderator</div>';
-    }
-
+    
     // Risks
     const risksDiv = document.getElementById('res-risks');
     risksDiv.innerHTML = '';
     (moderator.risk_flags || []).forEach(f => {
         risksDiv.innerHTML += `<span class="badge badge-error badge-outline text-[10px] font-bold">${f.toUpperCase()}</span>`;
     });
-    if (!(moderator.risk_flags || []).length) {
-        risksDiv.innerHTML = '<div class="text-[10px] opacity-30 italic">Không có cảnh báo rủi ro</div>';
+
+    // Error details if failed
+    if (full.status === 'failed') {
+        notesDiv.innerHTML = `<div class="p-4 bg-error/10 text-error rounded-xl border border-error/20">
+            <div class="font-black uppercase text-xs mb-1">Error Log:</div>
+            <div class="font-mono text-[10px]">${full.error || 'Unknown fatal error'}</div>
+        </div>`;
     }
 
     // RAW JSON
@@ -424,8 +454,6 @@ function renderResults(data) {
 
     // Metadata
     const metaDiv = document.getElementById('res-meta-content');
-    metaDiv.innerHTML = '';
-    // Since we don't have metadata returned in AJAX for demo, we skip detailed view or re-fetch
     metaDiv.innerHTML = '<div class="col-span-2 text-center py-8 opacity-40">Metadata logs already applied to prompt context.</div>';
 
     document.getElementById('result-area').classList.remove('hidden');

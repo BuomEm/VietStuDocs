@@ -128,32 +128,10 @@ function save_pdf_pages() {
     
     error_log("Document $doc_id: Page count updated to $pages via client-side PDF.js");
 
-    // NEW: Trigger AI Review if pages <= 180 and not already reviewed/processed
-    // This handles PDFs/DOCXs that were skipped in upload_handler because pages was 0
-    if ($pages > 0 && $pages <= 180) {
-        $check_ai = mysqli_fetch_assoc(mysqli_query($conn, "SELECT ai_status, file_name FROM documents WHERE id=$doc_id"));
-        if ($check_ai && ($check_ai['ai_status'] === null || $check_ai['ai_status'] === 'pending')) {
-            try {
-                // Run AI Review in background (or as much as possible)
-                // Note: This adds latency to the 'save_pdf_pages' call but creates a better flow than missing the review
-                require_once __DIR__ . '/../includes/ai_review_handler.php';
-                
-                // Increase time limit for this request
-                @set_time_limit(300);
-                
-                $ai_handler = new AIReviewHandler($conn);
-                $ai_result = $ai_handler->reviewDocument($doc_id);
-                
-                if ($ai_result && $ai_result['success']) {
-                    error_log("Document $doc_id: AI Review triggered by PDF page update. Result: " . ($ai_result['decision'] ?? 'Unknown'));
-                } else {
-                    error_log("Document $doc_id: AI Review triggered by PDF page update FAILED. Error: " . ($ai_result['error'] ?? 'Unknown'));
-                }
-            } catch (Exception $e) {
-                error_log("Error running AI review for doc $doc_id in save_pdf_pages: " . $e->getMessage());
-            }
-        }
-    }
+    error_log("Document $doc_id: Page count updated to $pages. AI will process via Cron Job.");
+
+    // Đảm bảo trạng thái là pending để worker tìm thấy
+    mysqli_query($conn, "UPDATE documents SET ai_status = 'pending' WHERE id=$doc_id AND ai_status IS NULL");
     
     echo json_encode([
         'success' => true,
