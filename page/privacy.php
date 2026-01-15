@@ -1,15 +1,15 @@
 <?php
-require_once __DIR__ . '/includes/error_handler.php';
+require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
 
-require_once 'config/db.php';
-require_once 'config/settings.php';
+require_once '../config/db.php';
+require_once '../config/settings.php';
 
 $site_name = getSetting('site_name', 'DocShare');
 $site_logo = getSetting('site_logo', '');
 $site_desc = getSetting('site_description', 'Chia sẻ tri thức, kết nối cộng đồng');
 $page_title = "Chính sách bảo mật";
-include 'includes/head.php';
+include '../includes/head.php';
 ?>
 
 <style>

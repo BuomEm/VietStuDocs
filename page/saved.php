@@ -5,10 +5,10 @@ if(!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
 
 $user_id = getCurrentUserId();
 $is_premium = isPremium($user_id);
@@ -33,11 +33,11 @@ $all_saved_docs = $VSD->get_list("
 
 $total_saved = count($all_saved_docs);
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8">
         <!-- Header Section -->
@@ -86,8 +86,8 @@ $total_saved = count($all_saved_docs);
                     <div class="group relative bg-base-100 rounded-[2rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
                         <!-- Thumbnail/Icon Area -->
                         <div class="aspect-[4/3] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
-                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                            <?php if ($thumbnail && file_exists('../uploads/' . $thumbnail)): ?>
+                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                             <?php else: ?>
                                 <div class="p-8 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-5xl <?= $icon_color ?>"></i>
@@ -125,8 +125,8 @@ $total_saved = count($all_saved_docs);
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <div class="w-8 h-8 rounded-full bg-primary/10 overflow-hidden border border-primary/20">
-                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                        <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
+                                            <img src="../uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                                         <?php else: ?>
                                             <div class="w-full h-full flex items-center justify-center text-primary">
                                                 <i class="fa-solid fa-user text-xs"></i>
@@ -164,7 +164,7 @@ $total_saved = count($all_saved_docs);
         <?php endif; ?>
     </main>
     
-    <?php include 'includes/footer.php'; ?>
+    <?php include '../includes/footer.php'; ?>
 </div>
 </div>
 <?php 

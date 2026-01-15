@@ -5,13 +5,13 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/points.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/points.php';
 
-require_once 'config/settings.php';
+require_once '../config/settings.php';
 
 $user_id = getCurrentUserId();
 $is_premium = isPremium($user_id);
@@ -111,11 +111,11 @@ $stats = $VSD->get_row($stats_query);
 
 
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8 bg-base-200/50">
         <!-- Header Section -->
@@ -283,8 +283,8 @@ $stats = $VSD->get_row($stats_query);
                                 
                                 <!-- Thumb Container -->
                                 <div class="w-full md:w-32 aspect-square rounded-[2rem] bg-base-200 overflow-hidden shrink-0 shadow-inner">
-                                    <?php if($purchase['thumbnail'] && file_exists('uploads/' . $purchase['thumbnail'])): ?>
-                                        <img src="uploads/<?= $purchase['thumbnail'] ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                                    <?php if($purchase['thumbnail'] && file_exists('../uploads/' . $purchase['thumbnail'])): ?>
+                                        <img src="../uploads/<?= $purchase['thumbnail'] ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
                                     <?php else: ?>
                                         <div class="w-full h-full flex items-center justify-center text-primary/20">
                                             <i class="fa-solid fa-file-invoice text-4xl"></i>
@@ -431,7 +431,7 @@ $stats = $VSD->get_row($stats_query);
                             <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 p-6 flex items-center gap-6 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500">
                                 <div class="w-24 h-24 rounded-[1.8rem] bg-base-200/50 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-500">
                                     <?php if($doc['thumbnail']): ?>
-                                        <img src="uploads/<?= $doc['thumbnail'] ?>" class="w-full h-full object-cover rounded-[1.8rem]">
+                                        <img src="../uploads/<?= $doc['thumbnail'] ?>" class="w-full h-full object-cover rounded-[1.8rem]">
                                     <?php else: ?>
                                         <i class="fa-solid fa-file-pdf text-4xl text-primary/20"></i>
                                     <?php endif; ?>
@@ -515,7 +515,7 @@ $stats = $VSD->get_row($stats_query);
         </div>
     </main>
 
-    <?php include 'includes/footer.php'; ?>
+    <?php include '../includes/footer.php'; ?>
 </div>
 </div>
 

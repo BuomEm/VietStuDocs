@@ -1,14 +1,14 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/file.php';
-require_once 'config/points.php';
-require_once 'config/categories.php';
-require_once 'config/document_stats.php';
-require_once 'config/settings.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/file.php';
+require_once '../config/points.php';
+require_once '../config/categories.php';
+require_once '../config/document_stats.php';
+require_once '../config/settings.php';
 
 // Cho phép xem mà không cần đăng nhập
 $user_id = isset($_SESSION['user_id']) ? getCurrentUserId() : null;
@@ -39,11 +39,11 @@ if(!$doc_check) {
 if($error_type) {
     header("HTTP/1.0 404 Not Found");
     $page_title = $error_type === 'not_found' ? 'Document Not Found' : 'Document Not Available';
-    include 'includes/head.php';
-    include 'includes/sidebar.php';
+    include '../includes/head.php';
+    include '../includes/sidebar.php';
     ?>
     <div class="drawer-content flex flex-col">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
         <main class="flex-1 min-h-screen flex items-center justify-center p-6">
             <div class="card bg-base-100 shadow-xl max-w-2xl w-full">
                 <div class="card-body text-center">
@@ -98,7 +98,7 @@ if($error_type) {
                 </div>
             </div>
         </main>
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
     </div>
     <?php
@@ -133,11 +133,11 @@ if($user_id) {
 if(!file_exists($file_path)) {
     header("HTTP/1.0 404 Not Found");
     $page_title = 'File Not Found - DocShare';
-    include 'includes/head.php';
-    include 'includes/sidebar.php';
+    include '../includes/head.php';
+    include '../includes/sidebar.php';
     ?>
     <div class="drawer-content flex flex-col">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
         <main class="flex-1 min-h-screen flex items-center justify-center p-6">
             <div class="card bg-base-100 shadow-xl max-w-2xl w-full">
                 <div class="card-body text-center">
@@ -161,7 +161,7 @@ if(!file_exists($file_path)) {
                 </div>
             </div>
         </main>
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
     </div>
     <?php
@@ -363,14 +363,14 @@ if (isset($doc_category['education_level'])) {
 }
 $page_keywords = $seo_keywords;
 
-include 'includes/head.php';
-include 'includes/sidebar.php';
+include '../includes/head.php';
+include '../includes/sidebar.php';
 ?>
 <!-- PDF.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <!-- Shared PDF functions for page counting and thumbnail generation -->
-<script src="js/pdf-functions.js"></script>
+<script src="../js/pdf-functions.js"></script>
 
 <!-- DOCX Preview Library - docx-preview with pagination support -->
 <!-- JSZip is required dependency for docx-preview -->
@@ -954,7 +954,7 @@ include 'includes/sidebar.php';
     }
 </style>
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     <main class="flex-1 p-6">
         <div class="max-w-7xl mx-auto">
             <div class="space-y-6">
@@ -966,8 +966,8 @@ include 'includes/sidebar.php';
             <div class="view-meta-row">
                 <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="user-badge-premium">
                     <div class="user-avatar-vsd">
-                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                        <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
+                            <img src="../uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                         <?php else: ?>
                             <i class="fa-solid fa-user text-primary text-sm"></i>
                         <?php endif; ?>
@@ -1169,7 +1169,7 @@ include 'includes/sidebar.php';
                                 <span id="currentPageNum">1</span> / <span id="totalPagesNum">--</span>
                             </div>
                           </div>';
-                    $pdf_path_for_preview = 'handler/file.php?doc_id=' . $doc_id;
+                    $pdf_path_for_preview = '../handler/file.php?doc_id=' . $doc_id;
                     break;
                 case 'docx':
                 case 'doc':
@@ -1185,14 +1185,14 @@ include 'includes/sidebar.php';
                               </div>';
                         // Store converted PDF path for JavaScript (nếu là đường dẫn tương đối, cần kiểm tra)
                         // Nếu converted_pdf_path là đường dẫn trong uploads, sử dụng handler
-                        if (strpos($converted_path, 'uploads/') === 0 || strpos($converted_path, '\\uploads\\') !== false) {
-                            $pdf_path_for_preview = 'handler/file.php?doc_id=' . $doc_id;
+                        if (strpos($converted_path, '../uploads/') === 0 || strpos($converted_path, '\\uploads\\') !== false) {
+                            $pdf_path_for_preview = '../handler/file.php?doc_id=' . $doc_id;
                         } else {
                             $pdf_path_for_preview = $converted_path;
                         }
                     } else {
                         // Fallback to DOCX viewer if PDF conversion failed or pending
-                        $file_url = 'handler/file.php?doc_id=' . $doc_id;
+                        $file_url = '../handler/file.php?doc_id=' . $doc_id;
                         echo '<div class="docx-viewer" id="docxViewer"></div>';
                         $pdf_path_for_preview = null;
                     }
@@ -1202,7 +1202,7 @@ include 'includes/sidebar.php';
                 case 'png':
                 case 'gif':
                 case 'webp':
-                    $file_url = 'handler/file.php?doc_id=' . $doc_id;
+                    $file_url = '../handler/file.php?doc_id=' . $doc_id;
                     echo '<div class="image-viewer">
                             <img src="' . $file_url . '" alt="' . htmlspecialchars($doc['original_name']) . '">
                           </div>';
@@ -1335,7 +1335,7 @@ include 'includes/sidebar.php';
             <?php endif; ?>
         <?php endif; ?>
         </main>
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
     </div>
 
@@ -1870,13 +1870,13 @@ include 'includes/sidebar.php';
         <?php 
         // Set pdfPath based on file type
         if ($file_ext === 'pdf') {
-            $pdf_path_js = "handler/file.php?doc_id=" . $doc_id;
+            $pdf_path_js = "../handler/file.php?doc_id=" . $doc_id;
         } elseif (($file_ext === 'docx' || $file_ext === 'doc')) {
             // For DOCX, prioritize converted PDF if available
             if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
                 // Nếu converted_pdf_path là đường dẫn trong uploads, sử dụng handler
-                if (strpos($doc['converted_pdf_path'], 'uploads/') === 0 || strpos($doc['converted_pdf_path'], '\\uploads\\') !== false) {
-                    $pdf_path_js = "handler/file.php?doc_id=" . $doc_id;
+                if (strpos($doc['converted_pdf_path'], '../uploads/') === 0 || strpos($doc['converted_pdf_path'], '\\uploads\\') !== false) {
+                    $pdf_path_js = "../handler/file.php?doc_id=" . $doc_id;
                 } else {
                     $pdf_path_js = $doc['converted_pdf_path'];
                 }
@@ -2057,7 +2057,7 @@ include 'includes/sidebar.php';
                     throw new Error('DOCX viewer element not found');
                 }
                 
-                const fileUrl = "handler/file.php?doc_id=<?= $doc_id ?>";
+                const fileUrl = "../handler/file.php?doc_id=<?= $doc_id ?>";
                 const response = await fetch(fileUrl);
                 
                 if (!response.ok) {
@@ -2411,7 +2411,7 @@ include 'includes/sidebar.php';
             showDownloadQueue();
             
             // Start download with progress tracking
-            const downloadUrl = 'handler/download.php?id=<?= $doc_id ?>';
+            const downloadUrl = '../handler/download.php?id=<?= $doc_id ?>';
             const fileName = '<?= htmlspecialchars($doc['original_name'], ENT_QUOTES) ?>';
             
             downloadWithProgress(downloadUrl, fileName);

@@ -1,6 +1,6 @@
 <?php
 // Include Error Handler First
-require_once __DIR__ . '/includes/error_handler.php';
+require_once __DIR__ . '/../includes/error_handler.php';
 
 session_start();
 if(!isset($_SESSION['user_id'])) {
@@ -8,10 +8,10 @@ if(!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'config/db.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/settings.php'; 
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/settings.php'; 
 
 redirectIfNotLoggedIn();
 
@@ -50,7 +50,7 @@ if($is_premium && $premium_info) {
 }
 
 $page_title = 'Nâng cấp Premium';
-include 'includes/head.php'; 
+include '../includes/head.php'; 
 ?>
 <style>
     :root {
@@ -400,10 +400,10 @@ include 'includes/head.php';
 </style>
 
 <body class="bg-base-100">
-    <?php include 'includes/sidebar.php'; ?>
+    <?php include '../includes/sidebar.php'; ?>
 
     <div class="drawer-content flex flex-col min-h-screen">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
 
         <main class="flex-1">
             <div class="premium-page-container">
@@ -454,8 +454,8 @@ include 'includes/head.php';
                             <div class="flex items-center gap-4 mb-8">
                                 <div class="avatar">
                                     <div class="w-16 h-16 rounded-2xl ring-4 ring-base-100 shadow-xl overflow-hidden bg-primary/10 flex items-center justify-center">
-                                        <?php if(!empty($user_info['avatar']) && file_exists('uploads/avatars/' . $user_info['avatar'])): ?>
-                                            <img src="uploads/avatars/<?= $user_info['avatar'] ?>" class="object-cover" />
+                                        <?php if(!empty($user_info['avatar']) && file_exists('../uploads/avatars/' . $user_info['avatar'])): ?>
+                                            <img src="../uploads/avatars/<?= $user_info['avatar'] ?>" class="object-cover" />
                                         <?php else: ?>
                                             <i class="fa-solid fa-user text-2xl text-primary"></i>
                                         <?php endif; ?>
@@ -673,7 +673,7 @@ include 'includes/head.php';
             </div>
         </main>
 
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
 </body>
 </html>

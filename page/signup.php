@@ -1,14 +1,14 @@
 <?php
-require_once __DIR__ . '/includes/error_handler.php';
+require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
 if(isset($_SESSION['user_id'])) {
     header("Location: dashboard");
     exit();
 }
 
-require_once 'config/db.php';
-require_once 'config/auth.php';
-require_once 'config/settings.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_once '../config/settings.php';
 
 $site_name = getSetting('site_name', 'DocShare');
 $site_logo = getSetting('site_logo', '');
@@ -46,11 +46,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['register']) || isset($
             } else {
                 $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
                 $avatar_filename = 'avatar_' . time() . '_' . uniqid() . '.' . $ext;
-                $upload_path = 'uploads/avatars/' . $avatar_filename;
+                $upload_path = '../uploads/avatars/' . $avatar_filename;
                 
                 // Create directory if not exists
-                if(!is_dir('uploads/avatars')) {
-                    mkdir('uploads/avatars', 0755, true);
+                if(!is_dir('../uploads/avatars')) {
+                    mkdir('../uploads/avatars', 0755, true);
                 }
                 
                 if(!move_uploaded_file($_FILES['avatar']['tmp_name'], $upload_path)) {
@@ -72,15 +72,15 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['register']) || isset($
             } else {
                 $error = $result['message'];
                 // Delete uploaded avatar if registration failed
-                if($avatar_filename && file_exists('uploads/avatars/' . $avatar_filename)) {
-                    unlink('uploads/avatars/' . $avatar_filename);
+                if($avatar_filename && file_exists('../uploads/avatars/' . $avatar_filename)) {
+                    unlink('../uploads/avatars/' . $avatar_filename);
                 }
             }
         }
     }
 }
 $page_title = "Đăng ký";
-include 'includes/head.php';
+include '../includes/head.php';
 ?>
 
 <style>

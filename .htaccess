@@ -6,8 +6,12 @@ php_value session.cookie_lifetime 604800
 RewriteEngine On
 
 # 1. Redirect .php to extensionless (Redirect public URL)
-# For specific whitelisted root files
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(contact|dashboard|edit-document|error|faq|history|index|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)\.php [NC]
+# For specific files in /page folder
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/page/(contact|dashboard|edit-document|error|faq|history|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|transaction-details|upload|user_profile|view)\.php [NC]
+RewriteRule ^page/(.*)\.php$ /%1 [R=301,L]
+
+# For remaining root files (like index.php)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(index|testapi)\.php [NC]
 RewriteRule ^ /%1 [R=301,L]
 
 # For tutors directory files
@@ -15,10 +19,14 @@ RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/tutors/(apply|dashboard|profile_edit|req
 RewriteRule ^ /tutors/%1 [R=301,L]
 
 # 2. Rewrite extensionless to .php (Internal handling)
-# For whitelisted root files
+# Handle pages moved to /page directory
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(contact|dashboard|edit-document|error|faq|history|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|transaction-details|upload|user_profile|view)$ page/$1.php [L]
+
+# Handle root files
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(contact|dashboard|edit-document|error|faq|history|index|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|testapi|transaction-details|upload|user_profile|view)$ $1.php [L]
+RewriteRule ^(index|testapi)$ $1.php [L]
 
 # 2.1 API Folder Handling (Case-Insensitive & Extensionless)
 # Handle /api/ or /API/ calls
@@ -48,11 +56,11 @@ RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s(.*)/index\.php [NC]
 RewriteRule ^ %1/ [R=301,L]
 
 # Error Pages
-ErrorDocument 400 /error.php?code=400
-ErrorDocument 401 /error.php?code=401
-ErrorDocument 403 /error.php?code=403
-ErrorDocument 404 /error.php?code=404
-ErrorDocument 500 /error.php?code=500
+ErrorDocument 400 /page/error.php?code=400
+ErrorDocument 401 /page/error.php?code=401
+ErrorDocument 403 /page/error.php?code=403
+ErrorDocument 404 /page/error.php?code=404
+ErrorDocument 500 /page/error.php?code=500
 
 
 # Protect Sensitive Files

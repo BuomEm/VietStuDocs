@@ -1,14 +1,14 @@
 <?php
-require_once __DIR__ . '/includes/error_handler.php';
+require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
 if(isset($_SESSION['user_id'])) {
     header("Location: dashboard");
     exit();
 }
 
-require_once 'config/db.php';
-require_once 'config/auth.php';
-require_once 'config/settings.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_once '../config/settings.php';
 
 $site_name = getSetting('site_name', 'DocShare');
 $site_logo = getSetting('site_logo', '');
@@ -31,7 +31,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['login']) || isset($_PO
 }
 
 $page_title = "Đăng nhập";
-include 'includes/head.php';
+include '../includes/head.php';
 ?>
 
 <style>

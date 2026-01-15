@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/categories.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/categories.php';
 
 // Get User ID from URL
 $profile_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -18,10 +18,10 @@ if ($profile_id === 0) {
 $profile_user = $VSD->get_row("SELECT id, username, email, avatar, created_at FROM users WHERE id = $profile_id");
 
 if (!$profile_user) {
-    include 'includes/head.php';
-    include 'includes/navbar.php';
+    include '../includes/head.php';
+    include '../includes/navbar.php';
     echo '<div class="container mx-auto p-10 text-center"><h1 class="text-2xl font-bold mb-4">Người dùng không tồn tại</h1><a href="dashboard.php" class="btn btn-primary">Về trang chủ</a></div>';
-    include 'includes/footer.php';
+    include '../includes/footer.php';
     exit;
 }
 
@@ -47,7 +47,7 @@ $total_likes_query = $VSD->get_row("
 $total_likes = intval($total_likes_query['total'] ?? 0);
 
 $current_user_id = getCurrentUserId();
-include 'includes/head.php'; 
+include '../includes/head.php'; 
 ?>
 <style>
     :root {
@@ -309,10 +309,10 @@ include 'includes/head.php';
 </style>
 
 <body class="bg-base-100">
-    <?php include 'includes/sidebar.php'; ?>
+    <?php include '../includes/sidebar.php'; ?>
 
     <div class="drawer-content flex flex-col min-h-screen">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
 
         <main class="flex-1">
             <!-- Banner -->
@@ -322,8 +322,8 @@ include 'includes/head.php';
             <div class="profile-header-card">
                 <div class="profile-info-vsd animate-in fade-in zoom-in duration-700">
                     <div class="profile-avatar-vsd">
-                        <?php if (!empty($profile_user['avatar']) && file_exists('uploads/avatars/' . $profile_user['avatar'])): ?>
-                            <img src="uploads/avatars/<?= htmlspecialchars($profile_user['avatar']) ?>" alt="<?= htmlspecialchars($profile_user['username']) ?>" />
+                        <?php if (!empty($profile_user['avatar']) && file_exists('../uploads/avatars/' . $profile_user['avatar'])): ?>
+                            <img src="../uploads/avatars/<?= htmlspecialchars($profile_user['avatar']) ?>" alt="<?= htmlspecialchars($profile_user['username']) ?>" />
                         <?php else: ?>
                             <div class="placeholder-icon">
                                 <i class="fa-solid fa-user"></i>
@@ -377,7 +377,7 @@ include 'includes/head.php';
                         <?php foreach ($user_docs as $doc): 
                             $doc_id = $doc['id'];
                             $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                            $file_path = "uploads/" . $doc['file_name'];
+                            $file_path = "../uploads/" . $doc['file_name'];
                             
                             $likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
                             
@@ -387,7 +387,7 @@ include 'includes/head.php';
                             $doc_name_short = preg_replace('/\.[^.]+$/', '', $doc['original_name']);
                             
                             $thumbnail = $doc['thumbnail'] ?? null;
-                            $thumbnail_path = 'uploads/' . $thumbnail;
+                            $thumbnail_path = '../uploads/' . $thumbnail;
                             $has_thumbnail = $thumbnail && file_exists($thumbnail_path);
                             $page_count = intval($doc['total_pages'] > 0 ? $doc['total_pages'] : 1);
                         ?>
@@ -423,7 +423,7 @@ include 'includes/head.php';
             </div>
         </main>
 
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
 </body>
 </html>

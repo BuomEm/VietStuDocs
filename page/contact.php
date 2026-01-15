@@ -1,13 +1,13 @@
 <?php
 session_start();
-require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/config/function.php';
-require_once __DIR__ . '/config/auth.php';
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/settings.php';
 
 $page_title = 'Liên hệ - DocShare';
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/sidebar.php';
+include __DIR__ . '/../includes/head.php';
+include __DIR__ . '/../includes/sidebar.php';
 
 $success_msg = '';
 $error_msg = '';
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <div class="drawer-content flex flex-col min-h-screen bg-base-200/30">
-    <?php include __DIR__ . '/includes/navbar.php'; ?>
+    <?php include __DIR__ . '/../includes/navbar.php'; ?>
     
     <main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8">
         <div class="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </main>
 
-    <?php include __DIR__ . '/includes/footer.php'; ?>
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
 </div>
 </div>
 </body>

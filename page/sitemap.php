@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
 
 $page_title = "Sơ Đồ Trang Web";
 $current_page = 'sitemap';
@@ -108,8 +108,8 @@ foreach ($sitemap as $section) {
     }
 }
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <style>
     .sitemap-section {
@@ -206,7 +206,7 @@ foreach ($sitemap as $section) {
 </style>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8">
         <!-- Hero Header -->
@@ -388,6 +388,6 @@ foreach ($sitemap as $section) {
         </div>
     </main>
     
-    <?php include 'includes/footer.php'; ?>
+    <?php include '../includes/footer.php'; ?>
 </div>
 </div>

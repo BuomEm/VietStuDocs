@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/../config/settings.php';
 $error_code = $_GET['code'] ?? 404;
 $valid_codes = [
     400 => ['code' => '400', 'title' => 'Yêu cầu không hợp lệ', 'desc' => 'Máy chủ không thể xử lý yêu cầu.'],
@@ -33,7 +33,7 @@ $quotes = [
 $random_quote = $quotes[array_rand($quotes)];
 
 $page_title = $info['title'];
-include 'includes/head.php';
+include '../includes/head.php';
 ?>
 
 <style>

@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
 
 redirectIfNotLoggedIn();
 
@@ -42,8 +42,8 @@ $success = '';
 
 // Handle avatar upload
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
-    if (!file_exists('uploads/avatars')) {
-        mkdir('uploads/avatars', 0777, true);
+    if (!file_exists('../uploads/avatars')) {
+        mkdir('../uploads/avatars', 0777, true);
     }
 
     $allowed = ['jpg', 'jpeg', 'png', 'gif'];
@@ -52,12 +52,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['avatar']) && $_FILES[
 
     if (in_array($ext, $allowed)) {
         $new_name = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
-        $destination = 'uploads/avatars/' . $new_name;
+        $destination = '../uploads/avatars/' . $new_name;
 
         if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
             // Delete old avatar
-            if (!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])) {
-                @unlink('uploads/avatars/' . $user['avatar']);
+            if (!empty($user['avatar']) && file_exists('../uploads/avatars/' . $user['avatar'])) {
+                @unlink('../uploads/avatars/' . $user['avatar']);
             }
 
             if ($VSD->query("UPDATE users SET avatar = '$new_name' WHERE id = $user_id")) {
@@ -114,7 +114,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
 $my_docs_count = intval($VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id") ?: 0);
 $saved_docs_count = intval($VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'") ?: 0);
 
-include 'includes/head.php'; 
+include '../includes/head.php'; 
 ?>
 <style>
     :root {
@@ -332,10 +332,10 @@ include 'includes/head.php';
 </style>
 
 <body class="bg-base-100">
-    <?php include 'includes/sidebar.php'; ?>
+    <?php include '../includes/sidebar.php'; ?>
 
     <div class="drawer-content flex flex-col min-h-screen">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
 
         <main class="flex-1">
             <div class="profile-container">
@@ -364,8 +364,8 @@ include 'includes/head.php';
                         <div class="avatar-wrapper">
                             <div class="avatar-ring">
                                 <div class="avatar-inner">
-                                    <?php if(!empty($user['avatar']) && file_exists('uploads/avatars/' . $user['avatar'])): ?>
-                                        <img src="uploads/avatars/<?= $user['avatar'] ?>" />
+                                    <?php if(!empty($user['avatar']) && file_exists('../uploads/avatars/' . $user['avatar'])): ?>
+                                        <img src="../uploads/avatars/<?= $user['avatar'] ?>" />
                                     <?php else: ?>
                                         <i class="fa-solid fa-user text-5xl text-primary/50"></i>
                                     <?php endif; ?>
@@ -495,7 +495,7 @@ include 'includes/head.php';
             </div>
         </main>
 
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
 
     <script>

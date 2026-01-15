@@ -5,10 +5,10 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/points.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/points.php';
 
 $user_id = getCurrentUserId();
 $page_title = "Chi Tiết Giao Dịch - VietStuDocs";
@@ -68,11 +68,11 @@ if(!$transaction) {
 }
 
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col min-h-screen bg-base-200/50">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8">
         <!-- Breadcrumb & Header -->
@@ -133,7 +133,7 @@ if(!$transaction) {
                                     <div class="group flex items-center gap-6 p-6 rounded-[2.5rem] bg-base-200/30 border border-base-200 hover:bg-base-100 hover:shadow-xl transition-all duration-500">
                                         <div class="w-16 h-20 rounded-xl bg-base-300 overflow-hidden shrink-0 shadow-inner">
                                             <?php if($transaction['thumbnail']): ?>
-                                                <img src="uploads/<?= htmlspecialchars($transaction['thumbnail']) ?>" class="w-full h-full object-cover">
+                                                <img src="../uploads/<?= htmlspecialchars($transaction['thumbnail']) ?>" class="w-full h-full object-cover">
                                             <?php else: ?>
                                                 <div class="w-full h-full flex items-center justify-center text-primary/20">
                                                     <i class="fa-solid fa-file-invoice text-3xl"></i>

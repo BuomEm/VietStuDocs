@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/auth.php';
-require_once 'config/search.php';
-require_once 'config/categories.php';
-require_once 'config/premium.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_once '../config/search.php';
+require_once '../config/categories.php';
+require_once '../config/premium.php';
 
 $user_id = isset($_SESSION['user_id']) ? getCurrentUserId() : null;
 $is_logged_in = isset($_SESSION['user_id']);
@@ -93,7 +93,7 @@ $education_levels = getEducationLevels();
 $page_title = !empty($keyword) ? "Tìm kiếm: $keyword - DocShare" : "Tìm kiếm tài liệu - DocShare";
 $current_page = 'search';
 ?>
-<?php include 'includes/head.php'; ?>
+<?php include '../includes/head.php'; ?>
 
 <style>
     :root {
@@ -546,10 +546,10 @@ $current_page = 'search';
     }
 </style>
 
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col min-h-screen">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-grow p-4 lg:p-6 pb-20">
         <div class="search-container">
@@ -697,8 +697,8 @@ $current_page = 'search';
                                     <div class="document-meta-row">
                                         <div class="user-badge">
                                             <div class="user-avatar-small bg-primary/10 flex items-center justify-center">
-                                                <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                                                    <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                                <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
+                                                    <img src="../uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                                                 <?php else: ?>
                                                     <i class="fa-solid fa-user text-[8px] text-primary"></i>
                                                 <?php endif; ?>
@@ -806,7 +806,7 @@ $current_page = 'search';
     </div> <!-- Close search-container -->
 </main>
             
-            <?php include 'includes/footer.php'; ?>
+            <?php include '../includes/footer.php'; ?>
         </div> <!-- Close drawer-content -->
     </div> <!-- Close drawer from sidebar.php -->
 

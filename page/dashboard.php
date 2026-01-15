@@ -1,12 +1,12 @@
 <?php
 session_start();
 
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/points.php';
-require_once 'config/categories.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/points.php';
+require_once '../config/categories.php';
 
 // Cho phép xem dashboard khi chưa đăng nhập
 $is_logged_in = isset($_SESSION['user_id']);
@@ -65,7 +65,7 @@ if(isset($_GET['delete']) && $is_logged_in) {
     $doc = $VSD->get_row("SELECT * FROM documents WHERE id=$doc_id AND user_id=$user_id");
     
     if($doc) {
-        $file_path = "uploads/" . $doc['file_name'];
+        $file_path = "../uploads/" . $doc['file_name'];
         if(file_exists($file_path)) {
             unlink($file_path);
         }
@@ -81,8 +81,8 @@ if(isset($_GET['download']) && $is_logged_in) {
     exit;
 }
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <!-- PDF.js Library for document previews -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -239,7 +239,7 @@ if(isset($_GET['download']) && $is_logged_in) {
 </style>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8">
         <!-- Header Section -->
@@ -331,8 +331,8 @@ if(isset($_GET['download']) && $is_logged_in) {
                     <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2 document-card-vsd">
                         <!-- Thumbnail Area -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
-                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                            <?php if ($thumbnail && file_exists('../uploads/' . $thumbnail)): ?>
+                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -497,8 +497,8 @@ if(isset($_GET['download']) && $is_logged_in) {
                     <div class="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2 document-card-vsd">
                         <!-- Thumbnail/Preview -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
-                            <?php if ($thumbnail && file_exists('uploads/' . $thumbnail)): ?>
-                                <img src="uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                            <?php if ($thumbnail && file_exists('../uploads/' . $thumbnail)): ?>
+                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -534,8 +534,8 @@ if(isset($_GET['download']) && $is_logged_in) {
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <div class="w-8 h-8 rounded-xl bg-primary/5 overflow-hidden border border-primary/10">
-                                        <?php if(!empty($doc['avatar']) && file_exists('uploads/avatars/' . $doc['avatar'])): ?>
-                                            <img src="uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                        <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
+                                            <img src="../uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
                                         <?php else: ?>
                                             <div class="w-full h-full flex items-center justify-center text-primary/40">
                                                 <i class="fa-solid fa-user text-xs"></i>
@@ -597,7 +597,7 @@ if(isset($_GET['download']) && $is_logged_in) {
         </section>
     </main>
     
-    <?php include 'includes/footer.php'; ?>
+    <?php include '../includes/footer.php'; ?>
 </div>
 </div>
 

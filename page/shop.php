@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/includes/error_handler.php';
+require_once __DIR__ . '/../includes/error_handler.php';
 session_start();
-require_once 'config/db.php';
-require_once 'config/auth.php';
-require_once 'config/points.php';
-require_once 'config/settings.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_once '../config/points.php';
+require_once '../config/settings.php';
 
 redirectIfNotLoggedIn();
 
@@ -39,7 +39,7 @@ for($i=1; $i<=5; $i++) {
 //     ];
 // }
 
-include 'includes/head.php';
+include '../includes/head.php';
 ?>
 
 <style>
@@ -171,9 +171,9 @@ include 'includes/head.php';
 </style>
 
 <body>
-    <?php include 'includes/sidebar.php'; ?>
+    <?php include '../includes/sidebar.php'; ?>
     <div class="drawer-content flex flex-col min-h-screen">
-        <?php include 'includes/navbar.php'; ?>
+        <?php include '../includes/navbar.php'; ?>
         
         <main class="flex-1">
             <div class="shop-container">
@@ -221,7 +221,7 @@ include 'includes/head.php';
             </div>
         </main>
 
-        <?php include 'includes/footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </div>
 
     <!-- Payment Modal -->

@@ -5,11 +5,11 @@ if(!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/premium.php';
-require_once 'config/categories.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/premium.php';
+require_once '../config/categories.php';
 
 $user_id = getCurrentUserId();
 $doc_id = intval($_GET['id'] ?? 0);
@@ -51,7 +51,7 @@ $education_levels = getEducationLevels();
 if($_SERVER["REQUEST_METHOD"] == "POST") {
     if(isset($_POST['action']) && $_POST['action'] === 'delete') {
         // Double check ownership (already checked in $doc fetch)
-        $file_path = "uploads/" . $doc['file_name'];
+        $file_path = "../uploads/" . $doc['file_name'];
         if(file_exists($file_path)) {
             unlink($file_path);
         }
@@ -143,11 +143,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
 $page_title = "Edit Document - DocShare";
 $current_page = 'dashboard';
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8 bg-base-200/50">
         <!-- Header Section -->
@@ -322,7 +322,7 @@ $current_page = 'dashboard';
                         
                         <div class="w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-base-200 shadow-inner group relative mb-8">
                             <?php if($doc['thumbnail']): ?>
-                                <img src="uploads/<?= htmlspecialchars($doc['thumbnail']) ?>" class="w-full h-full object-cover">
+                                <img src="../uploads/<?= htmlspecialchars($doc['thumbnail']) ?>" class="w-full h-full object-cover">
                             <?php else: ?>
                                 <div class="w-full h-full flex flex-col items-center justify-center text-primary/10">
                                     <i class="fa-solid fa-file-pdf text-7xl"></i>
@@ -854,7 +854,7 @@ $current_page = 'dashboard';
     </main>
 </div>
 
-<script src="js/categories.js"></script>
+<script src="../js/categories.js"></script>
 <script>
 // Current category data from PHP
 const currentCategory = <?= json_encode($current_category) ?>;

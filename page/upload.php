@@ -1,12 +1,12 @@
 <?php
 session_start();
-require_once 'config/db.php';
-require_once 'config/function.php';
-require_once 'config/auth.php';
-require_once 'config/points.php';
-require_once 'config/file.php';
-require_once 'config/categories.php';
-require_once 'config/premium.php';
+require_once '../config/db.php';
+require_once '../config/function.php';
+require_once '../config/auth.php';
+require_once '../config/points.php';
+require_once '../config/file.php';
+require_once '../config/categories.php';
+require_once '../config/premium.php';
 
 redirectIfNotLoggedIn();
 
@@ -24,11 +24,11 @@ $pending_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$us
 $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id AND status='approved'");
 
 ?>
-<?php include 'includes/head.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+<?php include '../includes/head.php'; ?>
+<?php include '../includes/sidebar.php'; ?>
 
 <div class="drawer-content flex flex-col">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8">
         <!-- Header Section -->
@@ -198,7 +198,7 @@ $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$u
     </main>
     
 <?php 
-    include 'includes/footer.php'; 
+    include '../includes/footer.php'; 
 ?>
 </div>
 </div>
@@ -241,8 +241,8 @@ $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$u
 
 <!-- PDF.js for thumbnail generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="js/pdf-functions.js"></script>
-<script src="js/categories.js"></script>
+<script src="../js/pdf-functions.js"></script>
+<script src="../js/categories.js"></script>
 <script>
     // Education levels from PHP
     const educationLevels = <?= json_encode($education_levels) ?>;
@@ -1029,7 +1029,7 @@ $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$u
                 reject(new Error('Upload cancelled'));
             });
 
-            xhr.open('POST', 'handler/upload_handler.php', true);
+            xhr.open('POST', '../handler/upload_handler.php', true);
             xhr.send(formData);
         });
     }
