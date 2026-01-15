@@ -53,8 +53,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 if(!empty($doc['converted_pdf_path'])) @unlink("../" . $doc['converted_pdf_path']);
                 if(!empty($doc['thumbnail'])) @unlink("../uploads/thumbnails/" . $doc['thumbnail']);
                 
-                $tables = ['docs_points', 'admin_approvals', 'document_sales', 'point_transactions', 'admin_notifications'];
-                foreach($tables as $t) $VSD->remove($t, "document_id=$id" . ($t === 'point_transactions' ? ' OR related_document_id='.$id : ''));
+                $tables = ['docs_points', 'admin_approvals', 'document_sales', 'admin_notifications'];
+                foreach($tables as $t) $VSD->remove($t, "document_id=$id");
+                
+                // point_transactions uses related_document_id
+                $VSD->remove('point_transactions', "related_document_id=$id");
+                
                 $VSD->remove('documents', "id=$id");
                 
                 $VSD->insert('notifications', ['user_id' => $doc['user_id'], 'title' => 'Tài liệu bị xóa', 'message' => "Tài liệu '{$doc['original_name']}' đã bị xóa bởi Admin.", 'type' => 'document_deleted', 'ref_id' => $admin_id]);
@@ -511,17 +515,20 @@ include __DIR__ . '/../includes/admin-header.php';
                                         <?php endif; ?>
                                     </div>
                                 </td>
-                                <td class="text-right">
-                                    <div class="join shadow-sm">
+                                 <td class="text-right">
+                                    <div class="flex justify-end gap-1">
                                         <?php if($doc['status'] === 'pending'): ?>
-                                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" class="btn btn-sm btn-success btn-square join-item text-white hover:scale-105 transition-transform" title="Duyệt">
+                                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" 
+                                                    class="btn btn-sm btn-circle btn-success text-white shadow-sm hover:scale-110 transition-all" title="Duyệt">
                                                 <i class="fa-solid fa-check"></i>
                                             </button>
-                                            <button onclick="openRejectModal(<?= $doc['id'] ?>)" class="btn btn-sm btn-warning btn-square join-item text-white hover:scale-105 transition-transform" title="Từ chối">
+                                            <button onclick="openRejectModal(<?= $doc['id'] ?>)" 
+                                                    class="btn btn-sm btn-circle btn-warning text-white shadow-sm hover:scale-110 transition-all" title="Từ chối">
                                                 <i class="fa-solid fa-xmark"></i>
                                             </button>
                                         <?php endif; ?>
-                                        <button onclick="confirmDelete(<?= $doc['id'] ?>)" class="btn btn-sm btn-ghost btn-square join-item text-error hover:bg-error/10" title="Xóa">
+                                        <button onclick="confirmDelete(<?= $doc['id'] ?>)" 
+                                                class="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10 hover:scale-110 transition-all" title="Xóa">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
