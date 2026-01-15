@@ -242,6 +242,10 @@ $config_mod = getSetting('ai_model_moderator', 'gpt-4o-mini');
                                 <div id="res-risks" class="flex flex-wrap gap-2"></div>
                             </div>
                         </div>
+                        <div class="card bg-base-100 border border-base-300 overflow-hidden">
+                            <div class="bg-base-300 px-4 py-2 font-bold text-xs">Moderator RAW JSON</div>
+                            <pre id="json-mod" class="bg-base-200 p-4 font-mono text-[10px] overflow-x-auto text-secondary"></pre>
+                        </div>
                     </div>
 
                     <!-- Judge View -->
@@ -451,6 +455,7 @@ function renderResults(data) {
 
     // RAW JSON
     document.getElementById('json-judge').textContent = JSON.stringify(judge, null, 2);
+    document.getElementById('json-mod').textContent = JSON.stringify(moderator, null, 2);
 
     // Metadata
     const metaDiv = document.getElementById('res-meta-content');

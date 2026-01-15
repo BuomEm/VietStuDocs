@@ -50,6 +50,12 @@ Khả năng hỗ trợ người học tự học mà không cần giảng viên 
 7. pedagogical_value  
 Giá trị sử dụng cho học tập, ôn tập, thi cử hoặc áp dụng thực tế.
 
+QUY TẮC KHẮC NGHIỆT KHI CHẤM ĐIỂM (PHẢI TUÂN THỦ):
+- Nếu tài liệu không có lời giải/hướng dẫn chi tiết cho bài tập -> knowledge_completeness KHÔNG ĐƯỢC vượt quá 60.
+- Nếu tài liệu thiếu chỉ dẫn tự học hoặc yêu cầu phải có giáo viên đi kèm -> self_learning_support KHÔNG ĐƯỢC vượt quá 50.
+- Nếu tài liệu có nội dung tốt nhưng trình bày lộn xộn, thiếu mục lục -> structure_logic KHÔNG ĐƯỢC vượt quá 65.
+- Điểm "overall" phản ánh đúng giá trị sử dụng thực tế: Một tài liệu chuyên sâu nhưng không có hướng dẫn sẽ bị trừ điểm nặng ở các tiêu chí bổ trợ.
+
 CẤU TRÚC JSON BẮT BUỘC:
 {
   "summary": "Tóm tắt nội dung tài liệu (2–3 câu)",
@@ -90,20 +96,21 @@ BỐI CẢNH:
   3) Kết quả JSON đánh giá từ AI vòng 1
 
 NHIỆM VỤ:
-1. Kiểm tra xem điểm số AI vòng 1 có hợp lý với nội dung tài liệu hay không.
-2. Phát hiện lỗi nghiêm trọng:
-   - Sai kiến thức học thuật
-   - Không đúng cấp học / môn / ngành
-   - Nội dung quá sơ sài hoặc khó sử dụng
+1. Kiểm tra xem điểm số AI vòng 1 có hợp lý với nội dung tài liệu và CÁC ĐIỂM YẾU đã chỉ ra hay không.
+2. Phát hiện lỗi nghiêm trọng hoặc sự không nhất quán giữa ĐIỂM SỐ và MÔ TẢ.
 3. Chỉ điều chỉnh điểm khi thật sự cần thiết.
 4. Không chấm lại từ đầu và không viết lại toàn bộ đánh giá nếu không cần.
 
+QUY TẮC KIỂM TRA (SỰ NHẤT QUÁN):
+- Nếu AI Vòng 1 liệt kê Điểm Yếu là "thiếu hướng dẫn/lời giải" nhưng lại chấm kiến thức (knowledge_completeness) > 70 -> BẠN PHẢI GIẢM ĐIỂM TIÊU CHÍ NÀY XUỐNG DƯỚI 60.
+- Nếu AI Vòng 1 liệt kê Điểm Yếu là "không có chỉ dẫn tự học" nhưng chấm self_learning_support > 70 -> BẠN PHẢI GIẢM ĐIỂM TIÊU CHÍ NÀY XUỐNG DƯỚI 50.
+- Điểm trung bình (overall) phải phản ánh đúng quyết định (Decision).
+
 NGUYÊN TẮC HIỆU CHỈNH:
-- Mỗi tiêu chí chỉ được điều chỉnh tối đa ±15 điểm.
+- Mỗi tiêu chí chỉ được điều chỉnh tối đa ±25 điểm (đã nới lỏng để sửa sai từ vòng 1).
 - Nếu sai kiến thức nghiêm trọng → academic_accuracy ≤ 40.
 - Nếu sai cấp học / môn / ngành → learning_objective_fit ≤ 40.
 - Nếu nội dung quá sơ sài → knowledge_completeness ≤ 45.
-- Không nâng điểm để vượt ngưỡng duyệt một cách vô lý.
 
 QUYẾT ĐỊNH DUYỆT:
 - Chấp Nhận: overall ≥ 60 và không có lỗi nghiêm trọng
@@ -112,15 +119,9 @@ QUYẾT ĐỊNH DUYỆT:
 
 LƯU Ý VỀ plagiarism_suspected:
 - Chỉ gắn cờ nếu tài liệu có dấu hiệu rõ ràng (sao chép nguyên văn, giữ nguyên bố cục SGK/tài liệu in sẵn).
-- Không khẳng định chắc chắn có đạo văn.
 
 YÊU CẦU BẮT BUỘC:
-- Chỉ trả về DUY NHẤT 1 đối tượng JSON hợp lệ.
-- Không markdown, không giải thích.
-- Tất cả điểm là SỐ NGUYÊN.
-- overall = trung bình cộng các điểm sau khi hiệu chỉnh, làm tròn số nguyên.
-- Không được bỏ thiếu bất kỳ key nào trong JSON.
-- Nếu không có dữ liệu cho một trường, trả về mảng rỗng [] hoặc chuỗi rỗng "".
+- Trả về JSON, không giải thích. overall = trung bình cộng các điểm sau hiệu chỉnh.
 
 CẤU TRÚC JSON BẮT BUỘC:
 {

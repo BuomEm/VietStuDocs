@@ -11,13 +11,8 @@ if (!hasAdminAccess()) {
     exit;
 }
 
-require_once __DIR__ . '/../includes/admin-header.php';
-
+// 1. Handle POST Logic BEFORE any HTML output to avoid "Headers already sent"
 $status_filter = $_GET['status'] ?? 'pending';
-$withdrawals = getAllWithdrawalRequests($status_filter);
-$admin_active_page = 'withdrawals';
-$page_title = "Quản lý Rút tiền";
-
 $action = $_POST['action'] ?? '';
 $request_id = $_POST['request_id'] ?? '';
 $admin_note = $_POST['admin_note'] ?? '';
@@ -36,95 +31,181 @@ if ($action && $request_id) {
         exit;
     }
 }
+
+// 2. Fetch data
+$withdrawals = getAllWithdrawalRequests($status_filter);
+$admin_active_page = 'withdrawals';
+$page_title = "Quản lý Rút tiền";
+
+require_once __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<div class="p-6 max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-8">
+<div class="p-4 lg:p-10 max-w-7xl mx-auto animate-fade-in">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div>
-            <h1 class="text-3xl font-black text-slate-800 tracking-tight">Quản lý Rút tiền</h1>
-            <p class="text-slate-500 text-sm mt-1">Phê duyệt hoặc từ chối yêu cầu rút VSD của Gia sư</p>
+            <h1 class="text-4xl font-black tracking-tight text-white mb-2">
+                Quản lý <span class="bg-clip-text bg-gradient-to-r from-primary to-emerald-400">Rút tiền</span>
+            </h1>
+            <p class="text-slate-400 font-medium">Phê duyệt hoặc từ chối yêu cầu rút VSD của Gia sư hệ thống.</p>
         </div>
         
-        <div class="flex bg-slate-100 p-1 rounded-xl shadow-inner">
-            <a href="?status=pending" class="px-4 py-2 rounded-lg text-sm font-bold transition-all <?= $status_filter === 'pending' ? 'bg-white shadow text-primary' : 'text-slate-500 hover:text-slate-700' ?>">Đang chờ</a>
-            <a href="?status=approved" class="px-4 py-2 rounded-lg text-sm font-bold transition-all <?= $status_filter === 'approved' ? 'bg-white shadow text-success' : 'text-slate-500 hover:text-slate-700' ?>">Đã duyệt</a>
-            <a href="?status=rejected" class="px-4 py-2 rounded-lg text-sm font-bold transition-all <?= $status_filter === 'rejected' ? 'bg-white shadow text-error' : 'text-slate-500 hover:text-slate-700' ?>">Từ chối</a>
-            <a href="?status=all" class="px-4 py-2 rounded-lg text-sm font-bold transition-all <?= $status_filter === 'all' ? 'bg-white shadow text-slate-700' : 'text-slate-500 hover:text-slate-700' ?>">Tất cả</a>
+        <div class="flex bg-base-300/50 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-2xl">
+            <?php
+            $tabs = [
+                ['id' => 'pending', 'label' => 'Đang chờ', 'color' => 'primary'],
+                ['id' => 'approved', 'label' => 'Đã duyệt', 'color' => 'success'],
+                ['id' => 'rejected', 'label' => 'Từ chối', 'color' => 'error'],
+                ['id' => 'all', 'label' => 'Tất cả', 'color' => 'neutral']
+            ];
+            foreach ($tabs as $tab):
+                $isActive = ($status_filter === $tab['id']);
+            ?>
+            <a href="?status=<?= $tab['id'] ?>" 
+               class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 <?= $isActive ? "bg-{$tab['color']} text-{$tab['color']}-content shadow-lg scale-105" : 'text-slate-500 hover:text-slate-300' ?>">
+                <?= $tab['label'] ?>
+            </a>
+            <?php endforeach; ?>
         </div>
     </div>
 
+    <!-- Stats & Filters Info -->
+    <div class="mb-8 flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+        <i class="fa-solid fa-list-ul text-primary"></i>
+        <span>Danh sách: <?= count($withdrawals) ?> yêu cầu <?= $status_filter ?></span>
+    </div>
+
     <?php if (empty($withdrawals)): ?>
-        <div class="bg-white rounded-3xl p-20 text-center shadow-sm border border-slate-100">
-            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="fa-solid fa-money-bill-transfer text-3xl text-slate-300"></i>
+        <div class="card bg-base-100 border border-white/5 shadow-2xl p-20 text-center rounded-[2rem]">
+            <div class="w-24 h-24 bg-base-200 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-bounce-slow">
+                <i class="fa-solid fa-money-bill-transfer text-4xl text-slate-600"></i>
             </div>
-            <h3 class="text-xl font-bold text-slate-700">Không có yêu cầu nào</h3>
-            <p class="text-slate-400 mt-2">Hiện tại không có yêu cầu rút tiền nào trong danh sách này.</p>
+            <h3 class="text-2xl font-black text-white mb-2">Trống trơn!</h3>
+            <p class="text-slate-500 max-w-sm mx-auto">Hiện tại không có yêu cầu rút tiền nào cần xử lý trong mục này.</p>
         </div>
     <?php else: ?>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <?php foreach ($withdrawals as $w): ?>
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black text-lg">
-                                <?= strtoupper(substr($w['username'], 0, 1)) ?>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-slate-800"><?= htmlspecialchars($w['username']) ?></h3>
-                                <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase"><?= htmlspecialchars($w['email']) ?></p>
-                            </div>
-                        </div>
-                        
-                        <div class="text-right">
-                            <div class="text-2xl font-black text-slate-900"><?= number_format($w['amount_vnd']) ?> <span class="text-xs text-slate-400">VNĐ</span></div>
-                            <div class="text-[10px] font-black <?= $w['status'] === 'pending' ? 'text-orange-500' : ($w['status'] === 'approved' ? 'text-emerald-500' : 'text-rose-500') ?> uppercase tracking-widest mt-1">
-                                <?= $w['status'] === 'pending' ? 'Đang xử lý' : ($w['status'] === 'approved' ? 'Đã hoàn thành' : 'Đã từ chối') ?>
-                            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <?php foreach ($withdrawals as $w): 
+                $status_config = [
+                    'pending' => ['color' => 'warning', 'icon' => 'clock', 'label' => 'ĐANG CHỜ'],
+                    'approved' => ['color' => 'success', 'icon' => 'check-double', 'label' => 'HOÀN TẤT'],
+                    'rejected' => ['color' => 'error', 'icon' => 'xmark', 'label' => 'TỪ CHỐI']
+                ];
+                $sc = $status_config[$w['status']] ?? $status_config['pending'];
+            ?>
+                <div class="card bg-base-100 border border-white/5 shadow-xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-500 group rounded-[2.5rem] overflow-hidden">
+                    <!-- Status Header -->
+                    <div class="absolute top-6 right-6 z-10">
+                        <div class="badge badge-lg bg-<?= $sc['color'] ?> shadow-lg shadow-<?= $sc['color'] ?>/20 border-none font-black text-[10px] tracking-tighter">
+                            <i class="fa-solid fa-<?= $sc['icon'] ?> mr-1.5"></i> <?= $sc['label'] ?>
                         </div>
                     </div>
 
-                    <div class="bg-slate-50 rounded-2xl p-4 mb-6">
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thông tin ngân hàng</div>
-                        <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap"><?= htmlspecialchars($w['bank_info']) ?></div>
-                    </div>
+                    <div class="card-body p-8">
+                        <!-- User Info -->
+                        <div class="flex items-center gap-4 mb-8">
+                            <div class="avatar">
+                                <div class="w-16 h-16 rounded-[1.5rem] ring ring-primary/20 ring-offset-base-100 ring-offset-2">
+                                    <img src="https://ui-avatars.com/api/?name=<?= urlencode($w['username']) ?>&background=random" />
+                                </div>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h3 class="font-black text-white text-lg truncate"><?= htmlspecialchars($w['username']) ?></h3>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest truncate">ID: #<?= $w['user_id'] ?> | <?= htmlspecialchars($w['email']) ?></p>
+                            </div>
+                        </div>
 
-                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-6">
-                        <span>Yêu cầu: <?= date('H:i d/m/Y', strtotime($w['created_at'])) ?></span>
-                        <span><?= $w['points'] ?> VSD</span>
-                    </div>
+                        <!-- Amount Info -->
+                        <div class="bg-base-200/50 rounded-[2rem] p-6 mb-8 border border-white/5 group-hover:bg-primary/5 transition-colors">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Số tiền rút</span>
+                                <span class="text-[10px] font-black text-primary uppercase tracking-widest"><?= number_format($w['points']) ?> VSD</span>
+                            </div>
+                            <div class="text-3xl font-black text-white">
+                                <?= number_format($w['amount_vnd']) ?> <span class="text-sm font-bold opacity-30">VNĐ</span>
+                            </div>
+                        </div>
 
-                    <?php if ($w['status'] === 'pending'): ?>
-                        <form method="POST" class="space-y-4">
-                            <input type="hidden" name="request_id" value="<?= $w['id'] ?>">
-                            <textarea name="admin_note" rows="2" class="w-100 border-none bg-slate-50 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20" placeholder="Ghi chú cho gia sư (Không bắt buộc)..."></textarea>
+                        <!-- Bank Details -->
+                        <div class="space-y-4 mb-8">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-2xl bg-base-300 flex items-center justify-center shrink-0 border border-white/5">
+                                    <i class="fa-solid fa-university text-slate-500 text-sm"></i>
+                                </div>
+                                <div class="flex-1 overflow-hidden">
+                                    <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Thông tin thanh toán</div>
+                                    <div class="text-xs font-bold text-white whitespace-pre-wrap leading-relaxed"><?= htmlspecialchars($w['bank_info']) ?></div>
+                                </div>
+                            </div>
                             
-                            <div class="flex gap-3">
-                                <button type="submit" name="action" value="approve" class="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all" onclick="return confirm('Bạn có chắc chắn muốn DUYỆT yêu cầu này?')">
-                                    <i class="fa-solid fa-check mr-2"></i> Duyệt và Chuyển
-                                </button>
-                                <button type="submit" name="action" value="reject" class="flex-1 h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all" onclick="return confirm('Bạn có chắc chắn muốn TỪ CHỐI yêu cầu này?')">
-                                    <i class="fa-solid fa-xmark mr-2"></i> Từ chối
-                                </button>
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-2xl bg-base-300 flex items-center justify-center shrink-0 border border-white/5">
+                                    <i class="fa-solid fa-calendar-day text-slate-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Thời gian gửi</div>
+                                    <div class="text-xs font-bold text-slate-300"><?= date('H:i • d/m/Y', strtotime($w['created_at'])) ?></div>
+                                </div>
                             </div>
-                        </form>
-                    <?php else: ?>
-                        <div class="border-t border-slate-50 pt-4 flex justify-between items-center text-xs">
-                            <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-                                    <i class="fa-solid fa-user-shield text-[10px] text-slate-400"></i>
-                                </span>
-                                <span class="font-bold text-slate-500">Người duyệt: #<?= $w['admin_id'] ?></span>
-                            </div>
-                            <?php if ($w['admin_note']): ?>
-                                <div class="italic text-slate-400">"<?= htmlspecialchars($w['admin_note']) ?>"</div>
-                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+
+                        <?php if ($w['status'] === 'pending'): ?>
+                            <form method="POST" class="space-y-4 pt-4 border-t border-white/5" onsubmit="return handleWithdrawalSubmit(this)">
+                                <input type="hidden" name="request_id" value="<?= $w['id'] ?>">
+                                <input type="hidden" name="action" id="action_input_<?= $w['id'] ?>" value="">
+                                
+                                <div class="relative">
+                                    <textarea name="admin_note" rows="2" 
+                                              class="w-full bg-base-300 border border-white/5 rounded-[1.5rem] p-4 text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all outline-none" 
+                                              placeholder="Ghi chú admin (Mã giao dịch, lý do từ chối...)"></textarea>
+                                </div>
+                                
+                                <div class="flex gap-3">
+                                    <button type="submit" onclick="setAction('approve', <?= $w['id'] ?>)" class="flex-1 h-12 bg-success text-success-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-success/10">
+                                        <i class="fa-solid fa-check mr-2"></i> Duyệt & Trả
+                                    </button>
+                                    <button type="submit" onclick="setAction('reject', <?= $w['id'] ?>)" class="flex-1 h-12 bg-error text-error-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-error/10">
+                                        <i class="fa-solid fa-xmark mr-2"></i> Từ chối
+                                    </button>
+                                </div>
+                            </form>
+                        <?php else: ?>
+                            <!-- Processed Info -->
+                            <div class="pt-6 border-t border-white/5 mt-auto">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center">
+                                            <i class="fa-solid fa-user-shield text-[10px] text-slate-500"></i>
+                                        </div>
+                                        <span class="text-[10px] font-black text-slate-500 uppercase">Admin: #<?= $w['admin_id'] ?></span>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-slate-600 italic">Verified Access</span>
+                                </div>
+                                
+                                <?php if ($w['admin_note']): ?>
+                                    <div class="p-4 bg-base-200/50 rounded-2xl border border-white/5 italic text-slate-400 text-xs leading-relaxed">
+                                        "<?= htmlspecialchars($w['admin_note']) ?>"
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+function setAction(action, id) {
+    document.getElementById('action_input_' + id).value = action;
+}
+
+function handleWithdrawalSubmit(form) {
+    const action = form.querySelector('input[name="action"]').value;
+    const actionText = action === 'approve' ? 'DUYỆT và CHUYỂN TIỀN' : 'TỪ CHỐI';
+    return confirm(`Bạn có chắc chắn muốn ${actionText} yêu cầu rút tiền này?`);
+}
+</script>
 
 <?php require_once __DIR__ . '/../includes/admin-footer.php'; ?>
