@@ -511,17 +511,20 @@ include __DIR__ . '/../includes/admin-header.php';
                                         <?php endif; ?>
                                     </div>
                                 </td>
-                                <td class="text-right">
-                                    <div class="join shadow-sm">
+                                 <td class="text-right">
+                                    <div class="flex justify-end gap-1">
                                         <?php if($doc['status'] === 'pending'): ?>
-                                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" class="btn btn-sm btn-success btn-square join-item text-white hover:scale-105 transition-transform" title="Duyệt">
+                                            <button onclick="openApproveModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" 
+                                                    class="btn btn-sm btn-circle btn-success text-white shadow-sm hover:scale-110 transition-all" title="Duyệt">
                                                 <i class="fa-solid fa-check"></i>
                                             </button>
-                                            <button onclick="openRejectModal(<?= $doc['id'] ?>)" class="btn btn-sm btn-warning btn-square join-item text-white hover:scale-105 transition-transform" title="Từ chối">
+                                            <button onclick="openRejectModal(<?= $doc['id'] ?>)" 
+                                                    class="btn btn-sm btn-circle btn-warning text-white shadow-sm hover:scale-110 transition-all" title="Từ chối">
                                                 <i class="fa-solid fa-xmark"></i>
                                             </button>
                                         <?php endif; ?>
-                                        <button onclick="confirmDelete(<?= $doc['id'] ?>)" class="btn btn-sm btn-ghost btn-square join-item text-error hover:bg-error/10" title="Xóa">
+                                        <button onclick="confirmDelete(<?= $doc['id'] ?>)" 
+                                                class="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10 hover:scale-110 transition-all" title="Xóa">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
