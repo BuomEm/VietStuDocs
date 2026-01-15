@@ -11,7 +11,7 @@ config/db.php
 .env
 *.log
 API/pdfservices-api-credentials.json
-
+.agent/
 # Test & Debug Files
 apply_patch.php
 
