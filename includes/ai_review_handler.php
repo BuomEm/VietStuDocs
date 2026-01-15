@@ -309,6 +309,11 @@ class AIReviewHandler {
             if (!$doc) throw new Exception("Không tìm thấy tài liệu.");
 
             $this->updateStatus($document_id, 'processing');
+            
+            // Cấu hình môi trường để tránh Timeout trên Shared Hosting
+            ignore_user_abort(true); // Tiếp tục chạy ngay cả khi user đóng tab
+            @set_time_limit(300);    // Cố gắng set timeout PHP lên 5 phút
+            
             $metadata = $this->formatMetadata($doc);
 
             // 1. Upload file trực tiếp lên OpenAI (Bắt buộc cho vòng 1)
@@ -325,6 +330,11 @@ class AIReviewHandler {
                 'METADATA' => $metadata,
                 'DOCUMENT' => "Vui lòng phân tích file đính kèm để đánh giá tài liệu."
             ], $file_id);
+
+            // [FIX] Kiểm tra kết quả Vòng 1 trước khi sang Vòng 2
+            if (empty($judge_result) || !is_array($judge_result)) {
+                throw new Exception("Lỗi Vòng 1: AI Judge không trả về kết quả hợp lệ (Null hoặc JSON lỗi).");
+            }
 
             // 3. Chạy Vòng 2: AI MODERATOR (Dùng Chat Completion - Tiết kiệm, không cần attach file)
             $moderator_result = $this->runChatCompletion($model_moderator, AI_MODERATOR_PROMPT, [
@@ -412,16 +422,34 @@ class AIReviewHandler {
             ]);
             $run_id = $run['id'];
 
-            // Chờ kết quả polling
-            $max_attempts = 45;
-            while ($max_attempts--) {
+            // Chờ kết quả polling (Tăng timeout lên 5 phút cho gói Shared Hosting)
+            $start_time = time();
+            $timeout_seconds = 300; // 5 phút
+            $is_completed = false;
+
+            while ((time() - $start_time) < $timeout_seconds) {
                 $status_check = $this->request("threads/$thread_id/runs/$run_id", 'GET');
-                if ($status_check['status'] === 'completed') break;
-                if (in_array($status_check['status'], ['failed', 'cancelled', 'expired'])) {
-                    $error = $status_check['last_error']['message'] ?? 'Run failed';
-                    throw new Exception("AI Assistant Error: $error");
+                $status = $status_check['status'] ?? 'unknown';
+
+                if ($status === 'completed') {
+                    $is_completed = true;
+                    break;
                 }
-                sleep(2);
+                
+                if (in_array($status, ['failed', 'cancelled', 'expired'])) {
+                    $error = $status_check['last_error']['message'] ?? 'Run failed';
+                    throw new Exception("AI Assistant Error ($status): $error");
+                }
+                
+                // Backoff strategy: Wait 1s first, then 2s, then 3s to be polite and save resources
+                $elapsed = time() - $start_time;
+                if ($elapsed < 10) sleep(1);
+                else if ($elapsed < 30) sleep(2);
+                else sleep(3);
+            }
+
+            if (!$is_completed) {
+                throw new Exception("AI Timeout: Quá thời gian chờ xử lý ($timeout_seconds s) trên OpenAI.");
             }
 
             // Lấy tin nhắn cuối cùng của assistant
@@ -434,7 +462,7 @@ class AIReviewHandler {
                 }
             }
             
-            if (empty($content)) throw new Exception("Không nhận được kết quả từ AI Judge.");
+            if (empty($content)) throw new Exception("Không nhận được kết quả từ AI Judge (Content Empty).");
 
             return json_decode($content, true);
 

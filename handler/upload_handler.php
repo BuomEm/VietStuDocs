@@ -221,23 +221,27 @@ if ($category_data) {
     );
 }
 
-// Tự động thẩm định AI ngay khi upload
+// Tự động thẩm định AI ngay khi upload (Chỉ khi biết số trang và <= 180)
 $ai_processed = false;
-try {
-    // Tăng thời gian chờ cho PHP vì AI Assistants có thể mất 30-60s
-    @set_time_limit(180); 
+// $total_pages > 0 confirms it's not a PDF/DOCX (which are 0 at this stage) OR server-side count succeeded
+// This effectively defers PDF/DOCX AI review to the client-side page count update handler
+if ($total_pages > 0 && $total_pages <= 180) {
+    try {
+        // Tăng thời gian chờ cho PHP vì AI Assistants có thể mất 30-60s
+        @set_time_limit(180); 
+        
+        require_once __DIR__ . '/../includes/ai_review_handler.php';
+        $ai_handler = new AIReviewHandler($conn);
+        $ai_result = $ai_handler->reviewDocument($doc_id);
     
-    require_once __DIR__ . '/../includes/ai_review_handler.php';
-    $ai_handler = new AIReviewHandler($VSD);
-    $ai_result = $ai_handler->reviewDocument($doc_id);
-    
-    if ($ai_result && $ai_result['success']) {
-        $ai_processed = true;
-        error_log("Document $doc_id: Auto AI Review completed. Decision: " . $ai_result['decision']);
+        if ($ai_result && $ai_result['success']) {
+            $ai_processed = true;
+            error_log("Document $doc_id: Auto AI Review completed. Decision: " . $ai_result['decision']);
+        }
+    } catch (Exception $e) {
+        error_log("AI Auto-Review Error for doc $doc_id: " . $e->getMessage());
+        // Không chặn quy trình upload chính nếu AI lỗi
     }
-} catch (Exception $e) {
-    error_log("AI Auto-Review Error for doc $doc_id: " . $e->getMessage());
-    // Không chặn quy trình upload chính nếu AI lỗi
 }
 
 // Create admin notification for new document using unified sender
