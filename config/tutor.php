@@ -952,7 +952,7 @@ function approveWithdrawal($request_id, $admin_id, $note = '') {
         $pdo->beginTransaction();
         
         // 1. Update request status
-        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'approved', admin_id = ?, admin_note = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'approved', admin_id = ?, admin_note = ?, processed_at = NOW() WHERE id = ?");
         $stmt->execute([$admin_id, $note, $request_id]);
         
         // 2. Settle the transaction (mark as settled and remove from locked)
@@ -1006,7 +1006,7 @@ function rejectWithdrawal($request_id, $admin_id, $reason = '') {
         $pdo->beginTransaction();
         
         // 1. Update request status
-        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'rejected', admin_id = ?, admin_note = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'rejected', admin_id = ?, admin_note = ?, processed_at = NOW() WHERE id = ?");
         $stmt->execute([$admin_id, $reason, $request_id]);
         
         // 2. Refund points to tutor
