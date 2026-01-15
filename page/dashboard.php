@@ -70,14 +70,14 @@ if(isset($_GET['delete']) && $is_logged_in) {
             unlink($file_path);
         }
         $VSD->query("DELETE FROM documents WHERE id=$doc_id");
-        header("Location: dashboard.php?msg=deleted");
+        header("Location: dashboard?msg=deleted");
     }
 }
 
 // Handle document download - redirect to secure download handler
 if(isset($_GET['download']) && $is_logged_in) {
     $doc_id = intval($_GET['download']);
-    header("Location: handler/download.php?id=" . $doc_id);
+    header("Location: handler/download?id=" . $doc_id);
     exit;
 }
 ?>
@@ -288,7 +288,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                     <span class="w-1.5 h-8 bg-primary rounded-full"></span>
                     Tài liệu của tôi
                 </h2>
-                <a href="upload.php" class="btn btn-primary btn-sm rounded-xl gap-2 shadow-lg shadow-primary/20">
+                <a href="upload" class="btn btn-primary btn-sm rounded-xl gap-2 shadow-lg shadow-primary/20">
                     <i class="fa-solid fa-plus"></i>
                     Tải Lên Mới
                 </a>
@@ -351,13 +351,13 @@ if(isset($_GET['download']) && $is_logged_in) {
 
                             <!-- Actions Hover Overlay -->
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                                <a href="view.php?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                <a href="view?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                                     <i class="fa-solid fa-eye text-lg"></i>
                                 </a>
-                                <a href="edit-document.php?id=<?= $doc_id ?>" class="btn btn-info btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
+                                <a href="edit-document?id=<?= $doc_id ?>" class="btn btn-info btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
                                     <i class="fa-solid fa-pen-to-square text-lg"></i>
                                 </a>
-                                <button onclick="vsdConfirm({title: 'Xóa tài liệu', message: 'Hành động này không thể hoàn tác. Bạn chắc chứ?', type: 'error', onConfirm: () => window.location.href='dashboard.php?delete=<?= $doc_id ?>'})" 
+                                <button onclick="vsdConfirm({title: 'Xóa tài liệu', message: 'Hành động này không thể hoàn tác. Bạn chắc chứ?', type: 'error', onConfirm: () => window.location.href='dashboard?delete=<?= $doc_id ?>'})" 
                                         class="btn btn-error btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
                                     <i class="fa-solid fa-trash-can text-lg"></i>
                                 </button>
@@ -366,7 +366,7 @@ if(isset($_GET['download']) && $is_logged_in) {
 
                         <!-- Card Content -->
                         <div class="p-6">
-                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
                                 <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
                             </h3>
                             
@@ -447,7 +447,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                         </div>
                         <h3 class="text-2xl font-black mb-2">Bạn chưa có tài liệu nào</h3>
                         <p class="text-base-content/50 mb-8 max-w-xs mx-auto">Bắt đầu chia sẻ kiến thức của bạn với cộng đồng ngay hôm nay.</p>
-                        <a href="upload.php" class="btn btn-primary rounded-2xl px-10 h-14 font-black">
+                        <a href="upload" class="btn btn-primary rounded-2xl px-10 h-14 font-black">
                             TẢI LÊN NGAY
                         </a>
                     </div>
@@ -517,7 +517,7 @@ if(isset($_GET['download']) && $is_logged_in) {
 
                             <!-- Hover Action -->
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                <a href="view.php?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                <a href="view?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                                     <i class="fa-solid fa-eye text-lg"></i>
                                 </a>
                             </div>
@@ -525,7 +525,7 @@ if(isset($_GET['download']) && $is_logged_in) {
 
                         <!-- Card Content -->
                         <div class="p-6">
-                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view.php?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
+                            <h3 class="font-black text-base line-clamp-2 min-h-[3rem] text-base-content leading-tight group-hover:text-primary transition-colors cursor-pointer" onclick="window.location.href='view?id=<?= $doc_id ?>'" title="<?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>">
                                 <?= htmlspecialchars(preg_replace('/\.[^.]+$/', '', $doc['original_name'])) ?>
                             </h3>
                             
@@ -542,7 +542,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                                             </div>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="user_profile.php?id=<?= $doc['user_id'] ?>" class="text-xs font-bold text-base-content/60 hover:text-primary transition-colors"><?= htmlspecialchars($doc['username']) ?></a>
+                                    <a href="user_profile?id=<?= $doc['user_id'] ?>" class="text-xs font-bold text-base-content/60 hover:text-primary transition-colors"><?= htmlspecialchars($doc['username']) ?></a>
                                 </div>
                                 <div class="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 rounded-full">
                                     <i class="fa-solid fa-thumbs-up text-success text-[10px]"></i>
