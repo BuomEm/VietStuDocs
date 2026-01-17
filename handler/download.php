@@ -129,8 +129,16 @@ function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100, $origin
     // Sử dụng original_name nếu có, nếu không thì dùng basename
     $download_filename = $original_name ? $original_name : basename($file_path);
     
+    // Đảm bảo tên file có phần mở rộng đúng (Fix lỗi tải file không có đuôi)
+    $actual_ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+    $current_ext = strtolower(pathinfo($download_filename, PATHINFO_EXTENSION));
+    
+    if($actual_ext && $current_ext !== $actual_ext) {
+        $download_filename .= '.' . $actual_ext;
+    }
+    
     // Xác định MIME type
-    $file_ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+    $file_ext = $actual_ext;
     $mime_types = [
         'pdf' => 'application/pdf',
         'doc' => 'application/msword',

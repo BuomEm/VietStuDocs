@@ -1449,7 +1449,7 @@ include '../includes/sidebar.php';
                     <i class="fa-solid fa-download text-primary text-lg"></i>
                     <span class="font-semibold">Đang tải xuống</span>
                 </div>
-                <button class="btn btn-ghost btn-xs btn-circle" onclick="hideDownloadQueue()" title="Ẩn">
+                <button class="btn btn-ghost btn-xs btn-circle" onclick="cancelDownload()" title="Hủy tải xuống">
                     <i class="fa-solid fa-times"></i>
                 </button>
             </div>
@@ -1525,6 +1525,9 @@ include '../includes/sidebar.php';
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
         }
+
+        // Track current download request
+        let currentDownloadXhr = null;
 
         /**
          * VSD Advanced PDF Viewer (Drive Style)
@@ -2437,7 +2440,12 @@ include '../includes/sidebar.php';
         
         // Download with progress tracking
         function downloadWithProgress(url, fileName) {
+            if (currentDownloadXhr) {
+                currentDownloadXhr.abort();
+            }
+
             const xhr = new XMLHttpRequest();
+            currentDownloadXhr = xhr;
             xhr.open('GET', url, true);
             xhr.responseType = 'blob';
             
@@ -2448,14 +2456,14 @@ include '../includes/sidebar.php';
             xhr.onprogress = function(e) {
                 if (e.lengthComputable) {
                     const currentTime = Date.now();
+                    const elapsedSeconds = (currentTime - startTime) / 1000;
                     const loaded = e.loaded;
                     const total = e.total;
                     const percent = Math.round((loaded / total) * 100);
                     
-                    // Calculate speed (bytes per second)
-                    const timeDiff = (currentTime - lastTime) / 1000; // seconds
-                    const bytesDiff = loaded - lastLoaded;
-                    const speedBps = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+                    // Calculate average speed (total bytes / total time)
+                    // This is more stable for UI display
+                    const speedBps = elapsedSeconds > 0 ? loaded / elapsedSeconds : 0;
                     
                     // Update UI
                     updateDownloadProgress(percent, speedBps, loaded, total);
@@ -2465,7 +2473,13 @@ include '../includes/sidebar.php';
                 }
             };
             
+            xhr.onabort = function() {
+                currentDownloadXhr = null;
+                hideDownloadQueue();
+            };
+            
             xhr.onload = function() {
+                currentDownloadXhr = null;
                 if (xhr.status === 200) {
                     // Create blob and download
                     const blob = xhr.response;
@@ -2483,6 +2497,7 @@ include '../includes/sidebar.php';
                         hideDownloadQueue();
                     }, 1000);
                 } else {
+                    currentDownloadXhr = null;
                     hideDownloadQueue();
                     showAlert('Lỗi khi tải xuống tài liệu', 'error', 'Lỗi');
                 }
@@ -2503,6 +2518,16 @@ include '../includes/sidebar.php';
                 widget.classList.remove('hidden');
                 widget.classList.add('show');
             }
+        }
+        
+        // Cancel ongoing download
+        function cancelDownload() {
+            if (currentDownloadXhr) {
+                currentDownloadXhr.abort();
+                currentDownloadXhr = null;
+                showAlert('Đã hủy tải xuống tài liệu', 'info', 'Đã Hủy');
+            }
+            hideDownloadQueue();
         }
         
         // Hide download queue widget

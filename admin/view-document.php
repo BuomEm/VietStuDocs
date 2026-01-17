@@ -4,13 +4,48 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/file.php';
 require_once __DIR__ . '/../config/categories.php';
+require_once __DIR__ . '/../config/points.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 // Check admin permission
 redirectIfNotAdmin();
 
 $admin_id = getCurrentUserId();
-$page_title = "Xem tài liệu - Admin Panel";
 
+// --- LOGIC XỬ LÝ ACTION ---
+if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    $document_id = isset($_POST['document_id']) ? intval($_POST['document_id']) : 0;
+    
+    // Khởi tạo $VSD nếu chưa có (thường có trong db.php hoặc function.php)
+    global $VSD;
+
+    if($action === 'approve') {
+        $points = intval($_POST['points']);
+        $notes = db_escape($_POST['notes'] ?? '');
+        if($points > 0) {
+            approveDocument($document_id, $admin_id, $points, $notes);
+            $doc_info = db_get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+            if($doc_info) {
+                db_query("INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES ({$doc_info['user_id']}, 'Tài liệu đã được duyệt', 'Tài liệu \'{$doc_info['original_name']}\' được duyệt. +{$points} điểm.', 'document_approved', $document_id)");
+                sendPushToUser($doc_info['user_id'], ['title' => 'Tài liệu đã được duyệt! 🎉', 'body' => "Bạn nhận được {$points} điểm.", 'url' => '/history.php?tab=notifications']);
+            }
+            header("Location: view-document.php?id=$document_id&msg=approved"); exit;
+        }
+    } 
+    elseif($action === 'reject') {
+        $reason = db_escape($_POST['rejection_reason'] ?? '');
+        $doc_info = db_get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+        rejectDocument($document_id, $admin_id, $reason);
+        if($doc_info) {
+            db_query("INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES ({$doc_info['user_id']}, 'Tài liệu bị từ chối', 'Tài liệu \'{$doc_info['original_name']}\' bị từ chối. Lý do: $reason', 'document_rejected', $document_id)");
+            sendPushToUser($doc_info['user_id'], ['title' => 'Tài liệu bị từ chối ❌', 'body' => "Nhấn để xem lý do.", 'url' => '/history.php?tab=notifications']);
+        }
+        header("Location: view-document.php?id=$document_id&msg=rejected"); exit;
+    }
+}
+
+$page_title = "Xem tài liệu - Admin Panel";
 $doc_id = intval($_GET['id'] ?? 0);
 
 if($doc_id <= 0) {
@@ -137,12 +172,30 @@ include __DIR__ . '/../includes/admin-header.php';
             </div>
             
             <div class="flex items-center gap-3 shrink-0">
-                <a href="../handler/download.php?id=<?= $doc_id ?>" class="btn btn-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
-                    <i class="fa-solid fa-download text-lg"></i>
-                    <span class="hidden sm:inline">Tải xuống</span>
+                <!-- Nút Tải xuống đã được fix đường dẫn và thêm thuộc tính download -->
+                <a href="../handler/download.php?id=<?= $doc_id ?>" 
+                   class="btn btn-primary shadow-lg shadow-primary/20 hover:scale-105 transition-all gap-2"
+                   target="_blank"
+                   download="<?= htmlspecialchars($doc['original_name']) ?>.<?= $file_ext ?>">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden sm:inline">Tải bản gốc</span>
                 </a>
-                <a href="pending-docs.php" class="btn btn-ghost hover:bg-base-content/10">
-                    <i class="fa-solid fa-arrow-right-from-bracket text-lg"></i>
+                
+                <?php if($doc['status'] === 'pending'): ?>
+                    <button onclick="openApproveModal(<?= $doc_id ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>')" 
+                            class="btn btn-success text-white shadow-lg shadow-success/20 hover:scale-105 transition-all">
+                        <i class="fa-solid fa-check"></i>
+                        <span class="hidden sm:inline">Duyệt ngay</span>
+                    </button>
+                    <button onclick="openRejectModal(<?= $doc_id ?>)" 
+                            class="btn btn-error text-white shadow-lg shadow-error/20 hover:scale-105 transition-all">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span class="hidden sm:inline">Từ chối</span>
+                    </button>
+                <?php endif; ?>
+
+                <a href="<?= $doc['status'] === 'pending' ? 'pending-docs.php' : 'all-documents.php' ?>" class="btn btn-ghost hover:bg-base-content/10">
+                    <i class="fa-solid fa-arrow-left"></i>
                     <span class="hidden sm:inline">Quay lại</span>
                 </a>
             </div>
@@ -601,7 +654,64 @@ include __DIR__ . '/../includes/admin-header.php';
         }
     })();
     <?php endif; ?>
+
+    function openApproveModal(id, title) {
+        document.getElementById('approve_doc_id').value = id;
+        document.getElementById('approve_doc_title').textContent = title;
+        document.getElementById('approveModal').showModal();
+    }
+    
+    function openRejectModal(id) {
+        document.getElementById('reject_doc_id').value = id;
+        document.getElementById('rejectModal').showModal();
+    }
 </script>
+
+<!-- Modals -->
+<dialog id="approveModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 text-success"><i class="fa-solid fa-check-circle"></i> Duyệt tài liệu</h3>
+        <form method="POST">
+            <input type="hidden" name="document_id" id="approve_doc_id">
+            <input type="hidden" name="action" value="approve">
+            <div class="bg-base-200 p-3 rounded-lg mb-4 font-medium truncate" id="approve_doc_title"></div>
+            
+            <div class="form-control mb-4">
+                <label class="label">Giá trị tài liệu (điểm)</label>
+                <input type="number" name="points" class="input input-bordered" value="5" min="1" required>
+            </div>
+            <div class="form-control mb-6">
+                <label class="label">Ghi chú (tùy chọn)</label>
+                <textarea name="notes" class="textarea textarea-bordered"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
+                <button type="submit" class="btn btn-success text-white">Xác nhận duyệt</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="rejectModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 text-error"><i class="fa-solid fa-circle-xmark"></i> Từ chối tài liệu</h3>
+        <form method="POST">
+            <input type="hidden" name="document_id" id="reject_doc_id">
+            <input type="hidden" name="action" value="reject">
+            
+            <div class="form-control mb-6">
+                <label class="label">Lý do từ chối <span class="text-error">*</span></label>
+                <textarea name="rejection_reason" class="textarea textarea-bordered h-24" required placeholder="VD: Nội dung không phù hợp..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
+                <button type="submit" class="btn btn-error text-white">Xác nhận từ chối</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <?php 
 include __DIR__ . '/../includes/admin-footer.php';

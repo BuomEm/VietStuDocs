@@ -982,7 +982,7 @@ $approved_count = (int)$VSD->num_rows("SELECT id FROM documents WHERE user_id=$u
                             status.innerHTML = '✓ <span class="text-success">Success</span> | Processing PDF...';
                             try {
                                 const result = await processPdfDocument(
-                                    response.pdf_path_for_processing,
+                                    `/handler/file.php?doc_id=${response.doc_id}`,
                                     response.doc_id,
                                     {
                                         countPages: true,
