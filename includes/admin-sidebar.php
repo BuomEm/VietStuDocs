@@ -41,7 +41,7 @@ try {
     }
 } catch(Exception $e) {}
 
-$site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+$site_name = function_exists('getSetting') ? getSetting('site_name', 'VietStuDocs') : 'VietStuDocs';
 $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 
 // Menu items configuration

@@ -5,7 +5,7 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/settings.php';
 
-$site_name = getSetting('site_name', 'DocShare');
+$site_name = getSetting('site_name', 'VietStuDocs');
 $site_logo = getSetting('site_logo', '');
 $site_desc = getSetting('site_description', 'Chia sẻ tri thức, kết nối cộng đồng');
 $page_title = "Điều khoản sử dụng";

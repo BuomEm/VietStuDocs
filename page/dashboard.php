@@ -13,8 +13,8 @@ $is_logged_in = isset($_SESSION['user_id']);
 $user_id = $is_logged_in ? getCurrentUserId() : 0;
 $is_premium = $is_logged_in ? isPremium($user_id) : false;
 $premium_info = $is_logged_in ? getPremiumInfo($user_id) : null;
-$page_title = "Dashboard - DocShare";
-$page_description = "Quản lý tài liệu cá nhân, theo dõi thống kê và khám phá kho tài liệu khổng lồ trên DocShare.";
+$page_title = "Dashboard - VietStuDocs";
+$page_description = "Quản lý tài liệu cá nhân, theo dõi thống kê và khám phá kho tài liệu khổng lồ trên VietStuDocs.";
 $page_keywords = "dashboard, quản lý tài liệu, thống kê, thư viện cá nhân";
 $current_page = 'dashboard';
 
@@ -259,7 +259,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                     <?= $is_logged_in ? 'Bảng Điều Khiển' : 'Khám Phá Tài Liệu' ?>
                 </h1>
                 <p class="text-base-content/60 mt-2 font-medium">
-                    <?= $is_logged_in ? 'Chào mừng trở lại! Xem tổng quan tài liệu của bạn.' : 'Chào mừng bạn đến với DocShare! Khám phá kho tài liệu phong phú.' ?>
+                    <?= $is_logged_in ? 'Chào mừng trở lại! Xem tổng quan tài liệu của bạn.' : 'Chào mừng bạn đến với VietStuDocs! Khám phá kho tài liệu phong phú.' ?>
                 </p>
             </div>
             

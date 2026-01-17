@@ -121,7 +121,7 @@ function isSettingEnabled($name) {
  * @return string
  */
 function getSiteName() {
-    return getSetting('site_name', 'DocShare');
+    return getSetting('site_name', 'VietStuDocs');
 }
 
 /**

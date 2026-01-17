@@ -41,7 +41,7 @@ if($is_premium && $premium_info) {
     } catch (Exception $e) {}
 }
 
-$page_title = "Cài đặt tài khoản - DocShare";
+$page_title = "Cài đặt tài khoản - VietStuDocs";
 $current_page = 'profile';
 
 $error = '';

@@ -90,7 +90,7 @@ if (!empty($filters)) {
 // Get education levels for filter dropdown
 $education_levels = getEducationLevels();
 
-$page_title = !empty($keyword) ? "Tìm kiếm: $keyword - DocShare" : "Tìm kiếm tài liệu - DocShare";
+$page_title = !empty($keyword) ? "Tìm kiếm: $keyword - VietStuDocs" : "Tìm kiếm tài liệu - VietStuDocs";
 $current_page = 'search';
 ?>
 <?php include '../includes/head.php'; ?>

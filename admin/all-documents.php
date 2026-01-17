@@ -66,6 +66,36 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         }
         header("Location: all-documents.php?msg=deleted"); exit;
     }
+    // Logic: Edit Document
+    elseif($action === 'edit') {
+        $new_name = $VSD->escape(trim($_POST['original_name'] ?? ''));
+        $new_desc = $VSD->escape(trim($_POST['description'] ?? ''));
+        
+        if(!empty($new_name)) {
+            $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
+            if($VSD->update('documents', [
+                'original_name' => $new_name,
+                'description' => $new_desc
+            ], "id=$document_id")) {
+                
+                if($doc_info) {
+                    $VSD->insert('notifications', [
+                        'user_id' => $doc_info['user_id'],
+                        'title' => 'Thông tin tài liệu được cập nhật',
+                        'message' => "Admin đã cập nhật thông tin tài liệu '{$doc_info['original_name']}'. Tên mới: $new_name",
+                        'type' => 'document_updated',
+                        'ref_id' => $document_id
+                    ]);
+                    sendPushToUser($doc_info['user_id'], [
+                        'title' => 'Thông tin tài liệu được cập nhật! 📝',
+                        'body' => "Tài liệu '{$doc_info['original_name']}' đã có thay đổi.",
+                        'url' => '/history.php?tab=notifications'
+                    ]);
+                }
+                header("Location: all-documents.php?msg=updated"); exit;
+            }
+        }
+    }
     // Logic: AI Review
     elseif($action === 'ai_review') {
         header('Content-Type: application/json');
@@ -527,6 +557,10 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 <i class="fa-solid fa-xmark"></i>
                                             </button>
                                         <?php endif; ?>
+                                        <button onclick="openEditModal(<?= $doc['id'] ?>, '<?= addslashes(htmlspecialchars($doc['original_name'])) ?>', '<?= addslashes(preg_replace('/\s+/', ' ', htmlspecialchars($doc['description'] ?? ''))) ?>')" 
+                                                class="btn btn-sm btn-circle btn-ghost text-info hover:bg-info/10 hover:scale-110 transition-all" title="Chỉnh sửa">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
                                         <button onclick="confirmDelete(<?= $doc['id'] ?>)" 
                                                 class="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10 hover:scale-110 transition-all" title="Xóa">
                                             <i class="fa-solid fa-trash-can"></i>
@@ -613,6 +647,30 @@ include __DIR__ . '/../includes/admin-header.php';
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<dialog id="editModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 text-primary"><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa tài liệu</h3>
+        <form method="POST">
+            <input type="hidden" name="document_id" id="edit_doc_id">
+            <input type="hidden" name="action" value="edit">
+            
+            <div class="form-control mb-4">
+                <label class="label">Tên tài liệu <span class="text-error">*</span></label>
+                <input type="text" name="original_name" id="edit_doc_name" class="input input-bordered" required>
+            </div>
+            <div class="form-control mb-6">
+                <label class="label">Mô tả tài liệu</label>
+                <textarea name="description" id="edit_doc_desc" class="textarea textarea-bordered h-32"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Hủy</button>
+                <button type="submit" class="btn btn-primary text-white">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
     function openApproveModal(id, title) {
         document.getElementById('approve_doc_id').value = id;
@@ -623,6 +681,13 @@ include __DIR__ . '/../includes/admin-header.php';
     function openRejectModal(id) {
         document.getElementById('reject_doc_id').value = id;
         document.getElementById('rejectModal').showModal();
+    }
+
+    function openEditModal(id, name, desc) {
+        document.getElementById('edit_doc_id').value = id;
+        document.getElementById('edit_doc_name').value = name;
+        document.getElementById('edit_doc_desc').value = desc;
+        document.getElementById('editModal').showModal();
     }
 
     function confirmDelete(id) {

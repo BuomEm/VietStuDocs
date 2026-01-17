@@ -132,7 +132,7 @@ if($user_id) {
 
 if(!file_exists($file_path)) {
     header("HTTP/1.0 404 Not Found");
-    $page_title = 'File Not Found - DocShare';
+    $page_title = 'File Not Found - VietStuDocs';
     include '../includes/head.php';
     include '../includes/sidebar.php';
     ?>
@@ -343,18 +343,18 @@ if(isset($_GET['download'])) {
 }
 ?>
 <?php
-$page_title = htmlspecialchars($doc['original_name']) . ' - DocShare';
+$page_title = htmlspecialchars($doc['original_name']) . ' - VietStuDocs';
 
 // Generate SEO description
 $seo_desc = "Xem và tải xuống tài liệu " . htmlspecialchars($doc['original_name']);
 if (isset($doc_category['doc_type_name'])) {
     $seo_desc .= " thuộc danh mục " . htmlspecialchars($doc_category['doc_type_name']);
 }
-$seo_desc .= " tại DocShare. Nền tảng chia sẻ tài liệu học tập hàng đầu.";
+$seo_desc .= " tại VietStuDocs. Nền tảng chia sẻ tài liệu học tập hàng đầu.";
 $page_description = $seo_desc;
 
 // Generate SEO keywords
-$seo_keywords = htmlspecialchars($doc['original_name']) . ", tài liệu, download, tải xuống, docshare";
+$seo_keywords = htmlspecialchars($doc['original_name']) . ", tài liệu, download, tải xuống, VietStuDocs";
 if (isset($doc_category['doc_type_name'])) {
     $seo_keywords .= ", " . htmlspecialchars($doc_category['doc_type_name']);
 }

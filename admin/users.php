@@ -21,7 +21,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $new_role = ($user_data && $user_data['role'] === 'admin') ? 'user' : 'admin';
         $VSD->update('users', ['role' => $new_role], "id=$user_id");
         
-        // Notify logic...
         $VSD->insert('notifications', [
             'user_id' => $user_id, 'title' => 'Cập nhật vai trò', 'type' => 'role_updated', 'ref_id' => $admin_id,
             'message' => "Admin đã thay đổi vai trò của bạn thành: " . strtoupper($new_role)
@@ -33,7 +32,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             addPoints($user_id, $points, $reason);
-            // Notify...
             $VSD->insert('notifications', ['user_id' => $user_id, 'title' => 'Cộng điểm', 'type' => 'points_added', 'ref_id' => $admin_id, 'message' => "Admin cộng $points điểm. Lý do: $reason"]);
             sendPushToUser($user_id, ['title' => 'Cộng điểm', 'body' => "Bạn được cộng $points điểm", 'url' => '/history.php?tab=notifications']);
             header("Location: users.php?msg=points_added"); exit;
@@ -43,10 +41,52 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $reason = $VSD->escape($_POST['reason'] ?? 'Admin adjustment');
         if($points > 0) {
             deductPoints($user_id, $points, $reason);
-            // Notify...
-             $VSD->insert('notifications', ['user_id' => $user_id, 'title' => 'Trừ điểm', 'type' => 'points_deducted', 'ref_id' => $admin_id, 'message' => "Admin trừ $points điểm. Lý do: $reason"]);
+            $VSD->insert('notifications', ['user_id' => $user_id, 'title' => 'Trừ điểm', 'type' => 'points_deducted', 'ref_id' => $admin_id, 'message' => "Admin trừ $points điểm. Lý do: $reason"]);
             sendPushToUser($user_id, ['title' => 'Trừ điểm', 'body' => "Bạn bị trừ $points điểm", 'url' => '/history.php?tab=notifications']);
             header("Location: users.php?msg=points_deducted"); exit;
+        }
+    } elseif($action === 'give_premium') {
+        require_once __DIR__ . '/../config/premium.php';
+        if(activateMonthlyPremium($user_id)) {
+            $VSD->insert('notifications', [
+                'user_id' => $user_id, 'title' => 'Cấp gói Premium', 'type' => 'premium_activated', 'ref_id' => $admin_id,
+                'message' => "Admin đã tặng bạn 1 tháng Premium. Tận hưởng các đặc quyền ngay!"
+            ]);
+            sendPushToUser($user_id, ['title' => 'Bạn đã có Premium! 👑', 'body' => "Admin vừa tặng bạn 1 tháng Premium.", 'url' => '/history.php?tab=notifications']);
+            header("Location: users.php?msg=premium_given"); exit;
+        }
+    } elseif($action === 'delete_user') {
+        if($user_id != $admin_id) {
+            // tables with user_id/student_id/tutor_id
+            $VSD->remove('user_points', "user_id=$user_id");
+            $VSD->remove('premium', "user_id=$user_id");
+            $VSD->remove('notifications', "user_id=$user_id");
+            $VSD->remove('point_transactions', "user_id=$user_id");
+            $VSD->remove('document_interactions', "user_id=$user_id");
+            $VSD->remove('document_reports', "user_id=$user_id");
+            $VSD->remove('document_views', "user_id=$user_id");
+            $VSD->remove('document_sales', "buyer_user_id=$user_id OR seller_user_id=$user_id");
+            $VSD->remove('withdrawal_requests', "user_id=$user_id");
+            $VSD->remove('tutor_requests', "student_id=$user_id OR tutor_id=$user_id");
+            $VSD->remove('tutors', "user_id=$user_id");
+            $VSD->remove('messages', "from_user=$user_id OR to_user=$user_id");
+            $VSD->remove('admin_notifications', "admin_id=$user_id"); // If they were admin
+            
+            $user_docs = $VSD->get_list("SELECT id, file_name, converted_pdf_path, thumbnail FROM documents WHERE user_id=$user_id");
+            foreach($user_docs as $doc) {
+                @unlink("../uploads/" . $doc['file_name']);
+                if(!empty($doc['converted_pdf_path'])) @unlink("../" . $doc['converted_pdf_path']);
+                if(!empty($doc['thumbnail'])) @unlink("../uploads/thumbnails/" . $doc['thumbnail']);
+                $doc_id = $doc['id'];
+                $VSD->remove('docs_points', "document_id=$doc_id");
+                $VSD->remove('admin_approvals', "document_id=$doc_id");
+                $VSD->remove('document_sales', "document_id=$doc_id");
+                $VSD->remove('document_categories', "document_id=$doc_id");
+                $VSD->remove('document_interactions', "document_id=$doc_id");
+            }
+            $VSD->remove('documents', "user_id=$user_id");
+            $VSD->remove('users', "id=$user_id");
+            header("Location: users.php?msg=user_deleted"); exit;
         }
     }
 }
@@ -257,7 +297,13 @@ include __DIR__ . '/../includes/admin-header.php';
                                         <?php if($user['role'] === 'admin'): ?>
                                             <span class="badge badge-sm badge-secondary font-bold">Admin</span>
                                         <?php else: ?>
-                                            <span class="badge badge-sm badge-ghost">User</span>
+                                            <?php 
+                                            require_once __DIR__ . '/../config/premium.php';
+                                            if(isPremium($user['id'])): ?>
+                                                <span class="badge badge-sm badge-warning font-bold"><i class="fa-solid fa-crown mr-1"></i>Premium</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-sm badge-ghost">User</span>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -313,6 +359,17 @@ include __DIR__ . '/../includes/admin-header.php';
                                                         <?php else: ?>
                                                             <i class="fa-solid fa-user-shield text-success"></i> Cấp quyền Admin
                                                         <?php endif; ?>
+                                                    </a>
+                                                </li>
+                                                <li class="border-t border-base-200 mt-1 pt-1"></li>
+                                                <li>
+                                                    <a onclick="givePremium(<?= $user['id'] ?>, '<?= addslashes($user['username']) ?>')">
+                                                        <i class="fa-solid fa-crown text-warning"></i> Tặng 1 tháng Premium
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a onclick="confirmDeleteUser(<?= $user['id'] ?>, '<?= addslashes($user['username']) ?>')" class="text-error">
+                                                        <i class="fa-solid fa-user-xmark"></i> Xóa người dùng
                                                     </a>
                                                 </li>
                                                 <li class="border-t border-base-200 mt-1 pt-1"></li>
@@ -444,13 +501,50 @@ include __DIR__ . '/../includes/admin-header.php';
             ? 'Bạn có chắc chắn muốn cấp quyền Quản trị viên cho người này?' 
             : 'Bạn có chắc chắn muốn gỡ quyền Quản trị viên?';
         
-        if(confirm(msg)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="action" value="toggle_role">`;
-            document.body.appendChild(form);
-            form.submit();
-        }
+        vsdConfirm({
+            title: isPromoting ? 'Cấp quyền Admin' : 'Hạ quyền Admin',
+            message: msg,
+            type: isPromoting ? 'success' : 'warning',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="action" value="toggle_role">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function givePremium(userId, username) {
+        vsdConfirm({
+            title: 'Tặng Premium',
+            message: `Bạn có chắc chắn muốn tặng 1 tháng Premium cho <b>${username}</b> không?`,
+            type: 'success',
+            confirmText: 'Xác nhận tặng',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="action" value="give_premium">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function confirmDeleteUser(userId, username) {
+        vsdConfirm({
+            title: 'Xóa người dùng',
+            message: `Bạn có chắc chắn muốn xóa tài khoản <b>${username}</b>? <br><br><span class="text-error font-bold">Cảnh báo:</span> Mọi tài liệu, điểm số và thông tin liên quan sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác!`,
+            type: 'error',
+            confirmText: 'Xóa vĩnh viễn',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="action" value="delete_user">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
     }
 </script>
 

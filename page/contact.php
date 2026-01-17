@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <div>
                             <h3 class="font-bold text-lg mb-1">Email</h3>
-                            <a href="mailto:support@docshare.vn" class="text-base-content/70 hover:text-primary transition-colors">support@docshare.vn</a>
+                            <a href="mailto:support@VietStuDocs.site" class="text-base-content/70 hover:text-primary transition-colors">support@docshare.vn</a>
                             <p class="text-xs text-base-content/50 mt-1">Phản hồi trong vòng 24h</p>
                         </div>
                     </div>

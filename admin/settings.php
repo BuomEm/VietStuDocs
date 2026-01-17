@@ -246,7 +246,7 @@ require_once __DIR__ . '/../includes/admin-header.php';
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-medium">Tên Website</span></label>
-                                    <input type="text" id="site_name" class="input input-bordered" value="<?= htmlspecialchars(getSetting('site_name', 'DocShare')) ?>">
+                                    <input type="text" id="site_name" class="input input-bordered" value="<?= htmlspecialchars(getSetting('site_name', 'VietStuDocs')) ?>">
                                 </div>
                                 
                                 <div class="form-control">

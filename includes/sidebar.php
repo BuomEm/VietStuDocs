@@ -33,7 +33,7 @@ if(isset($_SESSION['user_id'])) {
             <!-- Sidebar Header -->
             <div class="p-4 border-b border-base-300">
                 <?php 
-                $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+                $site_name = function_exists('getSetting') ? getSetting('site_name', 'VietStuDocs') : 'VietStuDocs';
                 $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                 ?>
                 <a href="/dashboard" class="text-xl font-bold text-primary flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap h-12 w-full hover:bg-primary/5 transition-all">

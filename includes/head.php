@@ -6,7 +6,7 @@
     if(function_exists('updateLastActivity')) {
         updateLastActivity();
     }
-    $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+    $site_name = function_exists('getSetting') ? getSetting('site_name', 'VietStuDocs') : 'VietStuDocs';
     $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '/favicon.ico';
     $site_logo = !empty($site_logo) ? $site_logo : '/favicon.ico';
 
@@ -14,7 +14,7 @@
     $display_title = $site_name;
     if (isset($page_title) && !empty($page_title)) {
         // Remove legacy suffixes if present to avoid duplication
-        $clean_title = str_replace([' - DocShare', ' | DocShare'], '', $page_title);
+        $clean_title = str_replace([' - VietStuDocs', ' | VietStuDocs'], '', $page_title);
         if ($clean_title !== $site_name) {
             $display_title = "$site_name | $clean_title";
         }
@@ -24,7 +24,7 @@
     $default_desc = function_exists('getSetting') ? getSetting('site_description', 'Nền tảng chia sẻ tài liệu học tập, giáo án, đề thi và luận văn chất lượng cao cho học sinh, sinh viên và giáo viên Việt Nam.') : 'Nền tảng chia sẻ tài liệu học tập hàng đầu Việt Nam';
     $display_description = isset($page_description) && !empty($page_description) ? $page_description : $default_desc;
     
-    $default_keywords = "tài liệu học tập, đề thi, giáo án, luận văn, sách giáo khoa, bài giảng, đại học, thpt, thcs, tiểu học, vietstudocs, docshare";
+    $default_keywords = "tài liệu học tập, đề thi, giáo án, luận văn, sách giáo khoa, bài giảng, đại học, thpt, thcs, tiểu học, vietstudocs, docshare, vietstudoc";
     $display_keywords = isset($page_keywords) && !empty($page_keywords) ? $page_keywords . ", " . $default_keywords : $default_keywords;
 
     // Canonical URL

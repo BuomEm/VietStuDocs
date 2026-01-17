@@ -16,7 +16,7 @@ $user_points = getUserPoints($user_id);
 // Get education levels for the cascade selection
 $education_levels = getEducationLevels();
 
-$page_title = "Upload Document - DocShare";
+$page_title = "Upload Document - VietStuDocs";
 $current_page = 'upload';
 
 // Count pending and approved documents

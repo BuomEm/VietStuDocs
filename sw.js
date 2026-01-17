@@ -66,7 +66,7 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('push', function (event) {
     console.log('[Service Worker] Push Received.');
-    let data = { title: 'Thông báo mới', body: 'Bạn có tin nhắn mới từ DocShare' };
+    let data = { title: 'Thông báo mới', body: 'Bạn có tin nhắn mới từ VietStuDocs' };
 
     if (event.data) {
         try {

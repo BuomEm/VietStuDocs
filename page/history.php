@@ -127,7 +127,7 @@ $stats = $VSD->get_row($stats_query);
                     </div>
                     Lịch Sử Hoạt Động
             </h1>
-                <p class="text-base-content/60 mt-2 font-medium">Theo dõi mọi vết chân của bạn trên DocShare</p>
+                <p class="text-base-content/60 mt-2 font-medium">Theo dõi mọi vết chân của bạn trên VietStuDocs</p>
             </div>
             
             <!-- <div class="flex items-center gap-3">

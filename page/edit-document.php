@@ -146,10 +146,11 @@ $current_page = 'dashboard';
 <?php include '../includes/head.php'; ?>
 <?php include '../includes/sidebar.php'; ?>
 
-<div class="drawer-content flex flex-col">
+<div class="drawer-content flex flex-col min-h-screen">
     <?php include '../includes/navbar.php'; ?>
     
     <main class="flex-1 p-4 lg:p-8 bg-base-200/50">
+        <div class="max-w-7xl mx-auto w-full">
         <!-- Header Section -->
         <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div>
@@ -851,7 +852,9 @@ $current_page = 'dashboard';
         <form id="deleteForm" method="POST" class="hidden">
             <input type="hidden" name="action" value="delete">
         </form>
+        </div>
     </main>
+</div>
 </div>
 
 <script src="../js/categories.js"></script>

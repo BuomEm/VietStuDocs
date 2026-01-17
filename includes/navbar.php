@@ -20,7 +20,7 @@ if(isset($_SESSION['user_id'])) {
     $user_info = getUserInfo($user_id);
     $is_premium = isPremium($user_id);
 }
-$site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+$site_name = function_exists('getSetting') ? getSetting('site_name', 'VietStuDocs') : 'VietStuDocs';
 $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 ?>
 

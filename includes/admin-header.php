@@ -9,7 +9,7 @@
  */
 
 // Ensure required variables are set
-if (!isset($page_title)) $page_title = 'Admin Panel - DocShare';
+if (!isset($page_title)) $page_title = 'Admin Panel - VietStuDocs';
 if (!isset($admin_active_page)) $admin_active_page = '';
 ?>
 <!doctype html>
@@ -17,13 +17,13 @@ if (!isset($admin_active_page)) $admin_active_page = '';
 <head>
     <?php
     require_once __DIR__ . '/../config/settings.php';
-    $site_name = function_exists('getSetting') ? getSetting('site_name', 'DocShare') : 'DocShare';
+    $site_name = function_exists('getSetting') ? getSetting('site_name', 'VietStuDocs') : 'VietStuDocs';
     $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '/favicon.ico';
     $site_logo = !empty($site_logo) ? $site_logo : '/favicon.ico';
     
     // Clean up page title
-    $clean_title = isset($page_title) ? str_replace([' - DocShare Admin', ' - DocShare', 'Admin Panel - '], '', $page_title) : 'Admin Panel';
-    if ($clean_title == 'Admin Panel - DocShare') $clean_title = 'Admin Panel';
+    $clean_title = isset($page_title) ? str_replace([' - VietStuDocs Admin', ' - VietStuDocs', 'Admin Panel - '], '', $page_title) : 'Admin Panel';
+    if ($clean_title == 'Admin Panel - VietStuDocs') $clean_title = 'Admin Panel';
     
     $display_title = "$site_name | $clean_title";
     ?>

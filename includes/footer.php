@@ -1,6 +1,6 @@
 <?php
 if (!function_exists('getSetting')) require_once __DIR__ . '/../config/settings.php';
-$site_name = getSetting('site_name', 'DocShare');
+$site_name = getSetting('site_name', 'VietStuDocs');
 $site_desc = getSetting('site_description', 'Nền tảng chia sẻ tài liệu an toàn và hiệu quả');
 $site_logo = getSetting('site_logo');
 ?>

@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/settings.php';
 
-$page_title = 'Câu hỏi thường gặp - DocShare';
+$page_title = 'Câu hỏi thường gặp - VietStuDocs';
 include __DIR__ . '/../includes/head.php';
 include __DIR__ . '/../includes/sidebar.php';
 
@@ -43,7 +43,7 @@ $faqs = [
                 Câu Hỏi Thường Gặp
             </h1>
             <p class="text-base-content/60 max-w-2xl mx-auto text-lg">
-                Giải đáp những thắc mắc phổ biến nhất của người dùng khi sử dụng DocShare.
+                Giải đáp những thắc mắc phổ biến nhất của người dùng khi sử dụng VietStuDocs.
             </p>
         </div>
 
