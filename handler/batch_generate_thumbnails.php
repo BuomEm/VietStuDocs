@@ -53,9 +53,10 @@ if($_SERVER["REQUEST_METHOD"] == "GET") {
             d.total_pages
         FROM documents d
         WHERE ((d.thumbnail IS NULL OR d.thumbnail = '') 
-           OR (d.total_pages IS NULL OR d.total_pages = 0))
+           OR (d.total_pages IS NULL OR d.total_pages <= 1))
         AND d.file_name IS NOT NULL
         AND d.file_name != ''
+        AND LOWER(SUBSTRING_INDEX(d.file_name, '.', -1)) NOT IN ('jpg', 'jpeg', 'png', 'gif', 'webp')
         ORDER BY d.id DESC
     ";
     
@@ -97,7 +98,8 @@ if($_SERVER["REQUEST_METHOD"] == "GET") {
             'file_name' => $row['file_name'],
             'original_name' => $row['original_name'],
             'file_path' => $row['file_path'],
-            'file_ext' => $row['file_ext']
+            'file_ext' => $row['file_ext'],
+            'total_pages' => (int)$row['total_pages']
         ];
     }
     

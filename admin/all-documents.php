@@ -225,6 +225,11 @@ include __DIR__ . '/../includes/admin-header.php';
                                 <i class="fa-solid fa-search mr-2"></i>
                                 Tìm kiếm
                             </button>
+                            <button type="button" onclick="openThumbnailGenerator()" class="btn btn-accent btn-lg rounded-2xl shadow-lg hover:shadow-xl hover:shadow-accent/20 transition-all duration-300 px-8">
+                                <i class="fa-solid fa-image mr-2"></i>
+                                Tạo Thumbnail
+                                <span id="thumb-pending-count" class="badge badge-sm badge-ghost ml-2 hidden">0</span>
+                            </button>
                         </div>
                     </div>
                     
@@ -782,4 +787,307 @@ include __DIR__ . '/../includes/admin-header.php';
     }
 </script>
 
+<!-- Thumbnail Generator Modal -->
+<dialog id="thumbnailGeneratorModal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box w-11/12 max-w-4xl border border-base-300 bg-base-100 rounded-[2rem] p-0 overflow-hidden">
+        <!-- Header -->
+        <div class="p-6 border-b border-base-200 bg-gradient-to-r from-accent/10 to-transparent flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent text-2xl shadow-inner">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-xl text-base-content uppercase tracking-tighter">Bộ Tạo Thumbnail & Số Trang</h3>
+                    <p class="text-xs opacity-60 font-medium">Tự động quét và xử lý các tài liệu PDF/DOCX còn thiếu thông tin</p>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-circle btn-ghost" onclick="thumbnailGeneratorModal.close()">✕</button>
+        </div>
+
+        <!-- Progress Bar (Visible during processing) -->
+        <div id="gen-progress-container" class="hidden px-6 pt-6">
+            <div class="flex justify-between items-end mb-2">
+                <span id="gen-status-text" class="text-sm font-bold opacity-70">Đang chuẩn bị...</span>
+                <span id="gen-percentage" class="text-accent font-black">0%</span>
+            </div>
+            <progress id="gen-progress-bar" class="progress progress-accent w-full h-3 rounded-full" value="0" max="100"></progress>
+        </div>
+
+        <!-- Content -->
+        <div id="gen-list-container" class="p-6 max-h-[50vh] overflow-y-auto">
+            <div id="gen-loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                <span class="loading loading-spinner loading-lg text-accent"></span>
+                <p class="text-sm font-bold opacity-50">Đang quét tài liệu...</p>
+            </div>
+            
+            <div id="gen-empty" class="hidden flex flex-col items-center justify-center py-12 gap-4">
+                <div class="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center text-success text-4xl">
+                    <i class="fa-solid fa-check-double"></i>
+                </div>
+                <p class="text-lg font-black opacity-70 text-center">Tất cả tài liệu đã có Thumbnail và Số trang!</p>
+                <button class="btn btn-sm rounded-xl" onclick="thumbnailGeneratorModal.close()">Tuyệt vời</button>
+            </div>
+
+            <table id="gen-table" class="table table-sm hidden w-full">
+                <thead>
+                    <tr class="opacity-40 uppercase text-[10px] tracking-widest font-black border-base-300">
+                        <th class="w-16">ID</th>
+                        <th>Tên tài liệu</th>
+                        <th>Loại</th>
+                        <th>Trạng thái hiện tại</th>
+                    </tr>
+                </thead>
+                <tbody id="gen-list-body">
+                    <!-- Dynamic Items -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="p-6 bg-base-200/50 flex items-center justify-between border-t border-base-200/50">
+            <div class="text-xs font-bold opacity-50" id="gen-summary-text">
+                Tìm thấy <span id="gen-total-count" class="text-accent">0</span> tài liệu cần xử lý
+            </div>
+            <div class="flex gap-3">
+                <button class="btn border-0 bg-base-300 hover:bg-base-content/10 rounded-xl px-6 font-bold" onclick="thumbnailGeneratorModal.close()">Đóng</button>
+                <button id="start-gen-btn" class="btn btn-accent rounded-xl px-10 font-black uppercase tracking-widest shadow-lg shadow-accent/20 hidden" onclick="startGeneration()">
+                    Bắt đầu tạo ngay
+                </button>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop bg-base-neutral/20 backdrop-blur-[2px]">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pendingDocs = [];
+    let isProcessing = false;
+    let stopProcessing = false;
+
+    async function updatePendingBadge() {
+        try {
+            const res = await fetch('../handler/batch_generate_thumbnails.php');
+            const data = await res.json();
+            const badge = document.getElementById('thumb-pending-count');
+            if (data.success && data.total > 0) {
+                badge.innerText = data.total;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        } catch(e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', updatePendingBadge);
+
+    async function openThumbnailGenerator() {
+        // Update badge first
+        updatePendingBadge();
+        
+        const modal = document.getElementById('thumbnailGeneratorModal');
+        const listBody = document.getElementById('gen-list-body');
+        const loading = document.getElementById('gen-loading');
+        const empty = document.getElementById('gen-empty');
+        const table = document.getElementById('gen-table');
+        const startBtn = document.getElementById('start-gen-btn');
+        const summaryText = document.getElementById('gen-summary-text');
+        const totalSpan = document.getElementById('gen-total-count');
+        const progressContainer = document.getElementById('gen-progress-container');
+
+        // Reset state
+        loading.classList.remove('hidden');
+        empty.classList.add('hidden');
+        table.classList.add('hidden');
+        startBtn.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        listBody.innerHTML = '';
+        totalSpan.innerText = '0';
+        isProcessing = false;
+        stopProcessing = false;
+        startBtn.disabled = false;
+        startBtn.innerText = 'Bắt đầu tạo ngay';
+
+        modal.showModal();
+
+        try {
+            const response = await fetch('../handler/batch_generate_thumbnails.php');
+            const data = await response.json();
+
+            if (data.success && data.documents.length > 0) {
+                pendingDocs = data.documents;
+                totalSpan.innerText = pendingDocs.length;
+                
+                pendingDocs.forEach(doc => {
+                    const row = document.createElement('tr');
+                    row.id = `gen-row-${doc.id}`;
+                    row.className = "hover:bg-base-200/50 transition-colors border-base-200/30";
+                    row.innerHTML = `
+                        <td class="font-black opacity-30">#${doc.id}</td>
+                        <td class="font-bold text-xs max-w-xs truncate">${doc.original_name}</td>
+                        <td>
+                            <div class="flex flex-col">
+                                <span class="badge badge-sm badge-ghost uppercase font-black text-[9px]">${doc.file_ext}</span>
+                                <span class="text-[9px] opacity-40 font-bold">${doc.total_pages || 0} trang</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span class="status-indicator w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+                                <span class="status-text text-[10px] font-bold opacity-60">Chờ xử lý</span>
+                            </div>
+                        </td>
+                    `;
+                    listBody.appendChild(row);
+                });
+
+                loading.classList.add('hidden');
+                table.classList.remove('hidden');
+                startBtn.classList.remove('hidden');
+            } else {
+                loading.classList.add('hidden');
+                empty.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error fetching documents:', error);
+            loading.innerHTML = `<div class="text-error font-bold">Lỗi khi tải dữ liệu!</div>`;
+        }
+    }
+
+    async function startGeneration() {
+        if (isProcessing) return;
+        isProcessing = true;
+        
+        const startBtn = document.getElementById('start-gen-btn');
+        const progressContainer = document.getElementById('gen-progress-container');
+        const progressBar = document.getElementById('gen-progress-bar');
+        const percentageText = document.getElementById('gen-percentage');
+        const statusText = document.getElementById('gen-status-text');
+
+        startBtn.disabled = true;
+        startBtn.innerText = 'Đang xử lý...';
+        progressContainer.classList.remove('hidden');
+
+        let completed = 0;
+        const total = pendingDocs.length;
+
+        for (const doc of pendingDocs) {
+            if (stopProcessing) break;
+
+            const row = document.getElementById(`gen-row-${doc.id}`);
+            const statusIndicator = row.querySelector('.status-indicator');
+            const statusTextEl = row.querySelector('.status-text');
+
+            statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-info animate-pulse';
+            statusTextEl.innerText = 'Đang xử lý...';
+            statusText.innerText = `Đang xử lý: ${doc.original_name}`;
+
+            try {
+                // 1. Get process info (convert if DOCX, get path if PDF)
+                const preRes = await fetch('../handler/batch_generate_thumbnails.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doc_id: doc.id })
+                });
+                const preData = await preRes.json();
+
+                if (preData.success) {
+                    if (preData.skip) {
+                        statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-neutral';
+                        statusTextEl.innerText = preData.message || 'Bỏ qua';
+                    } else {
+                        // 2. Client-side Generation from PDF
+                        const pdfPath = '../' + preData.file_path;
+                        await generateAndSaveThumbnail(doc.id, pdfPath, statusTextEl);
+                        
+                        statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-success';
+                        statusTextEl.innerText = 'Thành công';
+                        statusIndicator.classList.remove('animate-pulse');
+                    }
+                } else {
+                    throw new Error(preData.message || 'Server error');
+                }
+            } catch (error) {
+                console.error(`Error processing doc ${doc.id}:`, error);
+                statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-error';
+                statusTextEl.innerText = 'Lỗi: ' + error.message;
+                statusIndicator.classList.remove('animate-pulse');
+            }
+
+            completed++;
+            const percent = Math.round((completed / total) * 100);
+            progressBar.value = percent;
+            percentageText.innerText = `${percent}%`;
+            
+            // Auto scroll row into view
+            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        isProcessing = false;
+        startBtn.innerText = 'Hoàn tất';
+        statusText.innerText = 'Xử lý hoàn tất!';
+        updatePendingBadge(); // Final update
+        showAlert('Đã hoàn thành quá trình xử lý!', 'success');
+    }
+
+    async function generateAndSaveThumbnail(docId, pdfUrl, statusEl) {
+        try {
+            const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+            const totalPages = pdf.numPages;
+            
+            // Save page count
+            const tokenRes = await fetch('../handler/pdf_functions.php?get_token=1');
+            const { token } = await tokenRes.json();
+
+            statusEl.innerText = `Đang tạo thumbnail (1/${totalPages} trang)...`;
+
+            await fetch('../handler/pdf_functions.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=save_pdf_pages&doc_id=${docId}&pages=${totalPages}&token=${token}`
+            });
+
+            // Generate thumbnail of first page
+            const page = await pdf.getPage(1);
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            // Convert to blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            
+            // Upload thumbnail
+            const formData = new FormData();
+            formData.append('action', 'save_thumbnail');
+            formData.append('doc_id', docId);
+            formData.append('thumbnail', blob, 'thumbnail.jpg');
+            formData.append('token', token);
+
+            const uploadRes = await fetch('../handler/pdf_functions.php', {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+
+            if (!uploadData.success) throw new Error(uploadData.message);
+            
+            return true;
+        } catch (err) {
+            throw err;
+        }
+    }
+</script>
+
 <?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+
