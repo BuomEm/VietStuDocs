@@ -626,13 +626,19 @@ include __DIR__ . '/../includes/admin-header.php';
     }
 
     function confirmDelete(id) {
-        if(confirm('Bạn có chắc chắn muốn xóa tài liệu này? Hành động này không thể hoàn tác.')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = `<input type="hidden" name="action" value="delete"><input type="hidden" name="document_id" value="${id}">`;
-            document.body.appendChild(form);
-            form.submit();
-        }
+        vsdConfirm({
+            title: 'Xóa tài liệu',
+            message: 'Bạn có chắc chắn muốn xóa tài liệu này? Hành động này không thể hoàn tác.',
+            type: 'error',
+            confirmText: 'Xóa ngay',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `<input type="hidden" name="action" value="delete"><input type="hidden" name="document_id" value="${id}">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
     }
 
     // Bulk Actions
@@ -659,13 +665,19 @@ include __DIR__ . '/../includes/admin-header.php';
         const ids = Array.from(document.querySelectorAll('.doc-check:checked')).map(cb => cb.value);
         if(ids.length === 0) return;
         
-        if(confirm(`Xóa vĩnh viễn ${ids.length} tài liệu đã chọn?`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = `<input type="hidden" name="action" value="delete_bulk"><input type="hidden" name="ids" value="${ids.join(',')}">`;
-            document.body.appendChild(form);
-            form.submit();
-        }
+        vsdConfirm({
+            title: 'Xóa hàng loạt',
+            message: `Xóa vĩnh viễn ${ids.length} tài liệu đã chọn?`,
+            type: 'error',
+            confirmText: 'Xóa tất cả',
+            onConfirm: () => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `<input type="hidden" name="action" value="delete_bulk"><input type="hidden" name="ids" value="${ids.join(',')}">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
     }
 
     function runAIReview(id, btn) {
@@ -690,17 +702,16 @@ include __DIR__ . '/../includes/admin-header.php';
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to see results or update DOM dynamically
-                // For better UX, let's just reload this specific row or the whole page
+                // Reload page to see results
                 window.location.reload();
             } else {
-                alert('Lỗi AI: ' + (data.error || 'Không xác định'));
+                showAlert('Lỗi AI: ' + (data.error || 'Không xác định'), 'error');
                 cell.innerHTML = originalContent;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Lỗi hệ thống khi gọi AI');
+            showAlert('Lỗi hệ thống khi gọi AI', 'error');
             cell.innerHTML = originalContent;
         });
     }

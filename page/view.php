@@ -933,6 +933,15 @@ include '../includes/sidebar.php';
         display: flex;
     }
 
+    /* Hide scrollbars for modal-box */
+    .modal-box {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .modal-box::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+
     @media (max-width: 1024px) {
         .info-grid-vsd {
             grid-template-columns: 1fr;
@@ -1378,22 +1387,31 @@ include '../includes/sidebar.php';
 
     <!-- Purchase Modal -->
     <dialog id="purchaseModal" class="modal">
-        <div class="modal-box max-w-md">
+        <div class="modal-box max-w-md rounded-[2.5rem] p-8 bg-base-100/90 backdrop-blur-2xl border border-white/10 shadow-2xl">
             <form method="dialog">
-                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-4 top-4">✕</button>
             </form>
-            <div class="text-center mb-6">
-                <i class="fa-solid fa-cart-shopping text-6xl text-primary mb-4"></i>
-                <h3 class="font-bold text-xl mb-2">Mua Tài Liệu</h3>
+            <div class="text-center mb-8">
+                <div class="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                    <i class="fa-solid fa-cart-shopping text-4xl text-primary"></i>
+                </div>
+                <h3 class="font-black text-2xl mb-2 uppercase tracking-tight">Mua Tài Liệu</h3>
+                <p class="text-sm text-base-content/60">Bạn đang thực hiện giao dịch mua tài liệu học tập</p>
             </div>
-            <div class="text-center mb-6">
-                <div class="text-sm text-base-content/70 mb-2">Bạn sẽ mua tài liệu này với giá:</div>
-                <div class="text-4xl font-bold text-primary mb-2" id="purchasePrice">0 điểm</div>
-                <div class="text-xs text-base-content/50">Sau khi mua, bạn có thể xem và tải xuống tài liệu</div>
+            
+            <div class="bg-base-200/50 rounded-[2rem] p-8 text-center mb-8 border border-base-content/5">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-4">Giá tài liệu</div>
+                <div class="text-6xl font-black text-primary tracking-tighter mb-2" id="purchasePrice">0 điểm</div>
+                <div class="text-[11px] font-bold text-base-content/50 uppercase tracking-widest">Tài liệu sẽ được mở khóa vĩnh viễn</div>
             </div>
-            <div class="flex gap-2">
-                <button type="button" class="btn btn-ghost w-full" onclick="this.closest('dialog').close()">Hủy</button>
-                <button id="confirmPurchaseBtn" onclick="confirmPurchase(event)" class="btn btn-primary flex-1">Xác Nhận Mua</button>
+
+            <div class="flex flex-col gap-3">
+                <button id="confirmPurchaseBtn" onclick="confirmPurchase(event)" class="btn btn-primary btn-lg rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 h-16">
+                    Xác Nhận Mua
+                </button>
+                <button type="button" class="btn btn-ghost btn-md rounded-xl font-bold opacity-60 hover:opacity-100" onclick="this.closest('dialog').close()">
+                    Hủy Giao Dịch
+                </button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">

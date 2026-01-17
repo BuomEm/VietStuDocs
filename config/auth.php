@@ -31,6 +31,13 @@ function loginUser($identifier, $password) {
         if(password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
+            
+            /*
+            // Update login streak
+            require_once __DIR__ . '/streak.php';
+            updateLoginStreak($user['id']);
+            */
+            
             return true;
         }
     }
@@ -122,7 +129,7 @@ function hasAdminAccess() {
 function updateLastActivity() {
     if (isUserLoggedIn()) {
         $uid = getCurrentUserId();
-        // Use direct query for performance
+        // Update activity timestamp
         db_query("UPDATE users SET last_activity = NOW() WHERE id = $uid");
     }
 }

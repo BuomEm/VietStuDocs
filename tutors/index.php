@@ -697,37 +697,16 @@ function formatSLA($hours) {
         </form>
     </dialog>
 
-    <!-- Toast Container -->
-    <div id="toast-container" class="toast toast-top toast-end z-50"></div>
+
 
     <script>
     const isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
 
-    function showVsdToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} shadow-lg rounded-2xl animate-in slide-in-from-right duration-300`;
-        
-        let icon = 'fa-circle-info';
-        if(type === 'success') icon = 'fa-circle-check';
-        if(type === 'error') icon = 'fa-circle-exclamation';
-        if(type === 'warning') icon = 'fa-triangle-exclamation';
-        
-        toast.innerHTML = `
-            <i class="fa-solid ${icon}"></i>
-            <span class="font-bold text-sm">${message}</span>
-        `;
-        
-        document.getElementById('toast-container').appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
-    }
+
 
     function checkLoginAndAction(actionType, ...args) {
         if (!isLoggedIn) {
-            showVsdToast('Vui lòng đăng nhập để thực hiện chức năng này', 'warning');
+            showAlert('Vui lòng đăng nhập để thực hiện chức năng này', 'warning');
             setTimeout(() => {
                 window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
             }, 1500);
@@ -807,19 +786,11 @@ function formatSLA($hours) {
             if(data.success) {
                 window.location.href = '/tutors/request?id=' + data.request_id;
             } else {
-                if(typeof showAlert === 'function') {
-                    showAlert(data.message, 'error');
-                } else {
-                    alert(data.message);
-                }
+                showAlert(data.message, 'error');
             }
         } catch(err) {
             console.error(err);
-            if(typeof showAlert === 'function') {
-                showAlert('Có lỗi xảy ra: ' + err.message, 'error');
-            } else {
-                alert('Có lỗi xảy ra: ' + err.message);
-            }
+            showAlert('Có lỗi xảy ra: ' + err.message, 'error');
         } finally {
             if(btn) {
                 btn.disabled = false;

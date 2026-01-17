@@ -209,13 +209,20 @@ function markRead(id) {
 }
 
 function deleteNotif(id) {
-    if(!confirm('Xóa thông báo này?')) return;
-    fetch('notifications.php', {
-        method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        body: 'delete_notification=1&notification_id='+id
-    }).then(r=>r.json()).then(d=>{
-        if(d.success) document.getElementById('notif-'+id).remove();
+    vsdConfirm({
+        title: 'Xóa thông báo',
+        message: 'Bạn có chắc chắn muốn xóa thông báo này?',
+        type: 'error',
+        confirmText: 'Xóa',
+        onConfirm: () => {
+            fetch('notifications.php', {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: 'delete_notification=1&notification_id='+id
+            }).then(r=>r.json()).then(d=>{
+                if(d.success) document.getElementById('notif-'+id).remove();
+            });
+        }
     });
 }
 
@@ -224,7 +231,9 @@ function testNotification() {
         method: 'POST', 
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
         body: 'test_notification=1'
-    }).then(r=>r.json()).then(d=>alert(d.message));
+    }).then(r=>r.json()).then(d => {
+        showAlert(d.message, 'success');
+    });
 }
 
 function updateCounter(change) {

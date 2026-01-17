@@ -12,6 +12,13 @@ $user = getUserInfo($user_id);
 $is_premium = isPremium($user_id);
 $premium_info = getPremiumInfo($user_id);
 
+/*
+// Get streak information
+require_once '../config/streak.php';
+$streak_info = getUserStreakInfo($user_id);
+$streak_badge = getStreakBadge($streak_info['current_streak']);
+*/
+
 // Calculate days remaining for Premium
 $days_remaining = 0;
 $hours_remaining = 0;
@@ -113,6 +120,15 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
 // Count user's documents
 $my_docs_count = intval($VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id") ?: 0);
 $saved_docs_count = intval($VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'") ?: 0);
+
+/*
+// Handle Admin Streak Reset (TESTING ONLY)
+if(isset($_GET['reset_streak']) && isAdmin($user_id)) {
+    db_query("UPDATE users SET current_streak = 0, longest_streak = 0, streak_freezes = 2, last_streak_date = NULL WHERE id = $user_id");
+    header("Location: profile?msg=streak_reset");
+    exit;
+}
+*/
 
 include '../includes/head.php'; 
 ?>
@@ -329,6 +345,82 @@ include '../includes/head.php';
         text-transform: uppercase;
         letter-spacing: 0.1em;
     }
+
+    /* 
+    .streak-week-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+        margin: 24px 0;
+    }
+
+    .streak-day-box {
+        background: oklch(var(--bc) / 0.03);
+        border: 1px solid oklch(var(--bc) / 0.05);
+        border-radius: 1.5rem;
+        padding: 16px 8px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+    }
+
+    .streak-day-box.active {
+        background: oklch(var(--p) / 0.1);
+        border-color: oklch(var(--p) / 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px -5px oklch(var(--p) / 0.2);
+    }
+
+    .streak-day-label {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.5;
+    }
+
+    .streak-day-box.active .streak-day-label {
+        opacity: 1;
+        color: oklch(var(--p));
+    }
+
+    .flame-icon {
+        font-size: 1.5rem;
+        color: oklch(var(--bc) / 0.1);
+        transition: all 0.5s ease;
+    }
+
+    .streak-day-box.active .flame-icon {
+        color: #ef4444;
+        filter: drop-shadow(0 0 8px #ef4444);
+        animation: flicker 1.5s infinite;
+    }
+
+    .streak-reward-tag {
+        font-size: 9px;
+        font-weight: 900;
+        background: oklch(var(--bc) / 0.05);
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
+    .streak-day-box.active .streak-reward-tag {
+        background: oklch(var(--p));
+        color: white;
+    }
+
+    @keyframes flicker {
+        0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+        25% { transform: scale(1.1) rotate(2deg); opacity: 0.9; }
+        50% { transform: scale(0.95) rotate(-2deg); opacity: 1; }
+        75% { transform: scale(1.05) rotate(1deg); opacity: 0.95; }
+    }
+    */
+
 </style>
 
 <body class="bg-base-100">
@@ -441,7 +533,124 @@ include '../includes/head.php';
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
+                <?php /* ?>
+                <!-- Login Streak Section -->
+                <div class="glass-card">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+                        <div>
+                            <h2 class="section-title !mb-1"><i class="fa-solid fa-fire text-red-500"></i> Chuỗi Đăng Nhập</h2>
+                            <p class="text-[11px] font-bold opacity-50 uppercase tracking-widest">
+                                <?= $streak_info['ui_message'] ?>
+                            </p>
+                        </div>
+                        
+                        <div class="flex items-center gap-4">
+                            <?php if(isAdmin($user_id)): ?>
+                                <button type="button" class="btn btn-xs btn-error btn-outline rounded-lg" onclick="vsdConfirm({title: 'Reset Test', message: 'Bạn có muốn reset chuỗi và khôi phục 2 Freeze để test không?', type: 'error', onConfirm: () => window.location.href='?reset_streak=1'})">
+                                    <i class="fa-solid fa-rotate-left mr-1"></i> Reset Test
+                                </button>
+                            <?php endif; ?>
+                            
+                            <div class="text-right">
+                                <div class="text-2xl font-black text-primary leading-none"><?= $streak_info['current_streak'] ?></div>
+                                <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Ngày hiện tại</div>
+                            </div>
+                            <div class="h-8 w-px bg-base-content/10"></div>
+                            <div class="text-right">
+                                <div class="text-2xl font-black opacity-60 leading-none"><?= $streak_info['longest_streak'] ?></div>
+                                <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Kỷ lục</div>
+                            </div>
+                            <div class="h-8 w-px bg-base-content/10"></div>
+                            <div class="text-right">
+                                <div class="text-2xl font-black text-blue-500 leading-none flex items-center gap-1 justify-end">
+                                    <i class="fa-solid fa-snowflake text-xs"></i>
+                                    <?= $streak_info['streak_freezes'] ?>
+                                </div>
+                                <div class="text-[9px] font-black opacity-40 uppercase tracking-tighter">Bảo vệ (Freeze)</div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <?php
+                    // Calculate which day of the 7-day cycle we are on
+                    // If they already claimed today, current_streak reflects the completed day
+                    // If they haven't claimed, current_streak is the last completed day, next one is current_streak + 1
+                    $display_streak = $streak_info['current_streak'];
+                    $has_claimed = !$streak_info['can_claim'];
+                    
+                    // The cycle starts from 1 to 7
+                    // If streak is 0, they are on day 1 (not claimed)
+                    // If streak is 7, they finished day 7 (claimed) -> cycle starts over at 1
+                    
+                    $current_cycle_index = (($display_streak - ($has_claimed ? 1 : 0)) % 7); // 0 to 6
+                    $rewards = [
+                        1 => getSetting('streak_reward_1_3', 1),
+                        2 => getSetting('streak_reward_1_3', 1),
+                        3 => getSetting('streak_reward_1_3', 1),
+                        4 => getSetting('streak_reward_4', 2),
+                        5 => getSetting('streak_reward_5_6', 1),
+                        6 => getSetting('streak_reward_5_6', 1),
+                        7 => getSetting('streak_reward_7', 3),
+                    ];
+                    ?>
+
+                    <div class="streak-week-grid">
+                        <?php for($i = 1; $i <= 7; $i++): 
+                            $is_active = false;
+                            $day_in_cycle = (($display_streak - 1) % 7) + 1; // 1-7
+                            
+                            if ($has_claimed) {
+                                // If claimed, days up to current cycle day are active
+                                if ($i <= $day_in_cycle) $is_active = true;
+                            } else {
+                                // If not claimed, only days strictly before the one they are about to claim are active
+                                // Example: streak 0, about to claim day 1 -> none active
+                                // Example: streak 1, about to claim day 2 -> day 1 active
+                                if ($i <= ($display_streak % 7) && $display_streak > 0 && ($display_streak % 7) != 0) $is_active = true;
+                                // Special case: finished a full week (streak 7), none active yet for next week
+                            }
+                        ?>
+                            <div class="streak-day-box <?= $is_active ? 'active' : '' ?>">
+                                <span class="streak-day-label">Ngày <?= $i ?></span>
+                                <i class="fa-solid fa-fire flame-icon"></i>
+                                <span class="streak-reward-tag">+<?= $rewards[$i] ?> VSD</span>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+
+                    <!-- Helper Text -->
+                    <div class="my-6 p-4 bg-primary/5 border border-primary/10 rounded-2xl flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black uppercase tracking-wider text-primary mb-1">Mẹo giữ lửa</h4>
+                            <p class="text-[11px] text-base-content/60 font-medium leading-relaxed">
+                                Bạn không cần làm gì thêm – chỉ cần quay lại hệ thống mỗi ngày để không bị gián đoạn chuỗi. Đơn giản vậy thôi! ✨
+                            </p>
+                        </div>
+                    </div>
+
+                    <?php if($streak_info['can_claim']): ?>
+                        <button onclick="claimStreak(this)" class="btn btn-primary btn-lg w-full rounded-2xl font-black group overflow-hidden relative">
+                            <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                            <span class="relative flex items-center gap-2">
+                                <i class="fa-solid fa-gift text-xl group-hover:scale-110 transition-transform"></i>
+                                ĐIỂM DANH NHẬN QUÀ
+                            </span>
+                        </button>
+                    <?php else: ?>
+                        <div class="bg-success/10 border border-success/20 rounded-2xl p-4 text-center">
+                            <span class="text-success font-black text-sm uppercase tracking-tight">
+                                <i class="fa-solid fa-circle-check mr-2"></i> Đã hoàn thành điểm danh hôm nay
+                            </span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php */ ?>
+
+                <!-- Toast Container -->
+                <div id="vsd-toast-container"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Update Profile -->
                     <div class="glass-card">
@@ -501,7 +710,7 @@ include '../includes/head.php';
     <script>
         async function handlePushToggle(el) {
             if (typeof checkNotificationStatus !== 'function') {
-                alert('Hệ thống thông báo chưa được khởi tạo. Vui lòng tải lại trang.');
+                showAlert('Hệ thống thông báo chưa được khởi tạo. Vui lòng tải lại trang.', 'error');
                 el.checked = false;
                 return;
             }
@@ -510,7 +719,13 @@ include '../includes/head.php';
             
             if (status === 'denied') {
                 el.checked = false;
-                alert('Bạn đã chặn thông báo. Vui lòng đặt lại quyền trên trình duyệt (Click vào biểu tượng ổ khóa trên thanh địa chỉ).');
+                vsdConfirm({
+                    title: 'Quyền thông báo bị chặn',
+                    message: 'Bạn đã chặn thông báo trên trình duyệt. Vui lòng đặt lại quyền (Click vào biểu tượng ổ khóa trên thanh địa chỉ) để nhận được các nhắc nhở quan trọng nhé!',
+                    confirmText: 'Tôi đã hiểu',
+                    type: 'warning',
+                    onConfirm: () => {}
+                });
                 return;
             }
 
@@ -535,7 +750,7 @@ include '../includes/head.php';
                 } else {
                     const success = await unsubscribePush();
                     if (success) {
-                        alert('Đã tắt thông báo trên thiết bị này.');
+                        showAlert('Đã tắt thông báo trên thiết bị này.', 'info');
                     } else {
                         // Even if API fail, we visually turn it off
                         console.warn('Unsubscribe API warn');
@@ -544,9 +759,47 @@ include '../includes/head.php';
             } catch (e) {
                 console.error(e);
                 el.checked = !el.checked; // Revert state
-                alert('Có lỗi xảy ra khi cập nhật trạng thái thông báo.');
+                showAlert('Có lỗi xảy ra khi cập nhật trạng thái thông báo.', 'error');
             }
         }
+
+        /*
+        // Show reset message if exists
+        <?php if(isset($_GET['msg']) && $_GET['msg'] == 'streak_reset'): ?>
+        document.addEventListener('DOMContentLoaded', () => {
+            showAlert('Đã reset chuỗi và khôi phục 2 Freeze để test!', 'success');
+        });
+        <?php endif; ?>
+
+        async function claimStreak(btn) {
+            btn.disabled = true;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Đang xử lý...';
+            
+            try {
+                const response = await fetch('../api/streak_claim.php');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`${result.message} +${result.points_earned} VSD`, 'success');
+                    
+                    // Reload after a short delay to show the toast
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
+            } catch (error) {
+                console.error('Error claiming streak:', error);
+                showAlert('Có lỗi xảy ra khi điểm danh.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+        */
     </script>
 </body>
 </html>

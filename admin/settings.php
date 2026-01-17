@@ -141,6 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             elseif (strpos($name, 'tutor_') === 0) $category = 'tutor';
             elseif (strpos($name, 'shop_') === 0) $category = 'shop';
             elseif (strpos($name, 'ai_') === 0) $category = 'ai';
+            elseif (strpos($name, 'streak_') === 0) $category = 'streak';
             setSetting($name, $value, null, $category);
         }
         $response['success'] = true;
@@ -220,6 +221,11 @@ require_once __DIR__ . '/../includes/admin-header.php';
                         <li>
                             <a onclick="switchTab('ai', this)">
                                 <i class="fa-solid fa-robot w-5"></i> Cấu hình AI
+                            </a>
+                        </li>
+                        <li>
+                            <a onclick="switchTab('streak', this)">
+                                <i class="fa-solid fa-fire w-5"></i> Chuỗi điểm danh
                             </a>
                         </li>
                     </ul>
@@ -832,6 +838,53 @@ require_once __DIR__ . '/../includes/admin-header.php';
 
                                 <div class="mt-4 text-[10px] opacity-50 italic">
                                     * Giá VSD được tính tuyến tính trong mỗi khoảng điểm. Thay đổi sẽ áp dụng cho tài liệu mới được AI duyệt.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Streak Settings -->
+                <div id="tab-streak" class="settings-tab hidden animate-fade-in">
+                    <div class="card bg-base-100 shadow-sm border border-base-200">
+                        <div class="card-body">
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-orange-100 text-orange-500 grid place-items-center"><i class="fa-solid fa-fire"></i></span>
+                                Cấu hình Phần thưởng Chuỗi
+                            </h2>
+                            <p class="text-xs opacity-60 mb-6">Thiết lập số VSD người dùng nhận được khi điểm danh hàng ngày theo chu kỳ 7 ngày.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Ngày 1, 2, 3 (Mỗi ngày)</span></label>
+                                    <div class="join">
+                                        <input type="number" id="streak_reward_1_3" class="input input-bordered join-item w-full" value="<?= htmlspecialchars(getSetting('streak_reward_1_3', 1)) ?>">
+                                        <span class="join-item btn btn-disabled bg-base-200">VSD</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium text-primary">Ngày 4 (Mốc giữa)</span></label>
+                                    <div class="join">
+                                        <input type="number" id="streak_reward_4" class="input input-bordered join-item w-full border-primary/30" value="<?= htmlspecialchars(getSetting('streak_reward_4', 2)) ?>">
+                                        <span class="join-item btn btn-disabled bg-primary/10 text-primary border-primary/30">VSD</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium">Ngày 5, 6 (Mỗi ngày)</span></label>
+                                    <div class="join">
+                                        <input type="number" id="streak_reward_5_6" class="input input-bordered join-item w-full" value="<?= htmlspecialchars(getSetting('streak_reward_5_6', 1)) ?>">
+                                        <span class="join-item btn btn-disabled bg-base-200">VSD</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-medium text-orange-500">Ngày 7 (Mốc cuối tuần)</span></label>
+                                    <div class="join">
+                                        <input type="number" id="streak_reward_7" class="input input-bordered join-item w-full border-orange-500/30" value="<?= htmlspecialchars(getSetting('streak_reward_7', 3)) ?>">
+                                        <span class="join-item btn btn-disabled bg-orange-500/10 text-orange-500 border-orange-500/30">VSD</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

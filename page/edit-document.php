@@ -953,7 +953,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // If admin_points > 0, validate user_price <= admin_points
             if (maxPrice > 0 && userPrice > maxPrice) {
                 e.preventDefault();
-                alert('Giá bạn đặt (' + userPrice.toLocaleString() + ' điểm) không được vượt quá giá Admin (' + maxPrice.toLocaleString() + ' điểm).');
+                showAlert('Giá bạn đặt (' + userPrice.toLocaleString() + ' điểm) không được vượt quá giá Admin (' + maxPrice.toLocaleString() + ' điểm).', 'error');
                 userPriceInput.focus();
                 return false;
             }
@@ -1111,4 +1111,4 @@ function confirmDelete() {
 }
 </script>
 
-?>
+<?php include '../includes/footer.php'; ?>

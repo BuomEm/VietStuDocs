@@ -25,6 +25,7 @@ YÊU CẦU BẮT BUỘC:
 - overall = trung bình cộng của 7 tiêu chí, làm tròn số nguyên.
 - Đánh giá dựa trên nội dung tài liệu, KHÔNG dựa vào uy tín người upload.
 - Không được bỏ thiếu bất kỳ key nào trong JSON.
+- Tất cả các giá trị chuỗi (string values) trong JSON phải được viết bằng tiếng Việt.
 - Nếu không có dữ liệu cho một trường, trả về mảng rỗng [] hoặc chuỗi rỗng "" (không dùng null).
 
 TIÊU CHÍ CHẤM ĐIỂM (0–100):
@@ -54,6 +55,9 @@ QUY TẮC KHẮC NGHIỆT KHI CHẤM ĐIỂM (PHẢI TUÂN THỦ):
 - Nếu tài liệu không có lời giải/hướng dẫn chi tiết cho bài tập -> knowledge_completeness KHÔNG ĐƯỢC vượt quá 60.
 - Nếu tài liệu thiếu chỉ dẫn tự học hoặc yêu cầu phải có giáo viên đi kèm -> self_learning_support KHÔNG ĐƯỢC vượt quá 50.
 - Nếu tài liệu có nội dung tốt nhưng trình bày lộn xộn, thiếu mục lục -> structure_logic KHÔNG ĐƯỢC vượt quá 65.
+- Nếu nội dung tài liệu hoàn toàn không liên quan đến Môn học/Ngành học/Lớp trong Metadata -> learning_objective_fit PHẢI DƯỚI 20.
+- Nếu tài liệu chứa nội dung rác, ký tự vô nghĩa (lỗi OCR), trang trắng hoặc quá ngắn (dưới 100 từ) không có giá trị học thuật -> overall PHẢI BẰNG 0.
+- Nếu phát hiện nội dung chứa nhiều thông tin, website hoặc watermark của các nền tảng khác -> Phải liệt kê rõ vào weaknesses và nhắc đến nguy cơ bản quyền.
 - Điểm "overall" phản ánh đúng giá trị sử dụng thực tế: Một tài liệu chuyên sâu nhưng không có hướng dẫn sẽ bị trừ điểm nặng ở các tiêu chí bổ trợ.
 
 CẤU TRÚC JSON BẮT BUỘC:
@@ -104,6 +108,7 @@ NHIỆM VỤ:
 QUY TẮC KIỂM TRA (SỰ NHẤT QUÁN):
 - Nếu AI Vòng 1 liệt kê Điểm Yếu là "thiếu hướng dẫn/lời giải" nhưng lại chấm kiến thức (knowledge_completeness) > 70 -> BẠN PHẢI GIẢM ĐIỂM TIÊU CHÍ NÀY XUỐNG DƯỚI 60.
 - Nếu AI Vòng 1 liệt kê Điểm Yếu là "không có chỉ dẫn tự học" nhưng chấm self_learning_support > 70 -> BẠN PHẢI GIẢM ĐIỂM TIÊU CHÍ NÀY XUỐNG DƯỚI 50.
+- Nếu tài liệu là nội dung rác hoặc sai hoàn toàn metadata mà AI Vòng 1 vẫn chấm điểm cao (overall > 40) -> BẠN PHẢI HẠ overall VỀ 0 và đặt decision là "Từ Chối".
 - Điểm trung bình (overall) phải phản ánh đúng quyết định (Decision).
 
 NGUYÊN TẮC HIỆU CHỈNH:
@@ -122,6 +127,7 @@ LƯU Ý VỀ plagiarism_suspected:
 
 YÊU CẦU BẮT BUỘC:
 - Trả về JSON, không giải thích. overall = trung bình cộng các điểm sau hiệu chỉnh.
+- Tất cả các giá trị chuỗi (string values) trong JSON phải được viết bằng tiếng Việt.
 
 CẤU TRÚC JSON BẮT BUỘC:
 {

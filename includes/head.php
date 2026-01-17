@@ -35,6 +35,7 @@
     ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <!-- Primary Meta Tags -->
     <title><?= htmlspecialchars($display_title) ?></title>
@@ -44,6 +45,25 @@
     <meta name="robots" content="index, follow">
     <meta name="language" content="Vietnamese">
     <meta name="author" content="<?= htmlspecialchars($site_name) ?>">
+    <meta name="copyright" content="<?= htmlspecialchars($site_name) ?>">
+    <meta name="revisit-after" content="7 days">
+    
+    <!-- Mobile & PWA Meta Tags -->
+    <meta name="theme-color" content="#800000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars($site_name) ?>">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="<?= htmlspecialchars($site_name) ?>">
+    
+    <!-- Security & Privacy -->
+    <meta name="referrer" content="origin-when-cross-origin">
+    <meta name="format-detection" content="telephone=no">
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    
+    <!-- Geo Tags (Vietnam) -->
+    <meta name="geo.region" content="VN">
+    <meta name="geo.placename" content="Vietnam">
     
     <!-- Canonical -->
     <link rel="canonical" href="<?= htmlspecialchars($canonical_url) ?>" />
@@ -57,35 +77,63 @@
     // Ensure absolute URL for OG image
     $og_image_url = $protocol . "://$_SERVER[HTTP_HOST]" . $og_image;
     
+    // Image alt text for accessibility
+    $og_image_alt = isset($page_title) && !empty($page_title) 
+        ? $page_title . ' - ' . $site_name 
+        : $site_name . ' - Nền tảng chia sẻ tài liệu học tập';
+    
     // Facebook App ID (optional but recommended)
     $fb_app_id = function_exists('getSetting') ? getSetting('fb_app_id') : '';
     $fb_admins = function_exists('getSetting') ? getSetting('fb_admins') : '';
+    
+    // Article metadata (if applicable)
+    $is_article = isset($page_type) && $page_type === 'article';
+    $article_author = isset($page_author) ? $page_author : $site_name;
+    $article_published = isset($page_published) ? $page_published : null;
+    $article_modified = isset($page_modified) ? $page_modified : null;
     ?>
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="<?= $is_article ? 'article' : 'website' ?>">
     <meta property="og:url" content="<?= htmlspecialchars($current_url) ?>">
     <meta property="og:title" content="<?= htmlspecialchars($display_title) ?>">
     <meta property="og:description" content="<?= htmlspecialchars($display_description) ?>">
     <meta property="og:image" content="<?= htmlspecialchars($og_image_url) ?>">
+    <meta property="og:image:secure_url" content="<?= htmlspecialchars($og_image_url) ?>">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt" content="<?= htmlspecialchars($og_image_alt) ?>">
     <meta property="og:site_name" content="<?= htmlspecialchars($site_name) ?>">
     <meta property="og:locale" content="vi_VN">
+    <meta property="og:locale:alternate" content="en_US">
     <?php if (!empty($fb_app_id)): ?>
     <meta property="fb:app_id" content="<?= htmlspecialchars($fb_app_id) ?>">
     <?php endif; ?>
     <?php if (!empty($fb_admins)): ?>
     <meta property="fb:admins" content="<?= htmlspecialchars($fb_admins) ?>">
     <?php endif; ?>
+    <?php if ($is_article): ?>
+    <meta property="article:author" content="<?= htmlspecialchars($article_author) ?>">
+    <?php if ($article_published): ?>
+    <meta property="article:published_time" content="<?= htmlspecialchars($article_published) ?>">
+    <?php endif; ?>
+    <?php if ($article_modified): ?>
+    <meta property="article:modified_time" content="<?= htmlspecialchars($article_modified) ?>">
+    <?php endif; ?>
+    <meta property="article:section" content="Education">
+    <meta property="article:tag" content="<?= htmlspecialchars($display_keywords) ?>">
+    <?php endif; ?>
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="<?= htmlspecialchars($current_url) ?>">
-    <meta property="twitter:title" content="<?= htmlspecialchars($display_title) ?>">
-    <meta property="twitter:description" content="<?= htmlspecialchars($display_description) ?>">
-    <meta property="twitter:image" content="<?= htmlspecialchars($og_image_url) ?>">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="<?= htmlspecialchars($current_url) ?>">
+    <meta name="twitter:title" content="<?= htmlspecialchars($display_title) ?>">
+    <meta name="twitter:description" content="<?= htmlspecialchars($display_description) ?>">
+    <meta name="twitter:image" content="<?= htmlspecialchars($og_image_url) ?>">
+    <meta name="twitter:image:alt" content="<?= htmlspecialchars($og_image_alt) ?>">
+    <meta name="twitter:site" content="@vietstudocs">
+    <meta name="twitter:creator" content="@vietstudocs">
 
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
