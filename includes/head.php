@@ -48,19 +48,44 @@
     <!-- Canonical -->
     <link rel="canonical" href="<?= htmlspecialchars($canonical_url) ?>" />
 
+    <?php
+    // Open Graph Image: Use dedicated og_image if set, fallback to site_logo, then default
+    $og_image = function_exists('getSetting') ? getSetting('og_image') : '';
+    if (empty($og_image)) {
+        $og_image = $site_logo; // Fallback to logo
+    }
+    // Ensure absolute URL for OG image
+    $og_image_url = $protocol . "://$_SERVER[HTTP_HOST]" . $og_image;
+    
+    // Facebook App ID (optional but recommended)
+    $fb_app_id = function_exists('getSetting') ? getSetting('fb_app_id') : '';
+    $fb_admins = function_exists('getSetting') ? getSetting('fb_admins') : '';
+    ?>
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= htmlspecialchars($current_url) ?>">
     <meta property="og:title" content="<?= htmlspecialchars($display_title) ?>">
     <meta property="og:description" content="<?= htmlspecialchars($display_description) ?>">
-    <meta property="og:image" content="<?= $protocol . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars($og_image_url) ?>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:site_name" content="<?= htmlspecialchars($site_name) ?>">
+    <meta property="og:locale" content="vi_VN">
+    <?php if (!empty($fb_app_id)): ?>
+    <meta property="fb:app_id" content="<?= htmlspecialchars($fb_app_id) ?>">
+    <?php endif; ?>
+    <?php if (!empty($fb_admins)): ?>
+    <meta property="fb:admins" content="<?= htmlspecialchars($fb_admins) ?>">
+    <?php endif; ?>
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="<?= htmlspecialchars($current_url) ?>">
     <meta property="twitter:title" content="<?= htmlspecialchars($display_title) ?>">
     <meta property="twitter:description" content="<?= htmlspecialchars($display_description) ?>">
-    <meta property="twitter:image" content="<?= $protocol . "://$_SERVER[HTTP_HOST]" . ($site_logo ?? '/assets/images/og-image.png') ?>">
+    <meta property="twitter:image" content="<?= htmlspecialchars($og_image_url) ?>">
 
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">

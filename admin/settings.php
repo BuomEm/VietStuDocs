@@ -28,6 +28,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    
+    // Handle Open Graph Image Upload
+    if (isset($_FILES['og_image_file']) && $_FILES['og_image_file']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+        $filename = $_FILES['og_image_file']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        if (in_array($ext, $allowed)) {
+            $upload_dir = __DIR__ . '/../uploads/settings';
+            if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
+            $new_name = 'og_image_' . time() . '.' . $ext;
+            if (move_uploaded_file($_FILES['og_image_file']['tmp_name'], $upload_dir . '/' . $new_name)) {
+                $input['og_image'] = '/uploads/settings/' . $new_name;
+            }
+        }
+    }
     // 1.2 Detailed Usage Logic
     if (isset($input['get_detailed_ai_usage'])) {
         require_once __DIR__ . '/../includes/ai_review_handler.php';
@@ -239,6 +255,23 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                 </div>
                                 
                                 <div class="form-control md:col-span-2">
+                                    <label class="label">
+                                        <span class="label-text font-medium">Ảnh Thumbnail/Preview (Open Graph)</span>
+                                        <span class="badge badge-sm badge-info">1200x630px khuyến nghị</span>
+                                    </label>
+                                    <div class="flex gap-4 items-start">
+                                        <div class="w-32 h-16 rounded-lg bg-base-200 border border-base-300 grid place-items-center overflow-hidden flex-shrink-0">
+                                            <img id="og_image_preview" src="<?= htmlspecialchars(getSetting('og_image', getSetting('site_logo', '/favicon.ico'))) ?>" class="w-full h-full object-cover">
+                                        </div>
+                                        <div class="flex-1">
+                                            <input type="file" id="og_image_file" class="file-input file-input-bordered file-input-sm w-full" accept="image/jpeg,image/png,image/webp" onchange="previewOGImage(this)">
+                                            <input type="hidden" id="og_image" value="<?= htmlspecialchars(getSetting('og_image', '')) ?>">
+                                            <label class="label"><span class="label-text-alt opacity-60">Ảnh này sẽ hiển thị khi chia sẻ link lên <strong>tất cả</strong> social media: Facebook, Zalo, Telegram, Twitter, LinkedIn, Discord, WhatsApp...</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-control md:col-span-2">
                                     <label class="label"><span class="label-text font-medium">Mô tả (SEO)</span></label>
                                     <textarea id="site_description" class="textarea textarea-bordered h-24"><?= htmlspecialchars(getSetting('site_description', '')) ?></textarea>
                                 </div>
@@ -251,6 +284,24 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-medium">Tác giả (Author)</span></label>
                                     <input type="text" id="site_author" class="input input-bordered" value="<?= htmlspecialchars(getSetting('site_author', '')) ?>">
+                                </div>
+                                
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text font-medium">Facebook App ID</span>
+                                        <span class="badge badge-sm badge-ghost">Tùy chọn</span>
+                                    </label>
+                                    <input type="text" id="fb_app_id" class="input input-bordered font-mono text-sm" placeholder="123456789012345" value="<?= htmlspecialchars(getSetting('fb_app_id', '')) ?>">
+                                    <label class="label"><span class="label-text-alt opacity-60">Để trống nếu chưa có Facebook App</span></label>
+                                </div>
+                                
+                                <div class="form-control md:col-span-2">
+                                    <label class="label">
+                                        <span class="label-text font-medium">Facebook Admin IDs</span>
+                                        <span class="badge badge-sm badge-ghost">Tùy chọn</span>
+                                    </label>
+                                    <input type="text" id="fb_admins" class="input input-bordered font-mono text-sm" placeholder="100001234567890,100009876543210" value="<?= htmlspecialchars(getSetting('fb_admins', '')) ?>">
+                                    <label class="label"><span class="label-text-alt opacity-60">ID Facebook của admin, cách nhau bằng dấu phẩy. Tìm ID tại: <a href="https://findmyfbid.com" target="_blank" class="link link-primary">findmyfbid.com</a></span></label>
                                 </div>
                             </div>
                         </div>
@@ -866,6 +917,14 @@ function previewLogo(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = e => document.getElementById('logo_preview').src = e.target.result;
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewOGImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => document.getElementById('og_image_preview').src = e.target.result;
         reader.readAsDataURL(input.files[0]);
     }
 }
