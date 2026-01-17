@@ -27,7 +27,7 @@ if($type === 'points') {
     
     if($transaction) {
         // Get related document if exists
-        if($transaction['document_id']) {
+        if(isset($transaction['document_id']) && $transaction['document_id']) {
             $doc_query = "SELECT * FROM documents WHERE id = " . $transaction['document_id'];
             $transaction['related_document'] = db_get_row($doc_query);
         }
@@ -212,9 +212,9 @@ if(!$transaction) {
                                     <div class="h-px bg-base-200 flex-1 mx-6 opacity-50"></div>
                                     <div class="text-3xl font-black tracking-tighter text-base-content">
                                         <?php if($type === 'purchase'): ?>
-                                            <?= number_format($transaction['points_spent']) ?> <span class="text-lg opacity-30">P</span>
+                                            <?= number_format($transaction['points_spent']) ?> <span class="text-lg opacity-30">VSD</span>
                                         <?php elseif($type === 'points'): ?>
-                                            <?= number_format($transaction['points']) ?> <span class="text-lg opacity-30">P</span>
+                                            <?= number_format($transaction['points']) ?> <span class="text-lg opacity-30">VSD</span>
                                         <?php elseif($type === 'premium'): ?>
                                             <?= number_format($transaction['amount']) ?> <span class="text-lg opacity-30">VNĐ</span>
                                         <?php endif; ?>
@@ -271,7 +271,7 @@ if(!$transaction) {
                             </div>
                         </div>
                         <div class="divider my-6 opacity-30"></div>
-                        <a href="mailto:support@vietstudocs.com" class="btn btn-ghost w-full rounded-xl font-black text-xs text-primary hover:bg-primary/5 transition-colors">SUPPORT@VIETSTUDOCS.COM</a>
+                        <a href="mailto:support@vietstudocs.site" class="btn btn-ghost w-full rounded-xl font-black text-xs text-primary hover:bg-primary/5 transition-colors">SUPPORT@VIETSTUDOCS.SITE</a>
                     </div>
 
                     <div id="print-hide-notes" class="bg-primary/5 rounded-[2.5rem] p-8 border border-primary/10 relative overflow-hidden print:hidden">

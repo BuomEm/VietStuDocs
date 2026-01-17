@@ -3,22 +3,20 @@
 require_once __DIR__ . '/../includes/error_handler.php';
 
 session_start();
-if(!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+
 
 require_once '../config/db.php';
 require_once '../config/auth.php';
 require_once '../config/premium.php';
 require_once '../config/settings.php'; 
 
-redirectIfNotLoggedIn();
+// redirectIfNotLoggedIn(); // Removed to allow guest access
 
-$user_id = getCurrentUserId();
-$user_info = getUserInfo($user_id);
-$is_premium = isPremium($user_id);
-$premium_info = getPremiumInfo($user_id);
+$is_logged_in = isset($_SESSION['user_id']);
+$user_id = $is_logged_in ? getCurrentUserId() : null;
+$user_info = $is_logged_in ? getUserInfo($user_id) : null;
+$is_premium = $is_logged_in ? isPremium($user_id) : false;
+$premium_info = $is_logged_in ? getPremiumInfo($user_id) : null;
 
 // Overwrite connection check if needed for navbar which uses $conn
 if(!isset($conn) && isset($VSD)) {
@@ -452,23 +450,27 @@ include '../includes/head.php';
                         
                         <div class="glass-card">
                             <div class="flex items-center gap-4 mb-8">
-                                <div class="avatar">
-                                    <div class="w-16 h-16 rounded-2xl ring-4 ring-base-100 shadow-xl overflow-hidden bg-primary/10 flex items-center justify-center">
-                                        <?php if(!empty($user_info['avatar']) && file_exists('../uploads/avatars/' . $user_info['avatar'])): ?>
-                                            <img src="../uploads/avatars/<?= $user_info['avatar'] ?>" class="object-cover" />
-                                        <?php else: ?>
-                                            <i class="fa-solid fa-user text-2xl text-primary"></i>
-                                        <?php endif; ?>
-                                    </div>
+                                <div class="w-16 h-16 rounded-2xl ring-4 ring-base-100 shadow-xl overflow-hidden bg-primary/10 flex items-center justify-center">
+                                    <?php if($is_logged_in && !empty($user_info['avatar']) && file_exists('../uploads/avatars/' . $user_info['avatar'])): ?>
+                                        <img src="../uploads/avatars/<?= $user_info['avatar'] ?>" class="w-full h-full object-cover" />
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-user text-2xl text-primary"></i>
+                                    <?php endif; ?>
                                 </div>
                                 <div>
-                                    <h3 class="font-black text-xl"><?= htmlspecialchars($user_info['username']) ?></h3>
-                                    <?php if($is_premium): ?>
-                                        <div class="status-badge active mt-1">
-                                            <i class="fa-solid fa-crown"></i> Thành viên Premium
-                                        </div>
+                                    <h3 class="font-black text-xl"><?= $is_logged_in ? htmlspecialchars($user_info['username']) : 'Người Dùng' ?></h3>
+                                    <?php if($is_logged_in): ?>
+                                        <?php if($is_premium): ?>
+                                            <div class="status-badge active mt-1">
+                                                <i class="fa-solid fa-crown"></i> Thành viên Premium
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="status-badge mt-1">Thành viên Thường</div>
+                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <div class="status-badge mt-1">Thành viên Thường</div>
+                                        <div class="text-xs font-bold opacity-50 mt-1 max-w-[200px] leading-tight">
+                                            Tham gia cộng đồng để mở khóa toàn bộ tính năng
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -568,9 +570,15 @@ include '../includes/head.php';
                                     </div>
                                 </div>
                                 
-                                <button type="button" onclick="showPaymentModal()" class="btn-premium-buy">
-                                    Nâng cấp Ngay <i class="fa-solid fa-arrow-right"></i>
-                                </button>
+                                <?php if($is_logged_in): ?>
+                                    <button type="button" onclick="showPaymentModal()" class="btn-premium-buy">
+                                        Nâng cấp Ngay <i class="fa-solid fa-arrow-right"></i>
+                                    </button>
+                                <?php else: ?>
+                                    <a href="/login?redirect=/premium" class="btn-premium-buy no-underline">
+                                        Đăng nhập để nâng cấp <i class="fa-solid fa-right-to-bracket"></i>
+                                    </a>
+                                <?php endif; ?>
                                 
                                 <div class="mt-12 pt-8 border-t border-base-content/5 w-full">
                                     <h4 class="font-black text-[10px] uppercase opacity-30 tracking-[0.2em] mb-4">Sắp ra mắt</h4>

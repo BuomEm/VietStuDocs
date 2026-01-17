@@ -106,9 +106,21 @@ async function updateNotificationUI() {
 
     const status = checkNotificationStatus();
     if (status === 'granted') {
-        const reg = await navigator.serviceWorker.ready;
-        const subscription = await reg.pushManager.getSubscription();
-        if (subscription) {
+        let isSubscribed = false;
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await Promise.race([
+                    navigator.serviceWorker.ready,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 2000))
+                ]);
+                const subscription = await reg.pushManager.getSubscription();
+                isSubscribed = !!subscription;
+            }
+        } catch (e) {
+            console.warn('Push check failed/timed out', e);
+        }
+
+        if (isSubscribed) {
             toggle.checked = true;
             if (statusEl) statusEl.innerText = 'Trạng thái: Đã bật';
         } else {
@@ -155,7 +167,7 @@ function checkUnread() {
                 list.innerHTML = data.notifications.length > 0
                     ? data.notifications.map(n => `
                             <li>
-                                <a href="javascript:void(0)" onclick="markRead(${n.id})" class="flex flex-col items-start p-3 hover:bg-base-200 transition-colors ${n.is_read == 0 ? 'bg-primary/5' : ''}">
+                                <a href="${n.url}" onclick="handleNotificationClick(event, ${n.id}, '${n.url}')" class="flex flex-col items-start p-3 hover:bg-base-200 transition-colors ${n.is_read == 0 ? 'bg-primary/5' : ''}">
                                     <span class="font-bold text-xs text-primary line-clamp-1">${n.title}</span>
                                     <span class="text-sm opacity-90 line-clamp-2">${n.message}</span>
                                     <span class="text-[9px] opacity-40 mt-1">${n.time}</span>
@@ -166,9 +178,18 @@ function checkUnread() {
         }).catch(err => console.warn('Fetch unread failed'));
 }
 
+function handleNotificationClick(event, id, url) {
+    if (url === '#' || !url) return; // Allow default behavior for non-links
+    
+    // Attempt to mark read in background
+    markRead(id);
+    // Navigation will happen naturally via href
+}
+
 function markRead(id = null) {
     const url = id ? `/API/mark_read.php?id=${id}` : '/API/mark_read.php';
-    fetch(url).then(r => r.json()).then(() => checkUnread());
+    // Use keepalive to ensure request completes even if page unloads
+    fetch(url, { keepalive: true }).then(r => r.json()).then(() => checkUnread()).catch(() => {});
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -177,16 +198,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (document.body.dataset.loggedin === 'true') {
-        registerServiceWorker().then(async () => {
-            if (Notification.permission === 'granted') {
-                const reg = await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (!sub) await subscribePush();
+        registerServiceWorker().then(async (reg) => {
+            if (reg && Notification.permission === 'granted') {
+                try {
+                    const sub = await reg.pushManager.getSubscription();
+                    if (!sub) await subscribePush();
+                } catch (e) { console.warn('Auto-subscribe check failed', e); }
             }
             await updateNotificationUI();
+        }).catch(e => {
+            console.error('SW Init failed', e);
+            updateNotificationUI();
         });
         checkUnread();
         setInterval(checkUnread, 15000);
-        setInterval(() => fetch('/API/ping.php'), 60000);
+        setInterval(() => fetch('/API/ping.php').catch(() => {}), 60000);
     }
 });

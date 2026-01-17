@@ -501,25 +501,50 @@ include '../includes/head.php';
     <script>
         async function handlePushToggle(el) {
             if (typeof checkNotificationStatus !== 'function') {
-                alert('Hệ thống thông báo chưa được khởi tạo.');
+                alert('Hệ thống thông báo chưa được khởi tạo. Vui lòng tải lại trang.');
                 el.checked = false;
                 return;
             }
+            
             const status = checkNotificationStatus();
+            
             if (status === 'denied') {
                 el.checked = false;
-                alert('Bạn đã chặn thông báo. Vui lòng đặt lại quyền trên trình duyệt.');
+                alert('Bạn đã chặn thông báo. Vui lòng đặt lại quyền trên trình duyệt (Click vào biểu tượng ổ khóa trên thanh địa chỉ).');
                 return;
             }
-            if (el.checked) {
-                if (status === 'default') {
-                    const result = await Notification.requestPermission();
-                    if (result === 'granted') { await subscribePush(); } 
-                    else { el.checked = false; }
-                } else { await subscribePush(); }
-            } else {
-                await unsubscribePush();
-                alert('Đã tắt thông báo trên thiết bị này.');
+
+            try {
+                if (el.checked) {
+                    let granted = false;
+                    if (status === 'default') {
+                        const result = await Notification.requestPermission();
+                        granted = (result === 'granted');
+                    } else {
+                        granted = true;
+                    }
+
+                    if (granted) {
+                        const success = await subscribePush();
+                        if (!success) {
+                            throw new Error('Đăng ký thất bại');
+                        }
+                    } else {
+                        el.checked = false;
+                    }
+                } else {
+                    const success = await unsubscribePush();
+                    if (success) {
+                        alert('Đã tắt thông báo trên thiết bị này.');
+                    } else {
+                        // Even if API fail, we visually turn it off
+                        console.warn('Unsubscribe API warn');
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                el.checked = !el.checked; // Revert state
+                alert('Có lỗi xảy ra khi cập nhật trạng thái thông báo.');
             }
         }
     </script>

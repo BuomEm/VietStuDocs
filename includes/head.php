@@ -148,38 +148,43 @@
     <link rel="icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
     <link rel="shortcut icon" type="<?= $favicon_type ?>" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($favicon_path) ?>?v=<?= $favicon_version ?>">
+    <!-- Tailwind CSS (Local) -->
+    <link rel="stylesheet" href="/css/tailwindcss/tailwind.min.css">
     <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/css/tailwindcss/tailwind.js"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: "oklch(40% 0.18 29)",
-                        secondary: "oklch(80% 0.12 45)",
-                        accent: "oklch(85% 0.18 90)",
-                        neutral: "oklch(25% 0.02 30)",
+        // Inline configuration for components that might still look for tailwind object
+        window.tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: "oklch(40% 0.18 29)",
+                            secondary: "oklch(80% 0.12 45)",
+                            accent: "oklch(85% 0.18 90)",
+                            neutral: "oklch(25% 0.02 30)",
+                        }
                     }
-                }
-            },
-            daisyui: {
-                themes: [
-                    {
-                        vietstudocs: {
-                            "primary": "#800000", /* Deep Red Marble */
-                            "secondary": "#FFB88C", /* Soft Peach */
-                            "accent": "#FFD700", /* Golden */
-                            "neutral": "#2B2B2B",
-                            "base-100": "#FFFBFA", /* Creamy White */
-                            "info": "#3ABFF8",
-                            "success": "#36D399",
-                            "warning": "#FBBD23",
-                            "error": "#F87272",
+                },
+                daisyui: {
+                    themes: [
+                        {
+                            vietstudocs: {
+                                "primary": "#800000", /* Deep Red Marble */
+                                "secondary": "#FFB88C", /* Soft Peach */
+                                "accent": "#FFD700", /* Golden */
+                                "neutral": "#2B2B2B",
+                                "base-100": "#FFFBFA", /* Creamy White */
+                                "info": "#3ABFF8",
+                                "success": "#36D399",
+                                "warning": "#FBBD23",
+                                "error": "#F87272",
+                            },
                         },
-                    },
-                ],
-            },
-        }
+                    ],
+                },
+            }
+        };
     </script>
     <!-- DaisyUI -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
@@ -288,6 +293,14 @@
         /* Profile Info Hiding Logic */
         .is-drawer-close .drawer-side .profile-info {
             display: none !important;
+        }
+
+        /* Collapsed specific elements */
+        .is-collapsed-only {
+            display: none !important;
+        }
+        .is-drawer-close .is-collapsed-only {
+            display: flex !important;
         }
 
         .is-drawer-close .drawer-side .menu {

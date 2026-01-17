@@ -45,7 +45,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         require_once __DIR__ . '/../config/notifications.php';
         // Test logic simplified
         $msg = "🔔 Test Notification: Hệ thống hoạt động bình thường lúc " . date('H:i:s');
-        $result = sendAdminNotification($admin_id, 'system_alert', $msg, null, null, [['text' => 'Xem cài đặt', 'url' => getBaseUrl() . '/admin/settings.php']]);
+        $result = sendAdminNotification($admin_id, 'system_alert', $msg, null, null, [['text' => 'Xem cài đặt', 'url' => getBaseUrl() . '/admin/settings']]);
         echo json_encode(['success' => true, 'message' => 'Đã gửi thông báo test!']); exit;
     }
 }
@@ -162,7 +162,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                     <button onclick="markRead(<?= $n['id'] ?>)" class="btn btn-xs btn-primary btn-outline">Đã đọc</button>
                                 <?php endif; ?>
                                 <?php if($n['document_id']): ?>
-                                    <a href="../view-document.php?id=<?= $n['document_id'] ?>" target="_blank" class="btn btn-xs btn-ghost">Xem</a>
+                                    <a href="/admin/view-document?id=<?= $n['document_id'] ?>" target="_blank" class="btn btn-xs btn-ghost">Xem</a>
                                 <?php endif; ?>
                                 <button onclick="deleteNotif(<?= $n['id'] ?>)" class="btn btn-xs btn-ghost text-error ml-auto"><i class="fa-solid fa-trash"></i></button>
                             </div>

@@ -5,6 +5,10 @@ php_value session.cookie_lifetime 604800
 
 RewriteEngine On
 
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
 # 1. Redirect .php to extensionless (Redirect public URL)
 # Redirect /page/filename.php OR /filename.php to /filename
 RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(?:page/)?(contact|dashboard|edit-document|error|faq|history|login|logout|premium|privacy|profile|saved|shop|search|signup|sitemap|terms|transaction-details|upload|user_profile|view)\.php [NC]
@@ -73,8 +77,21 @@ ErrorDocument 500 /page/error.php?code=500
   ExpiresActive On
   ExpiresDefault "access plus 1 month"
   ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/jpg "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
   ExpiresByType text/css "access plus 1 month"
   ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(ico|pdf|flv|jpg|jpeg|png|gif|webp|js|css|swf|woff|woff2)$">
+    Header set Cache-Control "max-age=2592000, public"
+  </FilesMatch>
 </IfModule>
 
 # Add MIME types for fonts

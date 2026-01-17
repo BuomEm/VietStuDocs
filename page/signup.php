@@ -30,31 +30,45 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['register']) || isset($
         $error = "Mật khẩu xác nhận không khớp!";
     } elseif(strlen($_POST['password']) < 8) {
         $error = "Mật khẩu phải có ít nhất 8 ký tự!";
-    } elseif(!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
-        $error = "Vui lòng tải lên ảnh đại diện!";
     } else {
         // Handle avatar upload
         $avatar_filename = null;
+        
         if(isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
             $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            $max_size = 2 * 1024 * 1024; // 2MB
+            $max_size = 15 * 1024 * 1024; // 15MB
             
             if(!in_array($_FILES['avatar']['type'], $allowed_types)) {
                 $error = "Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP)!";
             } elseif($_FILES['avatar']['size'] > $max_size) {
-                $error = "Kích thước ảnh tối đa là 2MB!";
+                $error = "Kích thước ảnh tối đa là 15MB!";
             } else {
                 $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
                 $avatar_filename = 'avatar_' . time() . '_' . uniqid() . '.' . $ext;
                 $upload_path = '../uploads/avatars/' . $avatar_filename;
                 
-                // Create directory if not exists
                 if(!is_dir('../uploads/avatars')) {
                     mkdir('../uploads/avatars', 0755, true);
                 }
                 
                 if(!move_uploaded_file($_FILES['avatar']['tmp_name'], $upload_path)) {
                     $error = "Không thể tải lên avatar!";
+                    $avatar_filename = null;
+                }
+            }
+        } else {
+            // Use default avatar
+            $default_source = '../assets/img/user.png';
+            if(file_exists($default_source)) {
+                $avatar_filename = 'avatar_' . time() . '_' . uniqid() . '.png';
+                $upload_path = '../uploads/avatars/' . $avatar_filename;
+                
+                if(!is_dir('../uploads/avatars')) {
+                    mkdir('../uploads/avatars', 0755, true);
+                }
+                
+                if(!copy($default_source, $upload_path)) {
+                    // If copy fails, fallback to null (initials)
                     $avatar_filename = null;
                 }
             }
@@ -254,12 +268,12 @@ include '../includes/head.php';
         border-color: #800000 !important;
     }
 </style>
-<body class="min-h-screen flex items-center justify-center relative p-4 py-8">
+<body class="min-h-screen w-full flex flex-col items-center justify-center relative p-4 py-8 overflow-hidden">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
-    <div class="w-full max-w-lg relative z-10">
+    <div class="w-full max-w-lg relative z-10 mx-auto">
         <!-- Logo Section -->
         <div class="text-center mb-6">
             <div class="flex items-center justify-center gap-4 mb-3">
@@ -310,15 +324,15 @@ include '../includes/head.php';
                                 <input type="text" name="username" placeholder="nguyen_van_a" class="input input-bordered w-full pl-11 rounded-xl input-premium" required minlength="3" maxlength="30" pattern="^[a-zA-Z0-9_]+$" title="Chỉ chứa chữ cái không dấu, số và dấu _">
                             </div>
                             
-                            <!-- Avatar Upload (Required) -->
-                            <label for="avatarInput" class="avatar-upload-small" title="Tải lên avatar (bắt buộc)">
+                            <!-- Avatar Upload (Optional) -->
+                            <label for="avatarInput" class="avatar-upload-small" title="Tải lên avatar">
                                 <div class="avatar-preview-small" id="avatarPreview">
                                     <i class="fa-solid fa-user text-xl text-gray-400"></i>
                                 </div>
                                 <span class="avatar-edit-small">
                                     <i class="fa-solid fa-camera text-[10px]"></i>
                                 </span>
-                                <input type="file" id="avatarInput" name="avatar" accept="image/*" required>
+                                <input type="file" id="avatarInput" name="avatar" accept="image/*">
                             </label>
                         </div>
                     </div>

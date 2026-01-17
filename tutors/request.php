@@ -450,7 +450,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                     <div class="glass-card-vsd !p-6 border-l-4 <?= $is_accepted ? 'border-l-emerald-500' : 'border-l-warning' ?> flex flex-col md:flex-row justify-between items-center gap-6">
                                         <div>
                                             <div class="flex items-center gap-3 mb-2">
-                                                <span class="badge <?= $is_accepted ? 'badge-success text-white' : 'badge-warning' ?> font-black text-[10px]">+<?= $offer['points_offered'] ?> POINTS</span>
+                                                <span class="badge <?= $is_accepted ? 'badge-success text-white' : 'badge-warning' ?> font-black text-[10px]">+<?= $offer['points_offered'] ?> VSD</span>
                                                 <?php if(!$is_accepted): ?>
                                                     <span class="text-[10px] font-bold opacity-40 uppercase">Hết hạn: <?= date('H:i d/m', strtotime($offer['deadline'])) ?></span>
                                                 <?php endif; ?>
@@ -587,16 +587,30 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                             </div>
                         <?php endif; ?>
 
+                        <!-- Waiting for Rating Card (Tutor View) -->
+                        <?php if ($is_tutor && $request['status'] === 'answered'): ?>
+                            <div class="glass-card-vsd mt-12 bg-emerald-500/5 border-emerald-500/20">
+                                <div class="flex flex-col items-center text-center py-8">
+                                    <div class="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mb-6 text-emerald-500 text-3xl animate-pulse">
+                                        <i class="fa-solid fa-hourglass-half"></i>
+                                    </div>
+                                    <h3 class="font-black text-2xl text-emerald-700 mb-2">Đang chờ đánh giá</h3>
+                                    <p class="text-sm font-bold opacity-60 max-w-md mx-auto">
+                                        Bạn đã hoàn tất hỗ trợ. Vui lòng đợi học viên xác nhận và đánh giá chất lượng để nhận điểm thù lao.
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Message Input Panel -->
                         <?php 
                         $is_expired = ($request['status'] === 'pending' && strtotime($request['sla_deadline']) < time());
-                        if (($is_tutor && $request['status'] === 'pending') || ($is_student && $request['status'] === 'pending' && !empty($request['answers'])) || ($is_tutor && $request['status'] === 'answered')): 
+                        if (($is_tutor && $request['status'] === 'pending') || ($is_student && $request['status'] === 'pending' && !empty($request['answers']))): 
                         ?>
                             <div class="input-glass-vsd animate-in slide-in-from-bottom duration-700">
                                 <h3 class="font-black text-xs uppercase tracking-[0.2em] opacity-30 mb-8"><?= $is_tutor ? 'Gia sư trả lời' : 'Học viên nhắn tin' ?></h3>
                                 
                                 <form id="<?= $is_tutor ? 'answerForm' : 'chatForm' ?>" class="space-y-6" enctype="multipart/form-data">
-                                    <input type="hidden" name="action" value="<?= $is_tutor ? 'answer_request' : 'student_chat' ?>">
                                     <input type="hidden" name="request_id" value="<?= $request['id'] ?>">
                                     
                                     <?php if ($is_expired): ?>
@@ -657,7 +671,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                                         <div class="step-icon-vsd"><i class="fa-solid fa-paper-plane"></i></div>
                                         <div class="step-content-vsd">
                                             <h4 class="step-title-vsd">Gửi câu hỏi</h4>
-                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['points_used'] ?> points locked</p>
+                                            <p class="text-[10px] font-bold opacity-40 uppercase"><?= $request['points_used'] ?> VSD được tạm giữ</p>
                                         </div>
                                     </div>
                                     
@@ -717,9 +731,12 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
+            if(!btn) return;
+            
+            // Prevent double submission
+            if(btn.dataset.processing === 'true') return;
+            btn.dataset.processing = 'true';
             btn.disabled = true;
-            btn.querySelector('.btn-text')?.classList.add('hidden');
-            btn.querySelector('.btn-loading')?.classList.remove('hidden');
 
             const formData = new FormData(this);
             formData.append('action', action);
@@ -734,7 +751,11 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                 if(data.success) {
                     if (action === 'send_chat_message' || action === 'answer_request' || action === 'student_chat') {
                         form.reset();
-                        pollMessages();
+                        // Reset file input if exists
+                        const fileInput = form.querySelector('input[type="file"]');
+                        if (fileInput) fileInput.value = '';
+                        
+                        pollMessages(); // Fire and forget
                         showAlert('Đã gửi tin nhắn!', 'success');
                     } else {
                         showAlert(data.message, 'success');
@@ -748,8 +769,7 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                 showAlert('Có lỗi xảy ra khi gửi tin nhắn', 'error');
             } finally {
                 btn.disabled = false;
-                btn.querySelector('.btn-text')?.classList.remove('hidden');
-                btn.querySelector('.btn-loading')?.classList.add('hidden');
+                btn.dataset.processing = 'false';
             }
         });
     }
@@ -860,6 +880,13 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
     }
 
     async function finishRequestManual() {
+        // Validation: Must reply at least once
+        const myReplies = document.querySelectorAll('#conversationSection .chat-end-vsd');
+        if (myReplies.length === 0) {
+            showAlert('Bạn cần phản hồi ít nhất 1 lần trước khi hoàn tất yêu cầu!', 'error');
+            return;
+        }
+
         vsdConfirm({
             title: 'Hoàn tất hỗ trợ',
             message: 'Xác nhận hoàn tất hỗ trợ cho yêu cầu này? Sau khi đóng, học viên sẽ thực hiện đánh giá chất lượng.',
@@ -868,8 +895,18 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
             onConfirm: async function() {
                 try {
                     const formData = new FormData();
-                    formData.append('action', 'finish_request');
-                    formData.append('request_id', <?= $request['id'] ?>);
+                    formData.append('action', 'finish_request'); // Using finish_request logic
+                    // Actually, handler/tutor_handler.php does not seem to have 'finish_request' case in the viewed file!
+                    // I checked tutor_handler.php lines 1-275 and it was not there.
+                    // It uses api/tutor_chat.php (from previous code view).
+                    // In previous view of request.php line 874: `fetch('/api/tutor_chat.php', ...)`
+                    // Ah, so it calls API directly. I should keep that.
+                    
+                    // Re-verifying finishRequestManual original code:
+                    // fetch('/api/tutor_chat.php', { method: 'POST', body: formData });
+                    // So I should keep the fetch target as /api/tutor_chat.php and action as finish_request.
+                    
+                    formData.append('request_id', REQUEST_ID);
                     
                     const res = await fetch('/api/tutor_chat.php', {
                         method: 'POST',
@@ -889,6 +926,9 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
             }
         });
     }
+
+    // ... (rest of the file) ...
+
 
     function updateCountdowns() {
         const now = new Date().getTime();
@@ -942,10 +982,10 @@ $page_title = "Chi tiết câu hỏi - VietStuDocs";
                     name: 'points',
                     type: 'select',
                     options: [
-                        {value: 10, label: '+10 points'},
-                        {value: 20, label: '+20 points'},
-                        {value: 40, label: '+40 points'},
-                        {value: 60, label: '+60 points'}
+                        {value: 10, label: '+10 VSD'},
+                        {value: 20, label: '+20 VSD'},
+                        {value: 40, label: '+40 VSD'},
+                        {value: 60, label: '+60 VSD'}
                     ]
                 },
                 {

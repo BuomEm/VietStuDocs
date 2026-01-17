@@ -234,38 +234,7 @@ switch ($action) {
         }
         break;
 
-    case 'send_chat_message':
-        $request_id = intval($_POST['request_id'] ?? 0);
-        $content = trim($_POST['content'] ?? '');
-        
-        if (!$request_id || empty($content)) {
-            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập nội dung tin nhắn.']);
-            exit;
-        }
 
-        $attachment = null;
-        if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
-            $allowed = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'zip'];
-            $filename = $_FILES['attachment']['name'];
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            
-            if (in_array($ext, $allowed)) {
-                $new_name = 'chat_' . uniqid() . '_' . time() . '.' . $ext;
-                $upload_dir = __DIR__ . '/../uploads/tutors/';
-                
-                if (!file_exists($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-                
-                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $upload_dir . $new_name)) {
-                    $attachment = $new_name;
-                }
-            }
-        }
-
-        $result = sendTutorChatMessage($user_id, $request_id, $content, $attachment);
-        echo json_encode($result);
-        break;
 
     default:
         echo json_encode(['success' => false, 'message' => 'Hành động không hợp lệ.']);

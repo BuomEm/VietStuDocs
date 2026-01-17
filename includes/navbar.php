@@ -35,7 +35,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
     <div class="flex-none lg:hidden mr-2">
         <a href="/dashboard.php" class="flex items-center gap-2">
             <?php if (!empty($site_logo)): ?>
-                <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="h-8 w-8 object-contain">
+                <img src="<?= htmlspecialchars($site_logo) ?>" loading="lazy" alt="Logo" class="h-8 w-8 object-contain">
             <?php else: ?>
                 <i class="fa-solid fa-file-contract text-primary text-xl"></i>
             <?php endif; ?>
@@ -98,7 +98,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                         <div class="w-9 h-9 rounded-full bg-base-100 p-[1px] relative z-10 transition-transform duration-300 group-hover/avatar:scale-105">
                             <div class="w-full h-full rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden border border-white/10">
                                 <?php if(!empty($user_info['avatar']) && file_exists('uploads/avatars/' . $user_info['avatar'])): ?>
-                                    <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" alt="Avatar" class="object-cover w-full h-full" />
+                                    <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" loading="lazy" alt="Avatar" class="object-cover w-full h-full" />
                                 <?php else: ?>
                                     <span class="text-2xl flex items-center justify-center w-full h-full">
                                         <i class="fa-solid fa-circle-user"></i>
@@ -121,7 +121,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                         <div class="avatar">
                             <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
                                 <?php if(!empty($user_info['avatar']) && file_exists('uploads/avatars/' . $user_info['avatar'])): ?>
-                                    <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" alt="Avatar" />
+                                    <img src="/uploads/avatars/<?= $user_info['avatar'] ?>" loading="lazy" alt="Avatar" />
                                 <?php else: ?>
                                     <span class="text-3xl flex items-center justify-center w-full h-full mb-0.5">
                                         <i class="fa-solid fa-circle-user text-primary leading-none"></i>

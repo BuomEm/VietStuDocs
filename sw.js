@@ -3,9 +3,7 @@ const ASSETS_TO_CACHE = [
     '/',
     '/index.php',
     '/css/fontawesome/all.css',
-    '/assets/js/notifications.js?v=9',
-    '/assets/img/logo.png',
-    '/favicon.ico'
+    '/assets/js/notifications.js'
 ];
 
 // Install Event - Caching basic assets
@@ -39,6 +37,9 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     // Skip non-GET requests and cross-origin requests (except CDNs we want to cache)
     if (event.request.method !== 'GET') return;
+    
+    // Skip unsupported schemes (chrome-extension, etc.)
+    if (!event.request.url.startsWith('http')) return;
 
     event.respondWith(
         fetch(event.request)

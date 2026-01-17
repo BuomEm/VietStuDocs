@@ -515,7 +515,7 @@ function formatSLA($hours) {
                             ?>
                             <div class="mt-12 pt-12 border-t border-base-content/5 text-center">
                                 <p class="text-xs font-black opacity-30 uppercase tracking-widest mb-4">Bạn muốn dạy học?</p>
-                                <a href="/tutors/apply" class="btn btn-outline border-2 border-primary/20 hover:bg-primary/5 rounded-2xl w-full font-black text-xs h-14 uppercase tracking-wider">Trở thành Gia Sư</a>
+                                <button onclick="checkLoginAndAction('become_tutor')" class="btn btn-outline border-2 border-primary/20 hover:bg-primary/5 rounded-2xl w-full font-black text-xs h-14 uppercase tracking-wider">Trở thành Gia Sư</button>
                             </div>
                             <?php endif; ?>
                         </div>
@@ -596,7 +596,7 @@ function formatSLA($hours) {
                                                 </div>
                                             </div>
                                             
-                                            <button onclick='openRequestModal(<?= $tutor['user_id'] ?>, "<?= htmlspecialchars($tutor['username']) ?>", <?= json_encode([
+                                            <button onclick='checkLoginAndAction("ask_question", <?= $tutor['user_id'] ?>, "<?= htmlspecialchars($tutor['username']) ?>", <?= json_encode([
                                                 "normal" => $tutor['price_basic'] ?? 25,
                                                 "medium" => $tutor['price_standard'] ?? 35,
                                                 "vip" => $tutor['price_premium'] ?? 60
@@ -697,7 +697,51 @@ function formatSLA($hours) {
         </form>
     </dialog>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast toast-top toast-end z-50"></div>
+
     <script>
+    const isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+
+    function showVsdToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} shadow-lg rounded-2xl animate-in slide-in-from-right duration-300`;
+        
+        let icon = 'fa-circle-info';
+        if(type === 'success') icon = 'fa-circle-check';
+        if(type === 'error') icon = 'fa-circle-exclamation';
+        if(type === 'warning') icon = 'fa-triangle-exclamation';
+        
+        toast.innerHTML = `
+            <i class="fa-solid ${icon}"></i>
+            <span class="font-bold text-sm">${message}</span>
+        `;
+        
+        document.getElementById('toast-container').appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    }
+
+    function checkLoginAndAction(actionType, ...args) {
+        if (!isLoggedIn) {
+            showVsdToast('Vui lòng đăng nhập để thực hiện chức năng này', 'warning');
+            setTimeout(() => {
+                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+            }, 1500);
+            return;
+        }
+
+        // Execute original action if logged in
+        if (actionType === 'ask_question') {
+            openRequestModal(...args);
+        } else if (actionType === 'become_tutor') {
+            window.location.href = '/tutors/apply';
+        }
+    }
+
     let currentTutorPrices = {};
 
     function openRequestModal(tutorId, tutorName, prices) {

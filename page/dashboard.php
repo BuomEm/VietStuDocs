@@ -32,9 +32,13 @@ if($is_logged_in) {
     $total_my_docs = $VSD->get_row("SELECT COUNT(*) as total FROM documents WHERE user_id=$user_id")['total'];
     $total_my_pages = ceil($total_my_docs / $items_per_page);
 
-    $my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar 
+    $my_docs = $VSD->get_list("SELECT d.*, u.username, u.avatar,
+                                (SELECT COUNT(*) FROM document_interactions WHERE document_id = d.id AND type = 'like') as likes,
+                                (SELECT COUNT(*) FROM document_interactions WHERE document_id = d.id AND type = 'dislike') as dislikes,
+                                dc.doc_type_code
                               FROM documents d 
                               JOIN users u ON d.user_id = u.id 
+                              LEFT JOIN document_categories dc ON d.id = dc.document_id
                               WHERE d.user_id=$user_id 
                               ORDER BY d.created_at DESC 
                               LIMIT $items_per_page OFFSET $my_offset");
@@ -52,7 +56,10 @@ $current_pub_page = isset($_GET['pub_page']) ? max(1, intval($_GET['pub_page']))
 $pub_offset = ($current_pub_page - 1) * $items_per_page;
 
 $public_docs = $VSD->get_list("
-    SELECT d.*, u.username, u.avatar FROM documents d 
+    SELECT d.*, u.username, u.avatar,
+           (SELECT COUNT(*) FROM document_interactions WHERE document_id = d.id AND type = 'like') as likes,
+           (SELECT COUNT(*) FROM document_interactions WHERE document_id = d.id AND type = 'dislike') as dislikes
+    FROM documents d 
     JOIN users u ON d.user_id = u.id 
     WHERE $public_docs_where
     ORDER BY d.created_at DESC
@@ -303,15 +310,14 @@ if(isset($_GET['download']) && $is_logged_in) {
                     $thumbnail = $doc['thumbnail'] ?? null;
                     $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
                     
-                    // Stats
-                    $likes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-                    $dislikes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
+                    // Stats from pre-fetched columns
+                    $likes = intval($doc['likes'] ?? 0);
+                    $dislikes = intval($doc['dislikes'] ?? 0);
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
-                    // Category
-                    $doc_category = getDocumentCategoryWithNames($doc_id);
-                    $doc_type_name = $doc_category ? $doc_category['doc_type_name'] : 'Khác';
+                    // Category name from pre-fetched code
+                    $doc_type_name = isset($doc['doc_type_code']) ? getDocTypeName($doc['doc_type_code']) : 'Khác';
                     
                     // Icons logic from saved.php
                     $icon_class = 'fa-file-lines';
@@ -332,7 +338,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                         <!-- Thumbnail Area -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('../uploads/' . $thumbnail)): ?>
-                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" loading="lazy" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -477,9 +483,9 @@ if(isset($_GET['download']) && $is_logged_in) {
                     $thumbnail = $doc['thumbnail'] ?? null;
                     $page_count = isset($doc['total_pages']) && $doc['total_pages'] > 0 ? $doc['total_pages'] : 1;
                     
-                    // Stats
-                    $likes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='like'");
-                    $dislikes = $VSD->num_rows("SELECT id FROM document_interactions WHERE document_id=$doc_id AND type='dislike'");
+                    // Stats from pre-fetched columns
+                    $likes = intval($doc['likes'] ?? 0);
+                    $dislikes = intval($doc['dislikes'] ?? 0);
                     $total_interactions = $likes + $dislikes;
                     $like_percentage = $total_interactions > 0 ? round(($likes / $total_interactions) * 100) : 0;
                     
@@ -498,7 +504,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                         <!-- Thumbnail/Preview -->
                         <div class="aspect-[3/4] bg-base-300/30 relative overflow-hidden flex items-center justify-center">
                             <?php if ($thumbnail && file_exists('../uploads/' . $thumbnail)): ?>
-                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
+                                <img src="../uploads/<?= htmlspecialchars($thumbnail) ?>" loading="lazy" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-700">
                             <?php else: ?>
                                 <div class="p-10 rounded-3xl bg-base-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
                                     <i class="fa-solid <?= $icon_class ?> text-6xl <?= $icon_color ?>"></i>
@@ -535,7 +541,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                                 <div class="flex items-center gap-2">
                                     <div class="w-8 h-8 rounded-xl bg-primary/5 overflow-hidden border border-primary/10">
                                         <?php if(!empty($doc['avatar']) && file_exists('../uploads/avatars/' . $doc['avatar'])): ?>
-                                            <img src="../uploads/avatars/<?= $doc['avatar'] ?>" class="w-full h-full object-cover">
+                                            <img src="../uploads/avatars/<?= $doc['avatar'] ?>" loading="lazy" class="w-full h-full object-cover">
                                         <?php else: ?>
                                             <div class="w-full h-full flex items-center justify-center text-primary/40">
                                                 <i class="fa-solid fa-user text-xs"></i>

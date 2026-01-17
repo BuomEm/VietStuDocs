@@ -38,7 +38,7 @@ if(isset($_SESSION['user_id'])) {
                 ?>
                 <a href="/dashboard" class="text-xl font-bold text-primary flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap h-12 w-full hover:bg-primary/5 transition-all">
                     <?php if (!empty($site_logo)): ?>
-                        <img src="<?= htmlspecialchars($site_logo) ?>" alt="Logo" class="h-8 w-8 object-contain flex-shrink-0">
+                        <img src="<?= htmlspecialchars($site_logo) ?>" loading="lazy" alt="Logo" class="h-8 w-8 object-contain flex-shrink-0">
                     <?php else: ?>
                         <i class="fa-solid fa-file-contract text-lg w-8 flex-shrink-0 text-center"></i>
                     <?php endif; ?>
@@ -53,8 +53,10 @@ if(isset($_SESSION['user_id'])) {
             </div>
             
             <!-- Navigation Menu -->
-            <ul class="menu p-4 w-full text-base-content">
+            <ul class="menu p-4 w-full text-base-content flex-nowrap">
                 <?php if(isset($_SESSION['user_id'])): ?>
+                    <!-- LOGGED IN SIDEBAR -->
+                    
                     <!-- Dashboard -->
                     <li>
                         <a href="/dashboard" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Trang chủ">
@@ -86,16 +88,6 @@ if(isset($_SESSION['user_id'])) {
                             <span class="menu-text">Mua điểm</span>
                         </a>
                     </li>
-
-                    <!-- Withdraw (For Tutors) -->
-                    <!-- <?php if(isset($_SESSION['user_id']) && isTutor($_SESSION['user_id'])): ?>
-                    <li>
-                        <a href="/tutors/withdraw" class="<?= $current_page === 'withdraw' ? 'active' : '' ?>" data-tip="Rút tiền">
-                            <i class="fa-solid fa-money-bill-transfer w-5 h-5"></i>
-                            <span class="menu-text">Rút tiền</span>
-                        </a>
-                    </li>
-                    <?php endif; ?> -->
                     
                     <!-- Saved -->
                     <li>
@@ -117,10 +109,10 @@ if(isset($_SESSION['user_id'])) {
                     <li>
                         <a href="/premium" class="<?= $current_page === 'premium' ? 'active' : '' ?>" data-tip="Premium">
                             <i class="fa-solid fa-crown w-5 h-5"></i>
-                            <span class="menu-text">
+                            <span class="menu-text flex items-center justify-between w-full">
                                 Premium
                                 <?php if($is_premium): ?>
-                                    <span class="badge badge-sm badge-primary ml-1">Active</span>
+                                    <span class="badge badge-sm badge-primary text-[10px]">Active</span>
                                 <?php endif; ?>
                             </span>
                         </a>
@@ -136,6 +128,7 @@ if(isset($_SESSION['user_id'])) {
                     
                     <!-- Admin -->
                     <?php if($has_admin): ?>
+                        <li class="mt-4"><hr class="border-base-300"></li>
                         <li>
                             <a href="/admin/index.php" class="<?= $current_page === 'admin' ? 'active' : '' ?>" data-tip="Quản trị">
                                 <i class="fa-solid fa-user-shield w-5 h-5"></i>
@@ -166,34 +159,117 @@ if(isset($_SESSION['user_id'])) {
                                         <span class="text-[10px] font-bold text-primary/60">VSD</span>
                                     </div>
                                     
-                                    <div class="mt-2 flex items-center justify-between border-t border-primary/10 pt-2 text-[10px]">
+                                    <div class="mt-2 flex items-center justify-between border-t border-primary/10 pt-2 text-[9px] gap-4">
                                         <div class="flex flex-col">
-                                            <span class="text-base-content/50 uppercase tracking-tighter font-bold">Đã nhận</span>
-                                            <span class="font-bold"><?= number_format($user_points['total_earned'] ?? 0) ?> VSD</span>
+                                            <span class="text-base-content/50 uppercase font-bold">Đã nhận</span>
+                                            <span class=""><?= number_format($user_points['total_earned'] ?? 0) ?> VSD</span>
                                         </div>
                                         <div class="flex flex-col text-right">
-                                            <span class="text-base-content/50 uppercase tracking-tighter font-bold">Đã dùng</span>
-                                            <span class="font-bold"><?= number_format($user_points['total_spent'] ?? 0) ?> VSD</span>
+                                            <span class="text-base-content/50 uppercase font-bold">Đã dùng</span>
+                                            <span class=""><?= number_format($user_points['total_spent'] ?? 0) ?> VSD</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </li>
                     <?php endif; ?>
-                    
-                    <!-- Logout -->
-                    <!-- <li class="mt-auto">
-                        <a href="/logout.php" class="text-error">
-                            <i class="fa-solid fa-right-from-bracket w-5 h-5"></i>
-                            Logout
-                        </a>
-                    </li> -->
+
                 <?php else: ?>
+                    <!-- GUEST SIDEBAR -->
+                    
+                    <!-- Home -->
                     <li>
-                        <a href="/login" data-tip="Đăng nhập">
-                            <i class="fa-solid fa-right-to-bracket w-5 h-5"></i>
-                            <span class="menu-text">Đăng nhập</span>
+                        <a href="/dashboard" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>" data-tip="Trang chủ">
+                            <i class="fa-solid fa-house w-5 h-5"></i>
+                            <span class="menu-text">Trang chủ</span>
                         </a>
+                    </li>
+
+                    <!-- Browse Documents -->
+                    <li>
+                        <a href="/dashboard" data-tip="Tài liệu nổi bật">
+                            <i class="fa-solid fa-file-lines w-5 h-5"></i>
+                            <span class="menu-text">Tài liệu nổi bật</span>
+                        </a>
+                    </li>
+
+                    <!-- Tutor -->
+                    <li>
+                        <a href="/tutors/dashboard" data-tip="Thuê Gia Sư">
+                            <i class="fa-solid fa-user-graduate w-5 h-5"></i>
+                            <span class="menu-text">Thuê Gia Sư</span>
+                        </a>
+                    </li>
+
+                    <!-- Premium Intro -->
+                    <li>
+                        <a href="/premium" data-tip="Vì sao nên nâng cấp?">
+                            <i class="fa-solid fa-crown w-5 h-5"></i>
+                            <span class="menu-text">Premium</span>
+                        </a>
+                    </li>
+
+                    <!-- FAQ -->
+                    <li>
+                        <a href="/faq" data-tip="Hướng dẫn / FAQ">
+                            <i class="fa-solid fa-circle-question w-5 h-5"></i>
+                            <span class="menu-text">Hướng dẫn / FAQ</span>
+                        </a>
+                    </li>
+
+                    <li class="mt-4"><hr class="border-base-300"></li>
+
+                    <!-- Upload (Login Req) -->
+                    <li class="opacity-70">
+                        <a href="/login" data-tip="Đăng tài liệu (Yêu cầu đăng nhập)">
+                            <i class="fa-solid fa-cloud-arrow-up w-5 h-5"></i>
+                            <div class="flex flex-col menu-text">
+                                <span>Đăng tài liệu</span>
+                                <span class="text-[10px] text-base-content/50 leading-none mt-1">(Yêu cầu đăng nhập)</span>
+                            </div>
+                        </a>
+                    </li>
+
+                    <!-- Points (Login Req) -->
+                    <li class="opacity-70">
+                        <a href="/login" data-tip="Điểm VietStuDocs">
+                            <i class="fa-solid fa-coins w-5 h-5"></i>
+                            <div class="flex flex-col menu-text">
+                                <span>Điểm VietStuDocs</span>
+                                <span class="text-[10px] text-base-content/50 leading-none mt-1">Đăng nhập để sử dụng</span>
+                            </div>
+                        </a>
+                    </li>
+
+                    <!-- CTA Section -->
+                    <li class="mt-auto guest-cta pb-6 pt-8">
+                        <!-- Expanded View -->
+                        <div class="flex flex-col gap-3 menu-text px-3">
+                            <!-- Primary CTA -->
+                            <a href="/signup" class="flex items-center justify-center gap-2 h-11 w-full rounded-xl bg-[#990000] !text-white text-sm font-semibold hover:bg-[#800000] shadow-md shadow-red-900/15 transition-all active:scale-[0.98]">
+                                Đăng ký
+                                <i class="fa-solid fa-arrow-right text-[11px] opacity-70"></i>
+                            </a>
+
+                            <!-- Secondary CTA -->
+                            <a href="/login" class="flex items-center justify-center gap-2 h-11 w-full rounded-xl text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200/60 transition-all">
+                                Đăng nhập
+                                <i class="fa-solid fa-arrow-right-to-bracket text-[11px] opacity-50"></i>
+                            </a>
+                        </div>
+
+                        <!-- Collapsed View -->
+                        <div class="flex flex-col items-center gap-3 is-collapsed-only px-2">
+                            <!-- Signup -->
+                            <a href="/signup" data-tip="Đăng ký miễn phí" class="tooltip tooltip-right w-11 h-11 rounded-xl flex items-center justify-center bg-[#990000] text-white shadow-md shadow-red-900/20 hover:bg-[#800000] hover:scale-105 active:scale-95 transition-all">
+                                <!-- <i class="fa-solid fa-user-plus text-base"></i> -->
+                            </a>
+
+                            <!-- Login -->
+                            <a href="/login" data-tip="Đăng nhập" class="tooltip tooltip-right w-11 h-11 rounded-xl flex items-center justify-center text-[#990000] hover:bg-red-900/10 transition-all">
+                                <i class="fa-solid fa-right-to-bracket text-base"></i>
+                            </a>
+                        </div>
                     </li>
                 <?php endif; ?>
             </ul>
