@@ -1002,7 +1002,8 @@ include __DIR__ . '/../includes/admin-header.php';
                         statusTextEl.innerText = preData.message || 'Bỏ qua';
                     } else {
                         // 2. Client-side Generation from PDF
-                        const pdfPath = '../' + preData.file_path;
+                        // Sử dụng proxy handler/file.php để tránh lỗi 403 khi truy cập trực tiếp thư mục uploads
+                        const pdfPath = `../handler/file.php?doc_id=${doc.id}`;
                         await generateAndSaveThumbnail(doc.id, pdfPath, statusTextEl);
                         
                         statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-success';
@@ -1017,6 +1018,9 @@ include __DIR__ . '/../includes/admin-header.php';
                 statusIndicator.className = 'status-indicator w-2 h-2 rounded-full bg-error';
                 statusTextEl.innerText = 'Lỗi: ' + error.message;
                 statusIndicator.classList.remove('animate-pulse');
+                
+                // Log detailed error to console
+                if (error.stack) console.error(error.stack);
             }
 
             completed++;
