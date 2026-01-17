@@ -53,7 +53,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 if(!empty($doc['converted_pdf_path'])) @unlink("../" . $doc['converted_pdf_path']);
                 if(!empty($doc['thumbnail'])) @unlink("../uploads/thumbnails/" . $doc['thumbnail']);
                 
-                $tables = ['docs_points', 'admin_approvals', 'document_sales', 'admin_notifications'];
+                $tables = ['docs_points', 'admin_approvals', 'document_sales', 'admin_notifications', 'document_categories', 'document_interactions'];
                 foreach($tables as $t) $VSD->remove($t, "document_id=$id");
                 
                 // point_transactions uses related_document_id

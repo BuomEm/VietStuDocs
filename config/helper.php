@@ -168,7 +168,7 @@ function renderGlobalModal() {
         const btnEl = document.getElementById("vsd_confirm_btn");
 
         titleEl.innerHTML = `<i class="fa-solid ${options.icon || "fa-circle-question"}"></i> ${options.title || "Xác nhận"}`;
-        msgEl.innerText = options.message || "Bạn có chắc chắn?";
+        msgEl.innerHTML = options.message || "Bạn có chắc chắn?";
         btnEl.innerText = options.confirmText || "Xác nhận";
         btnEl.className = "btn rounded-xl px-8 font-black uppercase tracking-widest " + (options.type ? "btn-" + options.type : "btn-primary");
 
@@ -191,7 +191,7 @@ function renderGlobalModal() {
         const btnEl = document.getElementById("vsd_prompt_btn");
 
         titleEl.innerHTML = `<i class="fa-solid ${options.icon || "fa-pen-to-square"}"></i> ${options.title || "Nhập thông tin"}`;
-        msgEl.innerText = options.message || "";
+        msgEl.innerHTML = options.message || "";
         btnEl.innerText = options.confirmText || "Xác nhận";
         
         inputsEl.innerHTML = "";

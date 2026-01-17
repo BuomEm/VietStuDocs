@@ -64,7 +64,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $VSD->remove('point_transactions', "user_id=$user_id");
             $VSD->remove('document_interactions', "user_id=$user_id");
             $VSD->remove('document_reports', "user_id=$user_id");
-            $VSD->remove('document_views', "user_id=$user_id");
             $VSD->remove('document_sales', "buyer_user_id=$user_id OR seller_user_id=$user_id");
             $VSD->remove('withdrawal_requests', "user_id=$user_id");
             $VSD->remove('tutor_requests', "student_id=$user_id OR tutor_id=$user_id");
@@ -348,7 +347,7 @@ include __DIR__ . '/../includes/admin-header.php';
                                             </div>
                                             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-200">
                                                 <li>
-                                                    <a onclick="openPointsModal(<?= $user['id'] ?>, '<?= addslashes($user['username']) ?>', <?= $user['points'] ?>)">
+                                                    <a onclick="openPointsModal(<?= $user['id'] ?>, <?= htmlspecialchars(json_encode($user['username'])) ?>, <?= $user['points'] ?>)">
                                                         <i class="fa-solid fa-coins text-warning"></i> Quản lý điểm
                                                     </a>
                                                 </li>
@@ -363,12 +362,12 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 </li>
                                                 <li class="border-t border-base-200 mt-1 pt-1"></li>
                                                 <li>
-                                                    <a onclick="givePremium(<?= $user['id'] ?>, '<?= addslashes($user['username']) ?>')">
+                                                    <a onclick="givePremium(<?= $user['id'] ?>, <?= htmlspecialchars(json_encode($user['username'])) ?>)">
                                                         <i class="fa-solid fa-crown text-warning"></i> Tặng 1 tháng Premium
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a onclick="confirmDeleteUser(<?= $user['id'] ?>, '<?= addslashes($user['username']) ?>')" class="text-error">
+                                                    <a onclick="confirmDeleteUser(<?= $user['id'] ?>, <?= htmlspecialchars(json_encode($user['username'])) ?>)" class="text-error">
                                                         <i class="fa-solid fa-user-xmark"></i> Xóa người dùng
                                                     </a>
                                                 </li>
