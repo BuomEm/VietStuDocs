@@ -33,7 +33,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 
     <!-- Mobile Logo -->
     <div class="flex-none lg:hidden mr-2">
-        <a href="/dashboard.php" class="flex items-center gap-2">
+        <a href="/dashboard" class="flex items-center gap-2">
             <?php if (!empty($site_logo)): ?>
                 <img src="<?= htmlspecialchars($site_logo) ?>" loading="lazy" alt="Logo" class="h-8 w-8 object-contain">
             <?php else: ?>
@@ -44,23 +44,25 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
     </div>
     
     <!-- Search Box -->
-    <div class="flex-1 max-w-md mx-auto px-2 relative group/search">
-        <div class="relative">
-            <form action="/search" method="GET" class="flex gap-0 w-full">
-                <input 
-                    type="text" 
-                    name="q" 
-                    placeholder="Tìm kiếm tài liệu..." 
-                    class="input input-bordered w-full bg-base-100 text-base-content rounded-r-none focus:outline-none focus:border-primary transition-all"
-                    id="searchInput"
-                    autocomplete="off"
-                />
-                <button type="submit" class="btn btn-primary rounded-l-none border-l-0">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </form>
-            <!-- Autocomplete suggestions -->
-            <div class="absolute top-full left-0 right-0 mt-2 bg-base-100 shadow-2xl rounded-box border border-base-300 overflow-hidden z-[100] hidden" id="searchSuggestions"></div>
+    <div class="flex-1 px-4">
+        <div class="max-w-3xl mx-auto relative group/search">
+            <div class="relative">
+                <form action="/search" method="GET" class="flex gap-0 w-full">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        placeholder="Tìm kiếm tài liệu..." 
+                        class="input input-bordered w-full bg-base-100 text-base-content rounded-r-none focus:outline-none focus:border-primary transition-all"
+                        id="searchInput"
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="btn btn-primary rounded-l-none border-l-0">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </form>
+                <!-- Autocomplete suggestions -->
+                <div class="absolute top-full left-0 right-0 mt-2 bg-base-100 shadow-2xl rounded-box border border-base-300 overflow-hidden z-[100] hidden" id="searchSuggestions"></div>
+            </div>
         </div>
     </div>
     
@@ -82,7 +84,7 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                         <li class="p-8 text-center"><span class="loading loading-spinner loading-sm opacity-20"></span></li>
                     </ul>
                     <div class="p-2 border-t border-base-200 text-center">
-                        <a href="/history.php" class="text-xs text-primary hover:underline font-medium">Xem tất cả lịch sử</a>
+                        <a href="/history" class="text-xs text-primary hover:underline font-medium">Xem tất cả lịch sử</a>
                     </div>
                 </div>
             </div>
@@ -138,26 +140,26 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
                         </div>
                     </li>
                     <div class="divider my-0"></div>
-                    <li><a href="/saved.php" class="hover:text-primary py-3">
+                    <li><a href="/saved" class="hover:text-primary py-3">
                         <i class="fa-solid fa-bookmark text-primary"></i>
                         Đã lưu
                     </a></li>
-                    <li><a href="/profile.php" class="hover:text-primary py-3">
+                    <li><a href="/profile" class="hover:text-primary py-3">
                         <i class="fa-solid fa-user-gear"></i>
                         Thông tin cá nhân
                     </a></li>
-                    <li><a href="/premium.php" class="hover:text-primary py-3">
+                    <li><a href="/premium" class="hover:text-primary py-3">
                         <i class="fa-solid fa-crown text-warning"></i>
                         Gói Premium
                     </a></li>
                     <?php if($has_admin): ?>
-                        <li><a href="/admin/index.php" class="bg-primary/5 text-primary hover:bg-primary/10 py-3">
+                        <li><a href="/admin" class="bg-primary/5 text-primary hover:bg-primary/10 py-3">
                             <i class="fa-solid fa-user-shield"></i>
                             Quản trị viên
                         </a></li>
                     <?php endif; ?>
                     <div class="divider my-0"></div>
-                    <li><a href="/logout.php" class="text-error font-medium hover:bg-error/10 py-3">
+                    <li><a href="/logout" class="text-error font-medium hover:bg-error/10 py-3">
                         <i class="fa-solid fa-power-off"></i>
                         Đăng xuất
                     </a></li>

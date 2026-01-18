@@ -211,6 +211,10 @@ include '../includes/head.php';
                                     <div class="point-line text-success">
                                         +<?= $pkg['bonus'] ?> Bonus VSD <span class="bonus-tag">TẶNG KÈM</span>
                                     </div>
+                                <?php else: ?>
+                                    <div class="point-line opacity-0 pointer-events-none">
+                                        &nbsp;
+                                    </div>
                                 <?php endif; ?>
                             </div>
 

@@ -288,6 +288,67 @@ if(isset($_GET['download']) && $is_logged_in) {
         <?php endif; ?>
 
         <?php if($is_logged_in): ?>
+        <!-- Push Notification Alert CTA -->
+        <div id="push-notification-cta" class="hidden mb-8 group">
+            <div class="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-primary to-secondary p-1 shadow-xl shadow-primary/20 transition-all duration-500 hover:scale-[1.01]">
+                <div class="relative bg-base-100 dark:bg-base-300 rounded-[1.8rem] p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 overflow-hidden">
+                    <!-- Decor background -->
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-colors"></div>
+                    <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl group-hover:bg-secondary/20 transition-colors"></div>
+                    
+                    <div class="flex items-center gap-6 relative z-10">
+                        <div class="flex-none w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary animate-bounce-slow">
+                            <i class="fa-solid fa-bell text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-base-content mb-1">Đừng bỏ lỡ thông báo! 🔔</h3>
+                            <p class="text-base-content/60 text-sm font-medium max-w-md">Nhận thông báo tức thì khi có người mua tài liệu, tin nhắn từ Gia sư hoặc cập nhật quan trọng từ VietStuDocs.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 relative z-10 w-full lg:w-auto">
+                        <button onclick="subscribePush().then(success => success && document.getElementById('push-notification-cta').remove())" 
+                                class="btn btn-primary rounded-2xl px-8 h-12 flex-1 lg:flex-none font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+                            BẬT THÔNG BÁO NGAY
+                        </button>
+                        <button onclick="document.getElementById('push-notification-cta').remove(); sessionStorage.setItem('dismissed_push_cta', 'true')" 
+                                class="btn btn-ghost btn-square rounded-xl opacity-40 hover:opacity-100 hover:bg-base-200">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(async () => {
+                if (typeof checkNotificationStatus === 'function') {
+                    const status = checkNotificationStatus();
+                    const dismissed = sessionStorage.getItem('dismissed_push_cta');
+                    
+                    if (status !== 'granted' && !dismissed) {
+                        // Double check if not granted, or if granted but no subscription
+                        let isSubscribed = false;
+                        if ('serviceWorker' in navigator && status === 'granted') {
+                            try {
+                                const reg = await navigator.serviceWorker.ready;
+                                const sub = await reg.pushManager.getSubscription();
+                                isSubscribed = !!sub;
+                            } catch(e) {}
+                        }
+                        
+                        if (!isSubscribed) {
+                            document.getElementById('push-notification-cta').classList.remove('hidden');
+                        }
+                    }
+                }
+            }, 1000);
+        });
+        </script>
+        <?php endif; ?>
+
+        <?php if($is_logged_in): ?>
         <!-- My Documents Section -->
         <section class="mb-16">
             <div class="flex items-center justify-between mb-8">
@@ -358,14 +419,14 @@ if(isset($_GET['download']) && $is_logged_in) {
                             <!-- Actions Hover Overlay -->
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                                 <a href="view?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                    <i class="fa-solid fa-eye text-lg"></i>
+                                    <i class="fa-solid fa-eye text-lg text-white"></i>
                                 </a>
                                 <a href="edit-document?id=<?= $doc_id ?>" class="btn btn-info btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
-                                    <i class="fa-solid fa-pen-to-square text-lg"></i>
+                                    <i class="fa-solid fa-pen-to-square text-lg text-white"></i>
                                 </a>
                                 <button onclick="vsdConfirm({title: 'Xóa tài liệu', message: 'Hành động này không thể hoàn tác. Bạn chắc chứ?', type: 'error', onConfirm: () => window.location.href='dashboard?delete=<?= $doc_id ?>'})" 
                                         class="btn btn-error btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
-                                    <i class="fa-solid fa-trash-can text-lg"></i>
+                                    <i class="fa-solid fa-trash-can text-lg text-white"></i>
                                 </button>
                             </div>
                         </div>
@@ -524,7 +585,7 @@ if(isset($_GET['download']) && $is_logged_in) {
                             <!-- Hover Action -->
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                                 <a href="view?id=<?= $doc_id ?>" class="btn btn-primary btn-circle shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                    <i class="fa-solid fa-eye text-lg"></i>
+                                    <i class="fa-solid fa-eye text-lg text-white"></i>
                                 </a>
                             </div>
                         </div>
