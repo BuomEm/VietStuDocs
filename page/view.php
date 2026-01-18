@@ -2549,11 +2549,16 @@ include '../includes/sidebar.php';
             const speedIcon = document.getElementById('downloadSpeedIcon');
             
             if (progressBar) {
-                progressBar.value = percent;
+                if (total > 0) {
+                    progressBar.value = percent;
+                } else {
+                    // Nếu không có total, cho thanh chạy lặp (indeterminate)
+                    progressBar.removeAttribute('value');
+                }
             }
             
             if (progressPercent) {
-                progressPercent.textContent = percent + '%';
+                progressPercent.textContent = total > 0 ? percent + '%' : 'Đang nhận dữ liệu...';
             }
             
             if (downloadSpeed) {
@@ -2570,20 +2575,14 @@ include '../includes/sidebar.php';
                 const speedBadge = document.getElementById('downloadSpeedBadge');
                 if (speedIcon && speedBadge) {
                     if (speedBps >= 200 * 1024) {
-                        // Fast: >= 200 KB/s
                         speedIcon.className = 'fa-solid fa-bolt';
                         speedBadge.className = 'badge badge-success badge-sm gap-1 py-3 px-3 text-white';
-                        speedIcon.title = 'Tải nhanh';
                     } else if (speedBps >= 50 * 1024) {
-                        // Medium: >= 50 KB/s
                         speedIcon.className = 'fa-solid fa-gauge';
                         speedBadge.className = 'badge badge-warning badge-sm gap-1 py-3 px-3 text-warning-content';
-                        speedIcon.title = 'Tải trung bình';
                     } else {
-                        // Slow: < 50 KB/s
                         speedIcon.className = 'fa-solid fa-hourglass-half';
                         speedBadge.className = 'badge badge-error badge-sm gap-1 py-3 px-3 text-white';
-                        speedIcon.title = 'Tải chậm';
                     }
                 }
             }

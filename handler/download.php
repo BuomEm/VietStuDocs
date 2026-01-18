@@ -52,9 +52,7 @@ if(!$doc) {
     exit;
 }
 
-// Admin có thể tải bất kỳ document nào (bất kể trạng thái)
-// Owner có thể tải document của mình (bất kể trạng thái)
-// User khác chỉ có thể tải document đã được approve và public
+// Phân quyền tải
 if(!$is_admin && $doc['user_id'] != $user_id) {
     if($doc['status'] !== 'approved' || !$doc['is_public']) {
         http_response_code(403);
@@ -64,19 +62,10 @@ if(!$is_admin && $doc['user_id'] != $user_id) {
     }
 }
 
-// Kiểm tra quyền download
 $can_download = false;
-
-// Admin có thể tải bất kỳ document nào
-if($is_admin) {
+if($is_admin || $doc['user_id'] == $user_id) {
     $can_download = true;
-}
-// Owner có thể tải document của mình
-elseif($doc['user_id'] == $user_id) {
-    $can_download = true;
-}
-// User khác phải mua document trước
-else {
+} else {
     $can_download = canUserDownloadDocument($user_id, $doc_id);
 }
 
@@ -87,7 +76,7 @@ if(!$can_download) {
     exit;
 }
 
-// Kiểm tra file tồn tại
+// Kiểm tra file thực tế
 $file_path = UPLOAD_DIR . $doc['file_name'];
 if(!file_exists($file_path)) {
     http_response_code(404);
@@ -96,109 +85,76 @@ if(!file_exists($file_path)) {
     exit;
 }
 
-// Tăng số lượt download (chỉ tăng cho user khác, không tăng khi owner tự tải)
+// Tăng counter
 if($doc['user_id'] != $user_id) {
     incrementDocumentDownloads($doc_id);
 }
 
-// Xác định tốc độ download
-$download_speed_kbps = (int)getSetting('limit_download_speed_free', 100);
-
-// Premium users hoặc document owners có tốc độ download nhanh hơn
+// Tốc độ tải (KB/s)
+$speed_limit_kbps = (int)getSetting('limit_download_speed_free', 100);
 if($is_premium || $doc['user_id'] == $user_id || $is_admin) {
-    $download_speed_kbps = (int)getSetting('limit_download_speed_premium', 500);
+    $speed_limit_kbps = (int)getSetting('limit_download_speed_premium', 1000);
 }
 
-// Function để download file với speed limit
-function downloadFileWithSpeedLimit($file_path, $speed_limit_kbps = 100, $original_name = null) {
-    // Mở file
-    $file = fopen($file_path, 'rb');
-    if (!$file) {
-        return false;
-    }
-    
-    // Lấy kích thước file
-    $file_size = filesize($file_path);
-    
-    // Tính toán chunk size (100KB mỗi chunk)
-    $chunk_size = 100 * 1024; // 100KB
-    
-    // Tính toán delay giữa các chunk để đạt tốc độ mong muốn
-    $delay_microseconds = (($chunk_size / 1024) / $speed_limit_kbps) * 1000000;
-    
-    // Sử dụng original_name nếu có, nếu không thì dùng basename
-    $download_filename = $original_name ? $original_name : basename($file_path);
-    
-    // Đảm bảo tên file có phần mở rộng đúng (Fix lỗi tải file không có đuôi)
-    $actual_ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
-    $current_ext = strtolower(pathinfo($download_filename, PATHINFO_EXTENSION));
-    
-    if($actual_ext && $current_ext !== $actual_ext) {
-        $download_filename .= '.' . $actual_ext;
-    }
-    
-    // Xác định MIME type
-    $file_ext = $actual_ext;
-    $mime_types = [
-        'pdf' => 'application/pdf',
-        'doc' => 'application/msword',
-        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'xls' => 'application/vnd.ms-excel',
-        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'ppt' => 'application/vnd.ms-powerpoint',
-        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'txt' => 'text/plain',
-        'zip' => 'application/zip',
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'png' => 'image/png'
-    ];
-    $content_type = $mime_types[$file_ext] ?? 'application/octet-stream';
-    
-    // Gửi headers
-    header('Content-Type: ' . $content_type);
-    header('Content-Disposition: attachment; filename="' . htmlspecialchars($download_filename, ENT_QUOTES, 'UTF-8') . '"');
-    header('Content-Length: ' . $file_size);
-    header('Cache-Control: must-revalidate');
-    header('Pragma: public');
-    header('X-Content-Type-Options: nosniff');
-    
-    // Tắt output buffering
-    if (ob_get_level()) {
-        ob_end_clean();
-    }
-    
-    // Gửi file theo chunks với giới hạn tốc độ
+// --- Bắt đầu quá trình tải ---
+$file_size = filesize($file_path);
+$actual_ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+$download_filename = ($doc['original_name'] ?: basename($file_path));
+
+// Fix extension nếu thiếu
+if($actual_ext && strtolower(pathinfo($download_filename, PATHINFO_EXTENSION)) !== $actual_ext) {
+    $download_filename .= '.' . $actual_ext;
+}
+
+$mime_types = [
+    'pdf' => 'application/pdf',
+    'doc' => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls' => 'application/vnd.ms-excel',
+    'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt' => 'application/vnd.ms-powerpoint',
+    'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'txt' => 'text/plain',
+    'zip' => 'application/zip',
+    'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'
+];
+$content_type = $mime_types[$actual_ext] ?? 'application/octet-stream';
+
+// Headers chặn buffering (Fix lỗi đứng 0%)
+header('Content-Type: ' . $content_type);
+header('Content-Disposition: attachment; filename="' . htmlspecialchars($download_filename, ENT_QUOTES, 'UTF-8') . '"');
+header('Content-Length: ' . $file_size);
+header('Cache-Control: no-cache, must-revalidate');
+header('Pragma: no-cache');
+header('X-Accel-Buffering: no'); 
+header('Content-Encoding: identity');
+header('X-Content-Type-Options: nosniff');
+
+// Tắt output buffering
+while (ob_get_level()) ob_end_clean();
+
+$file = fopen($file_path, 'rb');
+if ($file) {
+    $chunk_size = 8 * 1024; // 8KB mỗi chunk giúp progress bar chạy mượt
     $bytes_sent = 0;
+    
+    // Tính delay cho mỗi 8KB dựa trên giới hạn KB/s
+    // Formula: (chunk_size_in_kb / speed_limit_kbps) * 1,000,000 microseconds
+    $delay_per_chunk = (($chunk_size / 1024) / $speed_limit_kbps) * 1000000;
+
     while (!feof($file) && $bytes_sent < $file_size) {
-        // Kiểm tra client có ngắt kết nối không
-        if (connection_aborted()) {
-            break;
-        }
+        if (connection_aborted()) break;
         
-        // Đọc chunk
         $chunk = fread($file, $chunk_size);
-        if ($chunk === false) {
-            break;
-        }
-        
-        // Gửi chunk
         echo $chunk;
         flush();
         
-        // Cập nhật số byte đã gửi
         $bytes_sent += strlen($chunk);
         
-        // Áp dụng delay để giới hạn tốc độ (trừ chunk cuối)
-        if ($bytes_sent < $file_size && $delay_microseconds > 0) {
-            usleep($delay_microseconds);
+        if ($bytes_sent < $file_size) {
+            usleep($delay_per_chunk);
         }
     }
-    
     fclose($file);
-    return true;
 }
-
-// Download file
-downloadFileWithSpeedLimit($file_path, $download_speed_kbps, $doc['original_name']);
 exit;
