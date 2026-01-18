@@ -70,9 +70,23 @@ require_once __DIR__ . '/../includes/admin-header.php';
     </div>
 
     <!-- Stats & Filters Info -->
-    <div class="mb-8 flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-        <i class="fa-solid fa-list-ul text-primary"></i>
-        <span>Danh sách: <?= count($withdrawals) ?> yêu cầu <?= $status_filter ?></span>
+    <div class="mb-4">
+        <?php if (isset($_SESSION['flash_message'])): ?>
+            <div class="alert alert-<?= $_SESSION['flash_type'] === 'success' ? 'success' : 'error' ?> mb-6 shadow-lg border-none rounded-2xl animate-fade-in">
+                <i class="fa-solid fa-<?= $_SESSION['flash_type'] === 'success' ? 'circle-check' : 'circle-exclamation' ?> text-lg"></i>
+                <span class="font-bold"><?= $_SESSION['flash_message'] ?></span>
+                <button class="btn btn-ghost btn-xs btn-circle ml-auto" onclick="this.parentElement.remove()">✕</button>
+            </div>
+            <?php 
+            unset($_SESSION['flash_message']);
+            unset($_SESSION['flash_type']);
+            ?>
+        <?php endif; ?>
+
+        <div class="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <i class="fa-solid fa-list-ul text-primary"></i>
+            <span>Danh sách: <?= count($withdrawals) ?> yêu cầu <?= $status_filter ?></span>
+        </div>
     </div>
 
     <?php if (empty($withdrawals)): ?>
@@ -150,9 +164,9 @@ require_once __DIR__ . '/../includes/admin-header.php';
                         </div>
 
                         <?php if ($w['status'] === 'pending'): ?>
-                            <form method="POST" class="space-y-4 pt-4 border-t border-white/5" onsubmit="return handleWithdrawalSubmit(this)">
+                            <form method="POST" class="space-y-4 pt-4 border-t border-white/5" onsubmit="return handleWithdrawalSubmit(this, event)">
                                 <input type="hidden" name="request_id" value="<?= $w['id'] ?>">
-                                <input type="hidden" name="action" id="action_input_<?= $w['id'] ?>" value="">
+                                <input type="hidden" name="action" value="">
                                 
                                 <div class="relative">
                                     <textarea name="admin_note" rows="2" 
@@ -161,10 +175,10 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                 </div>
                                 
                                 <div class="flex gap-3">
-                                    <button type="submit" onclick="setAction('approve', <?= $w['id'] ?>)" class="flex-1 h-12 bg-success text-success-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-success/10">
+                                    <button type="submit" name="action" value="approve" class="flex-1 h-12 bg-success text-success-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-success/10">
                                         <i class="fa-solid fa-check mr-2"></i> Duyệt & Trả
                                     </button>
-                                    <button type="submit" onclick="setAction('reject', <?= $w['id'] ?>)" class="flex-1 h-12 bg-error text-error-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-error/10">
+                                    <button type="submit" name="action" value="reject" class="flex-1 h-12 bg-error text-error-content hover:scale-105 active:scale-95 rounded-2xl font-black text-[10px] uppercase tracking-tighter transition-all shadow-lg shadow-error/10">
                                         <i class="fa-solid fa-xmark mr-2"></i> Từ chối
                                     </button>
                                 </div>
@@ -197,12 +211,13 @@ require_once __DIR__ . '/../includes/admin-header.php';
 </div>
 
 <script>
-function setAction(action, id) {
-    document.getElementById('action_input_' + id).value = action;
-}
-
-function handleWithdrawalSubmit(form) {
-    const action = form.querySelector('input[name="action"]').value;
+function handleWithdrawalSubmit(form, event) {
+    const action = event.submitter ? event.submitter.value : '';
+    if (!action) return false;
+    
+    // Set hidden action field to ensure it's sent even if button is disabled by global handler
+    form.querySelector('input[name="action"]').value = action;
+    
     const actionText = action === 'approve' ? 'DUYỆT và CHUYỂN TIỀN' : 'TỪ CHỐI';
     return confirm(`Bạn có chắc chắn muốn ${actionText} yêu cầu rút tiền này?`);
 }

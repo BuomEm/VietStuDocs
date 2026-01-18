@@ -938,109 +938,95 @@ function requestWithdrawal($tutor_id, $points, $bank_info) {
  * Admin: Approve a withdrawal request
  */
 function approveWithdrawal($request_id, $admin_id, $note = '') {
-    $pdo = getTutorDBConnection();
+    $request_id = intval($request_id);
+    $admin_id = intval($admin_id);
+    $note = db_escape($note);
     
-    $stmt = $pdo->prepare("SELECT * FROM withdrawal_requests WHERE id = ?");
-    $stmt->execute([$request_id]);
-    $request = $stmt->fetch();
+    $request = db_get_row("SELECT * FROM withdrawal_requests WHERE id = $request_id");
     
     if (!$request || $request['status'] !== 'pending') {
         return ['success' => false, 'message' => 'Yêu cầu không hợp lệ hoặc đã xử lý.'];
     }
     
-    try {
-        $pdo->beginTransaction();
-        
-        // 1. Update request status
-        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'approved', admin_id = ?, admin_note = ?, processed_at = NOW() WHERE id = ?");
-        $stmt->execute([$admin_id, $note, $request_id]);
-        
-        // 2. Settle the transaction (mark as settled and remove from locked)
-        $points = $request['points'];
-        $user_id = $request['user_id'];
-        $tx_id = $request['transaction_id'];
-        
-        // Mark transaction as settled
-        db_query("UPDATE point_transactions SET status = 'settled' WHERE id = $tx_id");
-        
-        // Finalize point deduction (points were already removed from current_points but added to locked_points)
-        db_query("UPDATE user_points SET 
-                  locked_points = locked_points - $points, 
-                  total_spent = total_spent + $points 
-                  WHERE user_id = $user_id");
-        
-        $pdo->commit();
-        
-        // Notify Tutor
-        global $VSD;
-        $VSD->insert('notifications', [
-            'user_id' => $user_id,
-            'title' => 'Rút tiền đã được duyệt',
-            'message' => "Yêu cầu rút " . number_format($request['amount_vnd']) . "đ đã được phê duyệt.",
-            'type' => 'withdrawal_approved',
-            'ref_id' => $request_id
-        ]);
-        
-        return ['success' => true, 'message' => 'Đã duyệt yêu cầu rút tiền thành công.'];
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    // 1. Update request status
+    $sql_status = "UPDATE withdrawal_requests SET status = 'approved', admin_id = $admin_id, admin_note = '$note', processed_at = NOW() WHERE id = $request_id";
+    if (!db_query($sql_status)) {
+        return ['success' => false, 'message' => 'Lỗi cập nhật yêu cầu: ' . db_error()];
     }
+    
+    // 2. Settle the transaction
+    $points = intval($request['points']);
+    $user_id = intval($request['user_id']);
+    $tx_id = intval($request['transaction_id']);
+    
+    // Mark transaction as settled
+    db_query("UPDATE point_transactions SET status = 'settled' WHERE id = $tx_id");
+    
+    // Finalize point deduction
+    db_query("UPDATE user_points SET 
+              locked_points = locked_points - $points, 
+              total_spent = total_spent + $points 
+              WHERE user_id = $user_id");
+    
+    // Notify Tutor
+    global $VSD;
+    $VSD->insert('notifications', [
+        'user_id' => $user_id,
+        'title' => 'Rút tiền đã được duyệt',
+        'message' => "Yêu cầu rút " . number_format($request['amount_vnd']) . "đ đã được phê duyệt.",
+        'type' => 'withdrawal_approved',
+        'ref_id' => $request_id
+    ]);
+    
+    return ['success' => true, 'message' => 'Đã duyệt yêu cầu rút tiền thành công.'];
 }
 
 /**
  * Admin: Reject a withdrawal request
  */
 function rejectWithdrawal($request_id, $admin_id, $reason = '') {
-    $pdo = getTutorDBConnection();
+    $request_id = intval($request_id);
+    $admin_id = intval($admin_id);
+    $reason = db_escape($reason);
     
-    $stmt = $pdo->prepare("SELECT * FROM withdrawal_requests WHERE id = ?");
-    $stmt->execute([$request_id]);
-    $request = $stmt->fetch();
+    $request = db_get_row("SELECT * FROM withdrawal_requests WHERE id = $request_id");
     
     if (!$request || $request['status'] !== 'pending') {
         return ['success' => false, 'message' => 'Yêu cầu không hợp lệ hoặc đã xử lý.'];
     }
     
-    try {
-        $pdo->beginTransaction();
-        
-        // 1. Update request status
-        $stmt = $pdo->prepare("UPDATE withdrawal_requests SET status = 'rejected', admin_id = ?, admin_note = ?, processed_at = NOW() WHERE id = ?");
-        $stmt->execute([$admin_id, $reason, $request_id]);
-        
-        // 2. Refund points to tutor
-        $points = $request['points'];
-        $user_id = $request['user_id'];
-        $tx_id = $request['transaction_id'];
-        
-        // Mark transaction as refunded
-        db_query("UPDATE point_transactions SET status = 'refunded', rejection_reason = '" . db_escape($reason) . "' WHERE id = $tx_id");
-        
-        // Return points to Topup and remove from Locked
-        db_query("UPDATE user_points SET 
-                  current_points = current_points + $points, 
-                  topup_points = topup_points + $points, 
-                  locked_points = locked_points - $points 
-                  WHERE user_id = $user_id");
-        
-        $pdo->commit();
-        
-        // Notify Tutor
-        global $VSD;
-        $VSD->insert('notifications', [
-            'user_id' => $user_id,
-            'title' => 'Rút tiền bị từ chối',
-            'message' => "Yêu cầu rút tiền của bạn bị từ chối. Lý do: $reason",
-            'type' => 'withdrawal_rejected',
-            'ref_id' => $request_id
-        ]);
-        
-        return ['success' => true, 'message' => 'Đã từ chối yêu cầu rút tiền. Điểm đã được hoàn lại cho gia sư.'];
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+    // 1. Update request status
+    $sql_status = "UPDATE withdrawal_requests SET status = 'rejected', admin_id = $admin_id, admin_note = '$reason', processed_at = NOW() WHERE id = $request_id";
+    if (!db_query($sql_status)) {
+        return ['success' => false, 'message' => 'Lỗi từ chối yêu cầu: ' . db_error()];
     }
+    
+    // 2. Refund points to tutor
+    $points = intval($request['points']);
+    $user_id = intval($request['user_id']);
+    $tx_id = intval($request['transaction_id']);
+    
+    // Mark transaction as refunded
+    db_query("UPDATE point_transactions SET status = 'refunded', rejection_reason = '$reason' WHERE id = $tx_id");
+    
+    // Return points to Topup and remove from Locked
+    db_query("UPDATE user_points SET 
+              current_points = current_points + $points, 
+              topup_points = topup_points + $points, 
+              locked_points = locked_points - $points 
+              WHERE user_id = $user_id");
+    
+    // Notify Tutor
+    global $VSD;
+    $VSD->insert('notifications', [
+        'user_id' => $user_id,
+        'title' => 'Rút tiền bị từ chối',
+        'message' => "Yêu cầu rút tiền của bạn bị từ chối. Lý do: $reason",
+        'type' => 'withdrawal_rejected',
+        'ref_id' => $request_id
+    ]);
+    
+    return ['success' => true, 'message' => 'Đã từ chối yêu cầu rút tiền. Điểm đã được hoàn lại cho gia sư.'];
 }
 
 /**
