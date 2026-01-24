@@ -111,6 +111,21 @@ $doc = $doc_check;
 $file_path = UPLOAD_DIR . $doc['file_name'];
 $file_ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
 
+// Calc PDF path for preview
+$pdf_path_js = null;
+if ($file_ext === 'pdf') {
+    $pdf_path_js = '../handler/file.php?doc_id=' . $doc_id;
+} elseif (in_array($file_ext, ['docx', 'doc'])) {
+    $converted_path = $doc['converted_pdf_path'] ?? '';
+    if (!empty($converted_path) && file_exists($converted_path)) {
+        if (strpos($converted_path, '../uploads/') === 0 || strpos($converted_path, '\\uploads\\') !== false) {
+             $pdf_path_js = '../handler/file.php?doc_id=' . $doc_id;
+        } else {
+             $pdf_path_js = $converted_path;
+        }
+    }
+}
+
 // Increment view count (only once per session)
 if (!hasViewedInSession($doc_id)) {
     incrementDocumentViews($doc_id);
@@ -128,6 +143,13 @@ if($user_id) {
     // Non-logged in users can only view preview (limited pages)
     // They must login and purchase to view full content
     $has_purchased = false;
+}
+
+// Load active emojis for comments
+$active_emojis = $VSD->get_results("SELECT name, file_path, shortcode FROM emojis WHERE is_active = 1") ?: [];
+$emoji_map = [];
+foreach($active_emojis as $e) {
+    $emoji_map[$e['name']] = $e['file_path'];
 }
 
 if(!file_exists($file_path)) {
@@ -169,59 +191,65 @@ if(!file_exists($file_path)) {
     exit;
 }
 
-// Handle actions (like, dislike, report, save)
-if($_SERVER["REQUEST_METHOD"] == "POST" && $is_logged_in) {
-    $action = $_POST['action'] ?? '';
-    
-    if($action === 'like' || $action === 'dislike') {
-        // Toggle like/dislike
-        $existing = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='$action'");
-        
-        if($existing) {
-            $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
-        } else {
-            // Remove opposite reaction if exists
-            $VSD->query("DELETE FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')");
-            // Add new reaction
-            $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, '$action')");
-        }
-        
-        // Return updated stats
-        $new_likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
-        $new_dislikes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='dislike'") ?: 0);
-        $curr_reaction = $VSD->get_row("SELECT type FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type IN ('like', 'dislike')");
-        
-        echo json_encode([
-            'success' => true, 
-            'likes' => $new_likes, 
-            'dislikes' => $new_dislikes,
-            'user_reaction' => $curr_reaction['type'] ?? null
-        ]);
-        exit;
-    }
-    
-    if($action === 'save') {
-        // Toggle save
-        $existing = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id=$doc_id AND user_id=$user_id AND type='save'");
-        
-        if($existing) {
-            $VSD->query("DELETE FROM document_interactions WHERE id={$existing['id']}");
-            $saved = false;
-        } else {
-            $VSD->query("INSERT INTO document_interactions (document_id, user_id, type) VALUES ($doc_id, $user_id, 'save')");
-            $saved = true;
-        }
-        echo json_encode(['success' => true, 'saved' => $saved]);
-        exit;
-    }
-    
-    if($action === 'report') {
-        $reason = $VSD->escape($_POST['reason'] ?? 'Inappropriate content');
-        $VSD->query("INSERT INTO document_reports (document_id, user_id, reason) VALUES ($doc_id, $user_id, '$reason')");
-        echo json_encode(['success' => true, 'message' => 'Report submitted']);
-        exit;
+// Handle actions (like, dislike, report, save, comments)
+handleViewDocumentActions($VSD, $doc_id, $user_id, $doc);
+
+// Get comments with extra info
+$all_comments = $VSD->get_list("
+    SELECT c.*, u.username, u.avatar,
+    (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as like_count,
+    " . ($is_logged_in ? "(SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id AND user_id = $user_id)" : "0") . " as liked_by_user
+    FROM document_comments c 
+    JOIN users u ON c.user_id = u.id 
+    WHERE c.document_id = $doc_id 
+    ORDER BY c.is_pinned DESC, c.created_at DESC
+");
+
+// Organize comments into threading (simple Parent -> Children array)
+$comments_tree = [];
+$comments_map = [];
+
+// Initialize
+foreach ($all_comments as $c) {
+    if (!$c['parent_id']) {
+        $c['replies'] = [];
+        $comments_map[$c['id']] = $c;
     }
 }
+
+// Map replies specifically to top-level parents for 1-level nesting (or general nesting)
+// Note: SQL ORDER BY DESC puts newest first. For replies, usually we want oldest first? Or newest. Let's keep newest first.
+foreach ($all_comments as $c) {
+    if ($c['parent_id']) {
+        if (isset($comments_map[$c['parent_id']])) {
+            $comments_map[$c['parent_id']]['replies'][] = $c;
+        }
+    }
+}
+// Note: This simple logic only works if parent comes before child or we iterate twice. 
+// Since we fetch all, better to do two passes or filter.
+// Robust way:
+$root_comments = [];
+$reply_comments = [];
+foreach ($all_comments as $c) {
+    if ($c['parent_id']) {
+        $reply_comments[] = $c;
+    } else {
+        $root_comments[$c['id']] = $c;
+        $root_comments[$c['id']]['replies'] = [];
+    }
+}
+// Reverse replies to show oldest first? Or keep DESC for newest first. Usually replies are chronological? 
+// Let's stick to DESC (newest at top) for now as query does.
+foreach ($reply_comments as $c) {
+    if (isset($root_comments[$c['parent_id']])) {
+        // Prepend or append. Query is DESC, so first item is newest. 
+        // If we want replies newest at top: append.
+        $root_comments[$c['parent_id']]['replies'][] = $c;
+    }
+}
+$comments = $root_comments; // Replace the flat list with tree
+
 
 // Get interaction stats
 $likes = intval($VSD->num_rows("SELECT * FROM document_interactions WHERE document_id=$doc_id AND type='like'") ?: 0);
@@ -377,591 +405,24 @@ include '../includes/sidebar.php';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.4/dist/docx-preview.min.js"></script>
     
-<style>
-    :root {
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.2);
-        --primary-gradient: linear-gradient(135deg, oklch(var(--p)) 0%, oklch(var(--p) / 0.8) 100%);
-    }
-    
-    [data-theme="dark"] {
-        --glass-bg: rgba(15, 23, 42, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.1);
-    }
+<link rel="stylesheet" href="../css/pages/view.css">
 
-    .view-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 40px 24px;
-    }
-
-    /* Document Header Premium */
-    .view-header-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 2.5rem;
-        padding: 40px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
-        margin-bottom: 32px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .view-header-card::before {
-        content: '';
-        position: absolute;
-        top: -100px;
-        right: -100px;
-        width: 300px;
-        height: 300px;
-        background: oklch(var(--p) / 0.03);
-        border-radius: 50%;
-        filter: blur(60px);
-    }
-
-    .view-title {
-        font-size: 2.25rem;
-        font-weight: 900;
-        color: oklch(var(--bc));
-        letter-spacing: -0.04em;
-        line-height: 1.1;
-        margin-bottom: 24px;
-    }
-
-    .view-meta-row {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 24px;
-        margin-bottom: 32px;
-    }
-
-    .user-badge-premium {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: oklch(var(--b2) / 0.5);
-        padding: 8px 20px 8px 8px;
-        border-radius: 1.25rem;
-        border: 1px solid oklch(var(--bc) / 0.05);
-        transition: all 0.3s ease;
-    }
-
-    .user-badge-premium:hover {
-        background: oklch(var(--b2));
-        transform: translateY(-2px);
-    }
-
-    .user-avatar-vsd {
-        width: 36px;
-        height: 36px;
-        border-radius: 12px;
-        background: oklch(var(--p) / 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-    }
-
-    .meta-item-vsd {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        font-weight: 900;
-        color: oklch(var(--bc) / 0.4);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-    }
-
-    /* Premium Status Badge */
-    .status-badge-premium {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
-        border-radius: 100px;
-        font-size: 10px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        background: linear-gradient(135deg, oklch(var(--s)) 0%, oklch(var(--s) / 0.8) 100%);
-        color: white;
-        box-shadow: 0 10px 20px -5px oklch(var(--s) / 0.3);
-        border: 1px solid oklch(var(--s) / 0.2);
-        animation: pulseFade 2s infinite;
-    }
-
-    .status-badge-owner {
-        background: linear-gradient(135deg, oklch(var(--p)) 0%, oklch(var(--p) / 0.8) 100%);
-        box-shadow: 0 10px 20px -5px oklch(var(--p) / 0.3);
-        border: 1px solid oklch(var(--p) / 0.2);
-    }
-
-    @keyframes pulseFade {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.9; transform: scale(0.98); }
-    }
-
-    .actions-bar-vsd {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
-        padding-top: 32px;
-        border-top: 1px solid oklch(var(--bc) / 0.05);
-    }
-
-    .btn-vsd {
-        height: 48px;
-        padding: 0 24px;
-        border-radius: 1rem;
-        font-weight: 900;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-        cursor: pointer;
-        border: 1px solid transparent;
-    }
-
-    .btn-vsd-primary {
-        background: oklch(var(--p));
-        color: oklch(var(--pc));
-        box-shadow: 0 10px 15px -3px oklch(var(--p) / 0.2);
-    }
-
-    .btn-vsd-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px oklch(var(--p) / 0.3);
-    }
-
-    .btn-vsd-secondary {
-        background: oklch(var(--b2) / 0.5);
-        color: oklch(var(--bc));
-        border-color: oklch(var(--bc) / 0.05);
-    }
-
-    .btn-vsd-secondary:hover {
-        background: oklch(var(--b2));
-        border-color: oklch(var(--bc) / 0.1);
-        transform: translateY(-1px);
-    }
-
-    .btn-vsd-ghost {
-        background: transparent;
-        color: oklch(var(--bc) / 0.5);
-    }
-
-    .btn-vsd-ghost:hover {
-        background: oklch(var(--bc) / 0.05);
-        color: oklch(var(--bc));
-    }
-
-    .reaction-group {
-        display: flex;
-        gap: 8px;
-        background: oklch(var(--b2) / 0.3);
-        padding: 6px;
-        border-radius: 1.25rem;
-        border: 1px solid oklch(var(--bc) / 0.05);
-    }
-
-    /* PDF Viewer Premium */
-    .viewer-card-vsd {
-        background: oklch(var(--b1));
-        border-radius: 3rem;
-        border: 1px solid oklch(var(--bc) / 0.05);
-        padding: 40px;
-        margin-bottom: 40px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .pdf-viewer {
-        width: 100%;
-        height: 190vh;
-        background: oklch(var(--b2) / 0.5);
-        border-radius: 2rem;
-        overflow-y: auto;
-        padding: 40px;
-        position: relative;
-        scrollbar-gutter: stable;
-    }
-
-    .pdf-page-container {
-        margin: 0 auto 40px auto;
-        background: white;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        border-radius: 1rem;
-        overflow: hidden;
-        transition: transform 0.3s ease;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* @media (hover: hover) {
-        .pdf-page-container:hover {
-            transform: scale(1.01);
-        }
-    } */
-
-    .pdf-page-counter {
-        position: absolute;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%) translateY(20px);
-        background: rgba(15, 23, 42, 0.9);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        color: white;
-        padding: 10px 24px;
-        border-radius: 2rem;
-        font-size: 0.75rem;
-        font-weight: 900;
-        letter-spacing: 0.15em;
-        z-index: 100;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
-        opacity: 0;
-        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-        border: 1px solid rgba(255,255,255,0.1);
-        pointer-events: none;
-    }
-
-    .pdf-page-counter.active {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-
-    #currentPageNum {
-        color: oklch(var(--p));
-        font-size: 0.85rem;
-    }
-
-    /* Info Section Grid */
-    .info-grid-vsd {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 32px;
-        margin-bottom: 40px;
-    }
-
-    .info-card-premium {
-        background: var(--glass-bg);
-        border-radius: 2.5rem;
-        border: 1px solid var(--glass-border);
-        padding: 32px;
-    }
-
-    .info-card-title-vsd {
-        font-size: 1.25rem;
-        font-weight: 900;
-        color: oklch(var(--bc));
-        letter-spacing: -0.02em;
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .info-card-title-vsd i {
-        color: oklch(var(--p));
-    }
-
-    /* Categories Styling */
-    .cat-group-vsd {
-        margin-bottom: 24px;
-    }
-
-    .cat-label-vsd {
-        font-size: 0.7rem;
-        font-weight: 900;
-        color: oklch(var(--bc) / 0.3);
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        margin-bottom: 12px;
-        display: block;
-    }
-
-    .cat-tag-vsd {
-        display: inline-flex;
-        padding: 8px 20px;
-        background: oklch(var(--p) / 0.05);
-        color: oklch(var(--p));
-        border-radius: 2rem;
-        font-size: 11px;
-        font-weight: 900;
-        border: 1px solid oklch(var(--p) / 0.1);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    /* Watermark Protection */
-    .protected {
-        user-select: none;
-        -webkit-user-select: none;
-    }
-
-    .watermark-overlay {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        z-index: 50;
-        background-image: repeating-linear-gradient(45deg, transparent, transparent 150px, rgba(0,0,0,0.02) 150px, rgba(0,0,0,0.02) 300px);
-    }
-    
-    .watermark-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-30deg);
-        font-size: 5rem;
-        font-weight: 900;
-        color: rgba(0,0,0,0.1);
-        white-space: nowrap;
-        pointer-events: none;
-    }
-
-    /* Additional Viewer Styles */
-    .image-viewer {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: oklch(var(--b2) / 0.3);
-        min-height: 500px;
-        border-radius: 2rem;
-    }
-    
-    .image-viewer img {
-        max-width: 100%;
-        max-height: 100%;
-        border-radius: 1rem;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-    }
-    
-    .text-viewer {
-        padding: 40px;
-        background: white;
-        border-radius: 2rem;
-        overflow-y: auto;
-        max-height: 800px;
-    }
-    
-    .text-viewer pre {
-        font-family: 'Courier New', monospace;
-        font-size: 13px;
-        line-height: 1.8;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        color: #334155;
-    }
-
-    .docx-viewer {
-        width: 100%;
-        padding: 40px;
-        background: oklch(var(--b2) / 0.3);
-        border-radius: 2rem;
-        min-height: 500px;
-    }
-
-    .page-loader {
-        transition: opacity 0.3s ease;
-    }
-
-    /* Download Queue Widget Premium */
-    .download-queue-widget {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 9999;
-        min-width: 320px;
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 1.5rem;
-        padding: 24px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
-        transform: translateY(120%);
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-        pointer-events: none;
-        opacity: 0;
-    }
-
-    .download-queue-widget.show {
-        transform: translateY(0);
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .download-queue-widget .progress {
-        height: 8px;
-        border-radius: 4px;
-        background: oklch(var(--b3));
-    }
-
-    /* Loading Overlay */
-    /* Purchase Banner Premium */
-    .preview-banner-vsd {
-        background: oklch(var(--b1));
-        border: 1px solid oklch(var(--p) / 0.1);
-        border-radius: 2rem;
-        padding: 24px 32px;
-        margin-bottom: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        box-shadow: 0 20px 40px -15px oklch(var(--p) / 0.1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .preview-banner-vsd::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 6px;
-        height: 100%;
-        background: oklch(var(--p));
-    }
-
-    .preview-banner-info {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .preview-icon-box {
-        width: 56px;
-        height: 56px;
-        background: oklch(var(--p) / 0.1);
-        border-radius: 1.25rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: oklch(var(--p));
-        flex-shrink: 0;
-    }
-
-    .preview-text h3 {
-        font-size: 1.15rem;
-        font-weight: 900;
-        color: oklch(var(--bc));
-        margin-bottom: 4px;
-    }
-
-    .preview-text p {
-        font-size: 0.85rem;
-        color: oklch(var(--bc) / 0.6);
-        font-weight: 500;
-    }
-
-    .preview-price-area {
-        display: flex;
-        align-items: center;
-        gap: 24px;
-    }
-
-    .price-value-vsd {
-        text-align: right;
-    }
-
-    .price-num-vsd {
-        font-size: 1.5rem;
-        font-weight: 1000;
-        color: oklch(var(--p));
-        display: block;
-        line-height: 1;
-    }
-
-    .price-txt-vsd {
-        font-size: 10px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        opacity: 0.4;
-    }
-
-    @media (max-width: 768px) {
-        .preview-banner-vsd {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 20px;
-        }
-        .preview-price-area {
-            justify-content: space-between;
-            padding-top: 20px;
-            border-top: 1px solid oklch(var(--bc) / 0.05);
-        }
-        .price-value-vsd {
-            text-align: left;
-        }
-    }
-
-    .vsd-loading-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        color: white;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .vsd-loading-overlay.active {
-        display: flex;
-    }
-
-    /* Hide scrollbars for modal-box */
-    .modal-box {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
-    }
-    .modal-box::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
-    }
-
-    @media (max-width: 1024px) {
-        .info-grid-vsd {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    @media (max-width: 640px) {
-        .view-header-card {
-            padding: 24px;
-            border-radius: 1.5rem;
-        }
-        .view-title {
-            font-size: 1.5rem;
-        }
-        .pdf-viewer {
-            height: 100vh;
-            padding: 15px;
-        }
-    }
-</style>
+<script>
+    const VSD_CONFIG = {
+        isLoggedIn: <?= $is_logged_in ? 'true' : 'false' ?>,
+        user_id: <?= $user_id ? $user_id : 'null' ?>,
+        docId: <?= $doc_id ?>,
+        price: <?= $doc['price'] ?? 0 ?>,
+        hasPurchased: <?= $has_purchased ? 'true' : 'false' ?>,
+        originalName: <?= json_encode($doc['original_name']) ?>,
+        totalPages: <?= $doc['total_pages'] ?? 0 ?>,
+        hasThumbnail: <?= !empty($doc['thumbnail']) ? 'true' : 'false' ?>,
+        limitPreviewPages: <?= (int)getSetting('limit_preview_pages', 5) ?>,
+        fileExt: '<?= $file_ext ?>',
+        pdfPath: <?= $pdf_path_js ? '"' . htmlspecialchars($pdf_path_js, ENT_QUOTES, 'UTF-8') . '"' : 'null' ?>,
+        emojiMap: <?= json_encode($emoji_map) ?>
+    };
+</script>
 <div class="drawer-content flex flex-col">
     <?php include '../includes/navbar.php'; ?>
     <main class="flex-1 p-6">
@@ -1131,6 +592,7 @@ include '../includes/sidebar.php';
                     <span class="text-sm italic opacity-50">Chưa có thông tin phân loại.</span>
                 <?php endif; ?>
             </div>
+            </div>
         </div>
 
         <!-- Viewer Section -->
@@ -1243,6 +705,306 @@ include '../includes/sidebar.php';
                     <div class="watermark-text"><?= htmlspecialchars(strtoupper($site_name)) ?> - BẢN QUYỀN</div>
                 </div>
             <?php endif; ?>
+        </div>
+
+        <!-- Comment Section -->
+        <div class="comment-section-vsd">
+            <h3 class="info-card-title-vsd mb-6">
+                <i class="fa-solid fa-comments"></i> BÌNH LUẬN (<span id="commentCount"><?= count($all_comments) ?></span>)
+            </h3>
+            
+            <?php if($is_logged_in): ?>
+                <div class="flex gap-4 mb-8">
+                    <div class="shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                            <?php 
+                            $curr_user = $VSD->get_row("SELECT avatar FROM users WHERE id = $user_id");
+                            if(!empty($curr_user['avatar']) && file_exists('../uploads/avatars/' . $curr_user['avatar'])): 
+                            ?>
+                                <img src="../uploads/avatars/<?= $curr_user['avatar'] ?>" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <i class="fa-solid fa-user text-primary text-sm"></i>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative">
+                        <div class="comment-input-wrapper relative flex items-center bg-base-200/50 rounded-[2rem] border border-base-content/10 px-2 py-1 transition-all focus-within:bg-base-100 focus-within:border-primary/50 focus-within:shadow-lg focus-within:shadow-primary/5">
+                            <textarea id="commentContent" class="textarea textarea-ghost bg-transparent border-none outline-none focus:bg-transparent shadow-none w-full text-sm resize-none min-h-[44px] py-3 pl-4 leading-tight placeholder:text-base-content/40" placeholder="Bạn thấy tài liệu này thế nào?" rows="1" oninput="updateCommentUI(this)"></textarea>
+                            
+                            <div class="flex items-center gap-2 pr-1 shrink-0">
+                                <button onclick="toggleEmojiPicker('commentContent')" class="btn btn-circle btn-ghost btn-sm h-9 w-9 text-base-content/60 hover:text-primary hover:bg-base-content/5 transition-colors" title="Chèn Emoji">
+                                    <i class="fa-regular fa-face-smile text-lg"></i>
+                                </button>
+                                
+                                <button onclick="handlePostComment()" class="btn btn-circle btn-primary btn-sm h-9 w-9 text-white shadow-md shadow-primary/30 grid place-items-center transition-all" id="postCommentBtn">
+    <i class="fa-solid fa-paper-plane text-xs pr-0.5 pt-px"></i>
+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="bg-base-200/50 rounded-2xl p-6 text-center mb-8 border border-base-content/5">
+                    <p class="text-base-content/60 text-sm mb-3">Vui lòng đăng nhập để tham gia thảo luận</p>
+                    <a href="/login" class="btn btn-primary btn-sm rounded-xl px-6">Đăng nhập ngay</a>
+                </div>
+            <?php endif; ?>
+
+            <div class="space-y-6" id="commentsList">
+                <?php if(empty($comments)): ?>
+                    <div id="noCommentsMsg" class="text-center py-10 opacity-50">
+                        <i class="fa-regular fa-comments text-4xl mb-3"></i>
+                        <p>Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach($comments as $comment): ?>
+                        <div class="comment-item" id="comment-<?= $comment['id'] ?>">
+                            <div class="flex gap-4">
+                                <div class="shrink-0">
+                                    <div class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+                                        <?php if(!empty($comment['avatar']) && file_exists('../uploads/avatars/' . $comment['avatar'])): ?>
+                                            <img src="../uploads/avatars/<?= $comment['avatar'] ?>" class="w-full h-full object-cover">
+                                        <?php else: ?>
+                                            <div class="bg-primary/10 w-full h-full flex items-center justify-center text-primary font-bold">
+                                                <?= strtoupper(substr($comment['username'], 0, 1)) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="flex-1 space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-sm"><?= htmlspecialchars($comment['username']) ?></span>
+                                        <?php if($comment['user_id'] == $doc['user_id']): ?>
+                                            <span class="badge badge-xs badge-primary font-bold">Tác giả</span>
+                                        <?php endif; ?>
+                                        <span class="text-xs text-base-content/50"><?= date('H:i d/m/Y', strtotime($comment['created_at'])) ?></span>
+                                        <?php if($comment['is_pinned']): ?>
+                                            <div class="badge badge-warning badge-xs gap-1 font-bold"><i class="fa-solid fa-thumbtack text-[10px]"></i> Đã ghim</div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="group relative">
+                                        <p class="text-sm text-base-content/80 leading-relaxed" id="comment-content-<?= $comment['id'] ?>"><?= render_comment_content($comment['content'], $emoji_map) ?></p>
+                                        <!-- Edit Form -->
+                                        <div id="edit-form-<?= $comment['id'] ?>" class="hidden mt-2">
+                                            <textarea id="edit-input-<?= $comment['id'] ?>" class="textarea textarea-bordered w-full text-sm min-h-[60px]"></textarea>
+                                            <div class="flex justify-end gap-2 mt-2">
+                                                <button onclick="cancelEdit('<?= $comment['id'] ?>')" class="btn btn-xs btn-ghost">Hủy</button>
+                                                <button onclick="saveEdit('<?= $comment['id'] ?>')" class="btn btn-xs btn-primary">Lưu</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action buttons -->
+                                    <div class="flex gap-4 pt-1 items-center">
+                                        <!-- Like -->
+                                        <button id="like-btn-<?= $comment['id'] ?>" onclick="likeComment('<?= $comment['id'] ?>')" class="flex items-center gap-1 text-xs font-bold transition-colors <?= $comment['liked_by_user'] ? 'text-error' : 'text-base-content/40 hover:text-error' ?>">
+                                            <i class="fa-solid fa-heart"></i>
+                                            <span id="like-count-<?= $comment['id'] ?>"><?= $comment['like_count'] > 0 ? $comment['like_count'] : '' ?></span>
+                                        </button>
+
+                                        <?php if($is_logged_in): ?>
+                                            <button class="text-xs font-bold text-base-content/40 hover:text-primary transition-colors" onclick="toggleReply('<?= $comment['id'] ?>')">Trả lời</button>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Menu Dropdown -->
+                                        <?php if($is_logged_in): ?>
+                                            <div class="dropdown dropdown-end">
+                                                <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base-content/30"><i class="fa-solid fa-ellipsis"></i></div>
+                                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-xs">
+                                                    <?php if($doc['user_id'] == $user_id): // Doc Owner Actions ?>
+                                                        <?php if($comment['is_pinned']): ?>
+                                                            <li><a onclick="actionComment('unpin', <?= $comment['id'] ?>)"><i class="fa-solid fa-thumbtack-slash"></i> Bỏ ghim</a></li>
+                                                        <?php else: ?>
+                                                            <li><a onclick="actionComment('pin', <?= $comment['id'] ?>)"><i class="fa-solid fa-thumbtack"></i> Ghim bình luận</a></li>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+
+                                                    <?php if($comment['user_id'] == $user_id): // Comment Owner Actions ?>
+                                                        <li><a onclick="startEdit('<?= $comment['id'] ?>')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</a></li>
+                                                    <?php endif; ?>
+
+                                                    <?php if($comment['user_id'] == $user_id || $doc['user_id'] == $user_id): // Delete ?>
+                                                        <li><a onclick="actionComment('delete', <?= $comment['id'] ?>)" class="text-error"><i class="fa-solid fa-trash"></i> Xóa</a></li>
+                                                    <?php endif; ?>
+
+                                                    <li><a onclick="showReportModal(<?= $comment['id'] ?>)"><i class="fa-solid fa-flag"></i> Báo cáo</a></li>
+                                                </ul>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Reply Form (Hidden) -->
+                                    <div id="reply-form-<?= $comment['id'] ?>" class="hidden mt-3 pl-4 animate-fade-in relative">
+                                        <div class="flex gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center shrink-0">
+                                                <i class="fa-solid fa-reply text-xs text-base-content/40"></i>
+                                            </div>
+                                            <div class="flex-1 relative">
+                                                <div class="comment-input-area mb-2 relative flex flex-col">
+                                                    <textarea id="reply-content-<?= $comment['id'] ?>" class="textarea textarea-ghost w-full focus:bg-transparent focus:outline-none min-h-[44px] max-h-[200px] overflow-y-auto text-sm" placeholder="Viết câu trả lời..." oninput="updateCommentUI(this)"></textarea>
+                                                    <div class="flex justify-between items-center px-3 pb-2">
+                                                        <button onclick="toggleEmojiPicker('reply-content-<?= $comment['id'] ?>')" class="vsd-emoji-btn vsd-emoji-btn-sm" title="Chèn Emoji">
+                                                            <i class="fa-regular fa-face-smile"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-end gap-2">
+                                                    <button onclick="toggleReply('<?= $comment['id'] ?>')" class="btn btn-ghost btn-xs">Hủy</button>
+                                                    <button onclick="handlePostComment('<?= $comment['id'] ?>')" class="btn btn-primary btn-xs">Gửi</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Nested Replies -->
+                            <div class="pl-14 space-y-4 mt-4" id="replies-<?= $comment['id'] ?>">
+                                <?php 
+                                $replyCount = count($comment['replies']);
+                                $visibleReplies = array_slice($comment['replies'], 0, 3);
+                                $hiddenReplies = array_slice($comment['replies'], 3);
+                                ?>
+
+                                <?php foreach($visibleReplies as $reply): ?>
+                                    <div class="flex gap-4" id="comment-<?= $reply['id'] ?>">
+                                        <div class="shrink-0">
+                                            <div class="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+                                                <?php if(!empty($reply['avatar']) && file_exists('../uploads/avatars/' . $reply['avatar'])): ?>
+                                                    <img src="../uploads/avatars/<?= $reply['avatar'] ?>" class="w-full h-full object-cover">
+                                                <?php else: ?>
+                                                    <div class="bg-primary/10 w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                                                        <?= strtoupper(substr($reply['username'], 0, 1)) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 space-y-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-sm"><?= htmlspecialchars($reply['username']) ?></span>
+                                                <?php if($reply['user_id'] == $doc['user_id']): ?>
+                                                    <span class="badge badge-xs badge-primary font-bold">Tác giả</span>
+                                                <?php endif; ?>
+                                                <span class="text-xs text-base-content/50"><?= date('H:i d/m/Y', strtotime($reply['created_at'])) ?></span>
+                                            </div>
+                                            
+                                            <div class="group relative">
+                                                <p class="text-sm text-base-content/80 leading-relaxed" id="comment-content-<?= $reply['id'] ?>"><?= render_comment_content($reply['content'], $emoji_map) ?></p>
+                                                <!-- Edit Form -->
+                                                <div id="edit-form-<?= $reply['id'] ?>" class="hidden mt-2">
+                                                    <textarea id="edit-input-<?= $reply['id'] ?>" class="textarea textarea-bordered w-full text-sm min-h-[60px]"></textarea>
+                                                    <div class="flex justify-end gap-2 mt-2">
+                                                        <button onclick="cancelEdit('<?= $reply['id'] ?>')" class="btn btn-xs btn-ghost">Hủy</button>
+                                                        <button onclick="saveEdit('<?= $reply['id'] ?>')" class="btn btn-xs btn-primary">Lưu</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Action buttons for replies -->
+                                             <div class="flex gap-4 pt-1 items-center">
+                                                 <!-- Like -->
+                                                 <button id="like-btn-<?= $reply['id'] ?>" onclick="likeComment('<?= $reply['id'] ?>')" class="flex items-center gap-1 text-xs font-bold transition-colors <?= $reply['liked_by_user'] ? 'text-error' : 'text-base-content/40 hover:text-error' ?>">
+                                                     <i class="fa-solid fa-heart"></i>
+                                                     <span id="like-count-<?= $reply['id'] ?>"><?= $reply['like_count'] > 0 ? $reply['like_count'] : '' ?></span>
+                                                 </button>
+
+                                                <!-- Menu Dropdown -->
+                                                <?php if($is_logged_in): ?>
+                                                    <div class="dropdown dropdown-end">
+                                                        <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base-content/30"><i class="fa-solid fa-ellipsis"></i></div>
+                                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-xs">
+                                                            <?php if($reply['user_id'] == $user_id): // Reply Owner Actions ?>
+                                                                <li><a onclick="startEdit('<?= $reply['id'] ?>')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</a></li>
+                                                            <?php endif; ?>
+
+                                                            <?php if($reply['user_id'] == $user_id || $doc['user_id'] == $user_id): // Delete ?>
+                                                                <li><a onclick="actionComment('delete', <?= $reply['id'] ?>)" class="text-error"><i class="fa-solid fa-trash"></i> Xóa</a></li>
+                                                            <?php endif; ?>
+
+                                                            <li><a onclick="showReportModal(<?= $reply['id'] ?>)"><i class="fa-solid fa-flag"></i> Báo cáo</a></li>
+                                                        </ul>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+
+                                <?php if($replyCount > 3): ?>
+                                    <div id="hidden-replies-<?= $comment['id'] ?>" class="hidden space-y-4">
+                                        <?php foreach($hiddenReplies as $reply): ?>
+                                            <div class="flex gap-4" id="comment-<?= $reply['id'] ?>">
+                                                <div class="shrink-0">
+                                                    <div class="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+                                                        <?php if(!empty($reply['avatar']) && file_exists('../uploads/avatars/' . $reply['avatar'])): ?>
+                                                            <img src="../uploads/avatars/<?= $reply['avatar'] ?>" class="w-full h-full object-cover">
+                                                        <?php else: ?>
+                                                            <div class="bg-primary/10 w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                                                                <?= strtoupper(substr($reply['username'], 0, 1)) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1 space-y-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-sm"><?= htmlspecialchars($reply['username']) ?></span>
+                                                <?php if($reply['user_id'] == $doc['user_id']): ?>
+                                                    <span class="badge badge-xs badge-primary font-bold">Tác giả</span>
+                                                <?php endif; ?>
+                                                <span class="text-xs text-base-content/50"><?= date('H:i d/m/Y', strtotime($reply['created_at'])) ?></span>
+                                            </div>
+                                            
+                                            <div class="group relative">
+                                                <p class="text-sm text-base-content/80 leading-relaxed" id="comment-content-<?= $reply['id'] ?>"><?= render_comment_content($reply['content'], $emoji_map) ?></p>
+                                                <!-- Edit Form -->
+                                                <div id="edit-form-<?= $reply['id'] ?>" class="hidden mt-2">
+                                                    <textarea id="edit-input-<?= $reply['id'] ?>" class="textarea textarea-bordered w-full text-sm min-h-[60px]"></textarea>
+                                                    <div class="flex justify-end gap-2 mt-2">
+                                                        <button onclick="cancelEdit('<?= $reply['id'] ?>')" class="btn btn-xs btn-ghost">Hủy</button>
+                                                        <button onclick="saveEdit('<?= $reply['id'] ?>')" class="btn btn-xs btn-primary">Lưu</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Action buttons for hidden replies -->
+                                            <div class="flex gap-4 pt-1 items-center">
+                                                <!-- Like -->
+                                                <button id="like-btn-<?= $reply['id'] ?>" onclick="likeComment('<?= $reply['id'] ?>')" class="flex items-center gap-1 text-xs font-bold transition-colors <?= $reply['liked_by_user'] ? 'text-error' : 'text-base-content/40 hover:text-error' ?>">
+                                                    <i class="fa-solid fa-heart"></i>
+                                                    <span id="like-count-<?= $reply['id'] ?>"><?= $reply['like_count'] > 0 ? $reply['like_count'] : '' ?></span>
+                                                </button>
+
+                                                <!-- Menu Dropdown -->
+                                                <?php if($is_logged_in): ?>
+                                                    <div class="dropdown dropdown-end">
+                                                        <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base-content/30"><i class="fa-solid fa-ellipsis"></i></div>
+                                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-xs">
+                                                            <?php if($reply['user_id'] == $user_id): // Reply Owner Actions ?>
+                                                                <li><a onclick="startEdit('<?= $reply['id'] ?>')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</a></li>
+                                                            <?php endif; ?>
+
+                                                            <?php if($reply['user_id'] == $user_id || $doc['user_id'] == $user_id): // Delete ?>
+                                                                <li><a onclick="actionComment('delete', <?= $reply['id'] ?>)" class="text-error"><i class="fa-solid fa-trash"></i> Xóa</a></li>
+                                                            <?php endif; ?>
+
+                                                            <li><a onclick="showReportModal(<?= $reply['id'] ?>)"><i class="fa-solid fa-flag"></i> Báo cáo</a></li>
+                                                        </ul>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <button onclick="toggleHiddenReplies('<?= $comment['id'] ?>')" id="btn-show-more-<?= $comment['id'] ?>" class="btn btn-ghost btn-xs text-primary font-bold mt-2">
+                                        Xem thêm <?= $replyCount - 3 ?> câu trả lời...
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Related Documents Sections -->
@@ -1520,1204 +1282,7 @@ include '../includes/sidebar.php';
     </dialog>
 
 
-    <script>
-        // Global PDF.js configurations
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-        }
-
-        // Track current download request
-        let currentDownloadXhr = null;
-
-        /**
-         * VSD Advanced PDF Viewer (Drive Style)
-         * High performance lazy loading with IntersectionObserver
-         */
-        class VsdPdfViewer {
-            constructor(viewerId, pdfPath, options = {}) {
-                this.viewer = document.getElementById(viewerId);
-                this.pdfPath = pdfPath;
-                this.options = {
-                    maxPreviewPages: options.maxPreviewPages || 5, // Default to 5 pages
-                    hasPurchased: options.hasPurchased || false,
-                    dprLimit: 2, // Reduced for better performance with large files
-                    rootMargin: '500px 0px', // Reduced: Pre-load ~2 pages ahead
-                    initialBatchSize: 20, // Only create first 20 placeholders initially
-                    batchSize: 10, // Load next batch of 10 pages when needed
-                    maxConcurrentRenders: 3, // Limit concurrent renders
-                    renderQueue: [],
-                    ...options
-                };
-                
-                this.pdfDoc = null;
-                this.numPages = 0;
-                this.trackObserver = null;
-                this.activePages = new Map(); // pageNum -> { renderTask, canvas }
-                this.renderingPages = new Set(); // Track pages currently rendering
-                this.pageCounter = document.getElementById('pdfPageCounter');
-                this.currentPageNumDisplay = document.getElementById('currentPageNum');
-                this.totalPagesNumDisplay = document.getElementById('totalPagesNum');
-                this.createdPlaceholders = 0; // Track how many placeholders created
-                this.isCreatingPlaceholders = false;
-                
-                this.init();
-            }
-
-            async init() {
-                try {
-                    // Set worker properly
-                    const loadingTask = pdfjsLib.getDocument({
-                        url: this.pdfPath,
-                        enableWebGL: false, // Fix: Disable WebGL to prevent texture inversion issues
-                        disableAutoFetch: true, // Lazy loading
-                        disableStream: false
-                    });
-                    
-                    this.pdfDoc = await loadingTask.promise;
-                    this.numPages = this.pdfDoc.numPages;
-                    
-                    if (this.totalPagesNumDisplay) {
-                        this.totalPagesNumDisplay.textContent = this.numPages;
-                    }
-
-                    await this.setupPlaceholders();
-                    // setupObservers will be called after initial batch is created
-                    
-                    // Show counter
-                    if (this.pageCounter) this.pageCounter.classList.add('active');
-                } catch (err) {
-                    console.error('PDF Init Error:', err);
-                    if (this.viewer) {
-                        this.viewer.innerHTML = `<div class="p-10 text-center text-error">
-                            <i class="fa-solid fa-triangle-exclamation text-4xl mb-2"></i>
-                            <p>Không thể hiển thị tài liệu: ${err.message}</p>
-                        </div>`;
-                    }
-                }
-            }
-
-            async setupPlaceholders() {
-                this.viewer.innerHTML = '';
-                // Get page 1 info for aspect ratio
-                const firstPage = await this.pdfDoc.getPage(1);
-                const viewport = firstPage.getViewport({ scale: 1 });
-                const aspectRatio = viewport.height / viewport.width;
-
-                // Progressive placeholder creation - only create initial batch
-                const initialCount = Math.min(this.options.initialBatchSize, this.numPages);
-                
-                // If all pages fit in initial batch, create all and setup observers
-                if (initialCount >= this.numPages) {
-                    for (let i = 1; i <= this.numPages; i++) {
-                        const container = this.createPlaceholder(i, viewport);
-                        this.viewer.appendChild(container);
-                        this.createdPlaceholders++;
-                    }
-                    this.setupObservers();
-                } else {
-                    // Create initial batch progressively, observers will be setup after
-                    this.createPlaceholderBatch(1, initialCount, viewport, true);
-                }
-            }
-
-            createPlaceholderBatch(startPage, count, viewport, isInitialBatch = false) {
-                if (this.isCreatingPlaceholders) return;
-                this.isCreatingPlaceholders = true;
-
-                // Use requestIdleCallback for better performance, fallback to setTimeout
-                const scheduleNext = window.requestIdleCallback || ((fn) => setTimeout(fn, 16));
-
-                let created = 0;
-                const createNext = () => {
-                    if (created >= count || this.createdPlaceholders >= this.numPages) {
-                        this.isCreatingPlaceholders = false;
-                        // Setup observers after initial batch, or observe new placeholders
-                        if (isInitialBatch && !this.renderObserver) {
-                            this.setupObservers();
-                        } else {
-                            // Re-observe new placeholders
-                            const newPages = this.viewer.querySelectorAll('.pdf-page-container:not([data-observed])');
-                            newPages.forEach(el => {
-                                el.setAttribute('data-observed', 'true');
-                                if (this.renderObserver) this.renderObserver.observe(el);
-                                if (this.trackObserver) this.trackObserver.observe(el);
-                            });
-                        }
-                        return;
-                    }
-
-                    const i = startPage + created;
-                    if (i > this.numPages) {
-                        this.isCreatingPlaceholders = false;
-                        if (isInitialBatch && !this.renderObserver) {
-                            this.setupObservers();
-                        } else {
-                            const newPages = this.viewer.querySelectorAll('.pdf-page-container:not([data-observed])');
-                            newPages.forEach(el => {
-                                el.setAttribute('data-observed', 'true');
-                                if (this.renderObserver) this.renderObserver.observe(el);
-                                if (this.trackObserver) this.trackObserver.observe(el);
-                            });
-                        }
-                        return;
-                    }
-
-                    const container = this.createPlaceholder(i, viewport);
-                    this.viewer.appendChild(container);
-                    this.createdPlaceholders++;
-                    created++;
-
-                    // Create next placeholder in next frame to avoid blocking
-                    scheduleNext(createNext);
-                };
-
-                createNext();
-            }
-
-            createPlaceholder(i, viewport) {
-                const container = document.createElement('div');
-                container.className = 'pdf-page-container';
-                container.id = `vsd-page-${i}`;
-                container.dataset.page = i;
-                
-                // Maintain aspect ratio exactly
-                container.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
-                container.style.width = '100%';
-                // Reduced maxWidth for better performance with large files
-                const maxWidthScale = this.numPages > 50 ? 1.2 : 1.5;
-                container.style.maxWidth = (viewport.width * maxWidthScale) + 'px';
-
-                // Loader element
-                const loader = document.createElement('div');
-                loader.className = 'page-loader absolute inset-0 flex flex-col items-center justify-center bg-base-100 z-10 transition-opacity duration-300';
-                loader.innerHTML = `
-                    <span class="loading loading-spinner loading-md text-primary opacity-50"></span>
-                    <div class="mt-2 text-[10px] font-bold opacity-20 uppercase tracking-widest text-center">Trang ${i} / ${this.numPages}</div>
-                `;
-                container.appendChild(loader);
-
-                // Blur logic for non-purchased
-                if (!this.options.hasPurchased && i > this.options.maxPreviewPages) {
-                    container.classList.add('page-limit-blur');
-                    const blurLabel = document.createElement('div');
-                    blurLabel.className = 'absolute inset-0 flex items-center justify-center z-20 pointer-events-none';
-                    blurLabel.innerHTML = `<div class="bg-base-100/90 px-5 py-3 rounded-xl shadow-2xl font-bold text-sm border border-primary/20 backdrop-blur-sm">Mua tài liệu để xem đầy đủ</div>`;
-                    container.appendChild(blurLabel);
-                }
-
-                return container;
-            }
-
-            setupObservers() {
-                // Prevent multiple observers
-                if (this.renderObserver) {
-                    this.renderObserver.disconnect();
-                }
-                if (this.trackObserver) {
-                    this.trackObserver.disconnect();
-                }
-
-                // Dynamic rootMargin based on file size - smaller for large files
-                const dynamicRootMargin = this.numPages > 100 ? '300px 0px' : 
-                                         this.numPages > 50 ? '500px 0px' : 
-                                         this.options.rootMargin;
-
-                // 1. Rendering Observer (Load on approach, destroy on leave)
-                this.renderObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        const pageNum = parseInt(entry.target.dataset.page);
-                        if (entry.isIntersecting) {
-                            // Create more placeholders if needed (progressive loading)
-                            if (pageNum > this.createdPlaceholders - 5 && this.createdPlaceholders < this.numPages && !this.isCreatingPlaceholders && this.pdfDoc) {
-                                const nextBatchStart = this.createdPlaceholders + 1;
-                                const batchSize = Math.min(this.options.batchSize, this.numPages - this.createdPlaceholders);
-                                // Create next batch asynchronously
-                                this.pdfDoc.getPage(1).then(page => {
-                                    const viewport = page.getViewport({ scale: 1 });
-                                    this.createPlaceholderBatch(nextBatchStart, batchSize, viewport);
-                                }).catch(err => console.warn('Error getting page 1 for placeholder:', err));
-                            }
-                            this.queueRenderPage(pageNum, entry.target);
-                        } else {
-                            this.destroyPage(pageNum);
-                        }
-                    });
-                }, {
-                    root: this.viewer,
-                    rootMargin: dynamicRootMargin,
-                    threshold: 0.01
-                });
-
-                // 2. Tracking Observer (Update page number indicator)
-                this.trackObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            if (this.currentPageNumDisplay) {
-                                this.currentPageNumDisplay.textContent = entry.target.dataset.page;
-                            }
-                        }
-                    });
-                }, {
-                    root: this.viewer,
-                    threshold: 0.51 // Trigger when more than half is visible
-                });
-
-                // Observe existing placeholders (mark as observed)
-                const pages = this.viewer.querySelectorAll('.pdf-page-container');
-                pages.forEach(el => {
-                    el.setAttribute('data-observed', 'true');
-                    this.renderObserver.observe(el);
-                    this.trackObserver.observe(el);
-                });
-            }
-
-            queueRenderPage(pageNum, container) {
-                // Limit concurrent renders
-                if (this.renderingPages.size >= this.options.maxConcurrentRenders) {
-                    this.options.renderQueue.push({ pageNum, container });
-                    return;
-                }
-                this.renderPage(pageNum, container);
-            }
-
-            async renderPage(pageNum, container) {
-                // Check both active AND rendering states
-                if (this.activePages.has(pageNum) || this.renderingPages.has(pageNum)) return; 
-                if (!this.options.hasPurchased && pageNum > this.options.maxPreviewPages) return;
-
-                // Lock the page immediately
-                this.renderingPages.add(pageNum);
-
-                try {
-                    const page = await this.pdfDoc.getPage(pageNum);
-                    
-                    // Update container dimensions to match the ACTUAL page dimensions
-                    const naturalViewport = page.getViewport({ scale: 1 });
-                    container.style.aspectRatio = `${naturalViewport.width} / ${naturalViewport.height}`;
-                    // Reduced maxWidth for better performance with large files
-                    const maxWidthScale = this.numPages > 50 ? 1.2 : 1.5;
-                    container.style.maxWidth = (naturalViewport.width * maxWidthScale) + 'px';
-
-                    // Adaptive DPR based on file size - lower for large files
-                    const adaptiveDprLimit = this.numPages > 100 ? 1.5 : 
-                                           this.numPages > 50 ? 2 : 
-                                           this.options.dprLimit;
-                    const dpr = Math.min(window.devicePixelRatio || 1, adaptiveDprLimit);
-                    const viewport = page.getViewport({ scale: dpr });
-                    
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d', { alpha: false });
-                    
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    canvas.style.width = '100%';
-                    canvas.style.height = 'auto';
-                    canvas.style.opacity = '0';
-                    canvas.style.transition = 'opacity 0.3s ease-in-out';
-
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-
-                    const renderTask = page.render(renderContext);
-                    
-                    // Store task immediately
-                    this.activePages.set(pageNum, { renderTask, canvas });
-
-                    await renderTask.promise;
-                    
-                    // Ensure no duplicate canvases exist before appending
-                    const existingCanvas = container.querySelector('canvas');
-                    if (existingCanvas) existingCanvas.remove();
-
-                    container.appendChild(canvas);
-                    requestAnimationFrame(() => {
-                        canvas.style.opacity = '1';
-                        const loader = container.querySelector('.page-loader');
-                        if (loader) {
-                            loader.style.opacity = '0';
-                            setTimeout(() => loader.remove(), 300);
-                        }
-                    });
-
-                    // Process render queue if there's space
-                    if (this.options.renderQueue.length > 0 && this.renderingPages.size < this.options.maxConcurrentRenders) {
-                        const next = this.options.renderQueue.shift();
-                        if (next) {
-                            this.renderPage(next.pageNum, next.container);
-                        }
-                    }
-
-                } catch (err) {
-                    if (err.name === 'RenderingCancelledException') return;
-                    console.warn(`Render error page ${pageNum}:`, err);
-                    this.activePages.delete(pageNum); // Clean up if failed
-                    
-                    // Try next in queue even if this failed
-                    if (this.options.renderQueue.length > 0) {
-                        const next = this.options.renderQueue.shift();
-                        if (next) {
-                            this.renderPage(next.pageNum, next.container);
-                        }
-                    }
-                } finally {
-                    // Release the lock
-                    this.renderingPages.delete(pageNum);
-                }
-            }
-
-            destroyPage(pageNum) {
-                const item = this.activePages.get(pageNum);
-                if (!item) return;
-
-                if (item.renderTask) item.renderTask.cancel();
-                if (item.canvas) item.canvas.remove();
-                
-                // Reset placeholder state (add loader back if needed)
-                const container = document.getElementById(`vsd-page-${pageNum}`);
-                if (container && !container.querySelector('.page-loader')) {
-                    const loader = document.createElement('div');
-                    loader.className = 'page-loader absolute inset-0 flex flex-col items-center justify-center bg-base-100 z-10';
-                    loader.innerHTML = `<span class="loading loading-spinner loading-md text-primary opacity-30"></span>`;
-                    container.appendChild(loader);
-                }
-
-                this.activePages.delete(pageNum);
-            }
-        }
-
-
-        <?php 
-        // Set pdfPath based on file type
-        if ($file_ext === 'pdf') {
-            $pdf_path_js = "../handler/file.php?doc_id=" . $doc_id;
-        } elseif (($file_ext === 'docx' || $file_ext === 'doc')) {
-            // For DOCX, prioritize converted PDF if available
-            if (!empty($doc['converted_pdf_path']) && file_exists($doc['converted_pdf_path'])) {
-                // Nếu converted_pdf_path là đường dẫn trong uploads, sử dụng handler
-                if (strpos($doc['converted_pdf_path'], '../uploads/') === 0 || strpos($doc['converted_pdf_path'], '\\uploads\\') !== false) {
-                    $pdf_path_js = "../handler/file.php?doc_id=" . $doc_id;
-                } else {
-                    $pdf_path_js = $doc['converted_pdf_path'];
-                }
-            } else {
-                $pdf_path_js = null;
-            }
-        } else {
-            $pdf_path_js = null;
-        }
-        ?>
-        const pdfPath = <?= $pdf_path_js ? '"' . htmlspecialchars($pdf_path_js, ENT_QUOTES, 'UTF-8') . '"' : 'null' ?>;
-        const hasPurchased = <?= $has_purchased ? 'true' : 'false' ?>;
-        const maxPreviewPages = <?= (int)getSetting('limit_preview_pages', 5) ?>;
-        
-        // Protection against copy and screenshot
-        <?php if(!$has_purchased): ?>
-        // Disable right-click
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Disable copy
-        document.addEventListener('copy', function(e) {
-            e.preventDefault();
-            e.clipboardData.setData('text/plain', '');
-            showAlert('Sao chép nội dung bị cấm. Vui lòng mua tài liệu để sử dụng.', 'warning', 'Cảnh Báo');
-            return false;
-        });
-        
-        // Disable cut
-        document.addEventListener('cut', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Disable select
-        document.addEventListener('selectstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Disable drag
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Disable print screen (F12, Print Screen key)
-        document.addEventListener('keydown', function(e) {
-            // Disable F12 (Developer Tools)
-            if(e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || 
-               (e.ctrlKey && e.shiftKey && e.key === 'C') || 
-               (e.ctrlKey && e.key === 'U') || 
-               (e.ctrlKey && e.key === 'S')) {
-                e.preventDefault();
-                return false;
-            }
-            // Disable Print Screen
-            if(e.key === 'PrintScreen') {
-                e.preventDefault();
-                navigator.clipboard.writeText('');
-                showAlert('Chụp màn hình bị cấm. Vui lòng mua tài liệu để sử dụng.', 'warning', 'Cảnh Báo');
-                return false;
-            }
-        });
-        
-        // Disable screenshot on mobile (iOS/Android)
-        document.addEventListener('touchstart', function(e) {
-            if(e.touches.length > 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        // Blur on tab switch (prevents screenshot when switching tabs)
-        document.addEventListener('visibilitychange', function() {
-            if(document.hidden) {
-                document.body.style.filter = 'blur(10px)';
-            } else {
-                document.body.style.filter = 'none';
-            }
-        });
-        
-        // Console warning
-        console.log('%c⚠️ CẢNH BÁO!', 'color: red; font-size: 50px; font-weight: bold;');
-        console.log('%cSao chép hoặc chỉnh sửa mã này là bất hợp pháp!', 'color: red; font-size: 20px;');
-        <?php endif; ?>
-        
-        
-
-        // Load PDF if applicable (for PDF files or DOCX files with converted PDF)
-        <?php if($file_ext === 'pdf' || (($file_ext === 'docx' || $file_ext === 'doc') && isset($pdf_path_for_preview) && $pdf_path_for_preview)): ?>
-        if (!window.pdfViewerInitialized) {
-            window.pdfViewerInitialized = true;
-            (async () => {
-                try {
-                    if (pdfPath) {
-                        new VsdPdfViewer('pdfViewer', pdfPath, {
-                            maxPreviewPages: maxPreviewPages,
-                            hasPurchased: hasPurchased
-                        });
-                        
-                        // Lazy generation logic...
-                        const docId = <?= $doc_id ?>;
-                        const totalPages = <?= $doc['total_pages'] ?? 0 ?>;
-                        const hasThumbnail = <?= !empty($doc['thumbnail']) ? 'true' : 'false' ?>;
-                        
-                        if (totalPages === 0 || !hasThumbnail) {
-                            try {
-                                await processPdfDocument(pdfPath, docId, {
-                                    countPages: totalPages === 0,
-                                    generateThumbnail: !hasThumbnail,
-                                    thumbnailWidth: 400
-                                });
-                            } catch(error) {
-                                console.warn('Lazy generation failed:', error);
-                            }
-                        }
-                    } else {
-                        const viewer = document.getElementById("pdfViewer");
-                        if(viewer) viewer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">PDF path not available</div>';
-                    }
-                } catch(error) {
-                    const viewer = document.getElementById("pdfViewer");
-                    if(viewer) viewer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">Error loading PDF: ' + error.message + '</div>';
-                }
-            })();
-        }
-        <?php endif; ?>
-        
-        // Load DOCX or converted PDF if applicable
-        <?php if($file_ext === 'docx' || $file_ext === 'doc'): ?>
-        (async () => {
-            // Check if already initialized (e.g. by PDF viewer above)
-            if (window.pdfViewerInitialized) return;
-            window.pdfViewerInitialized = true;
-
-            try {
-                <?php if(isset($pdf_path_for_preview) && $pdf_path_for_preview): ?>
-                // Use converted PDF for preview
-                const pdfPath = "<?= htmlspecialchars($pdf_path_for_preview, ENT_QUOTES, 'UTF-8') ?>";
-                new VsdPdfViewer('pdfViewer', pdfPath, {
-                    maxPreviewPages: maxPreviewPages,
-                    hasPurchased: hasPurchased
-                });
-                // ... (Lazy generation logic omitted for brevity as it's duplicate of above but inside DOCX block) ...
-                <?php else: ?>
-                // Fallback to DOCX preview
-                // Wait for JSZip and docx library to load
-                let retries = 0;
-                while ((typeof JSZip === 'undefined' || (typeof docx === 'undefined' && typeof docxPreview === 'undefined')) && retries < 15) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    retries++;
-                }
-                
-                // Check JSZip
-                if (typeof JSZip === 'undefined') {
-                    throw new Error('JSZip library not loaded. Please refresh the page.');
-                }
-                
-                // Try to get docx API - it might be exposed as docx, docxPreview, or window.docxPreview
-                let docxAPI = null;
-                if (typeof docx !== 'undefined' && docx.renderAsync) {
-                    docxAPI = docx;
-                } else if (typeof docxPreview !== 'undefined' && docxPreview.renderAsync) {
-                    docxAPI = docxPreview;
-                } else if (window.docxPreview && window.docxPreview.renderAsync) {
-                    docxAPI = window.docxPreview;
-                } else if (window.docx && window.docx.renderAsync) {
-                    docxAPI = window.docx;
-                } else {
-                    console.error('Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('docx')));
-                    throw new Error('DOCX preview library not loaded correctly. Please refresh the page.');
-                }
-                
-                const docxViewer = document.getElementById("docxViewer");
-                if (!docxViewer) {
-                    throw new Error('DOCX viewer element not found');
-                }
-                
-                const fileUrl = "../handler/file.php?doc_id=<?= $doc_id ?>";
-                const response = await fetch(fileUrl);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to fetch file: ' + response.statusText);
-                }
-                
-                const arrayBuffer = await response.arrayBuffer();
-                
-                if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-                    throw new Error('File is empty or invalid');
-                }
-                
-                // Check if renderAsync method exists
-                if (typeof docxAPI.renderAsync !== 'function') {
-                    throw new Error('docx.renderAsync is not available. Library version may be incompatible.');
-                }
-                
-                // Render DOCX with pagination support using docx-preview
-                await docxAPI.renderAsync(arrayBuffer, docxViewer, null, {
-                    className: "docx-wrapper",
-                    inWrapper: true,
-                    ignoreWidth: false,
-                    ignoreHeight: false,
-                    ignoreFonts: false,
-                    breakPages: true, // Enable page breaks for clear pagination
-                    ignoreLastRenderedPageBreak: false,
-                    experimental: false,
-                    trimXmlDeclaration: true,
-                    useBase64URL: false,
-                    showChanges: false,
-                    showInsertions: false,
-                    showDeletions: false
-                });
-                
-                // After rendering, enhance pagination by wrapping pages
-                const wrapper = docxViewer.querySelector('.docx-wrapper');
-                if (wrapper) {
-                    // Wait a bit for content to render
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // Get all direct children (potential pages)
-                    const children = Array.from(wrapper.children);
-                    
-                    // Simple approach: Split content into pages based on approximate page height
-                    let pages = [];
-                    let currentPage = [];
-                    let currentHeight = 0;
-                    const pageHeight = 800; // Approximate page height in pixels
-                    
-                    children.forEach((child) => {
-                        // Move child to current page first to measure
-                        currentPage.push(child);
-                        
-                        // Estimate height (use offsetHeight if available, otherwise default)
-                        const childHeight = child.offsetHeight || 150;
-                        currentHeight += childHeight;
-                        
-                        // If we've accumulated enough content for a page, create it
-                        if (currentHeight >= pageHeight && currentPage.length > 1) {
-                            // Remove last child (it will start next page)
-                            const lastChild = currentPage.pop();
-                            currentHeight -= (lastChild.offsetHeight || 150);
-                            
-                            // Create a page wrapper
-                            const pageDiv = document.createElement('div');
-                            pageDiv.className = 'docx-page';
-                            pageDiv.style.minHeight = '800px';
-                            pageDiv.style.padding = '40px';
-                            pageDiv.style.marginBottom = '20px';
-                            pageDiv.style.background = 'white';
-                            pageDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                            pageDiv.style.borderRadius = '4px';
-                            
-                            currentPage.forEach(el => pageDiv.appendChild(el));
-                            pages.push(pageDiv);
-                            
-                            // Start new page with the last child
-                            currentPage = [lastChild];
-                            currentHeight = lastChild.offsetHeight || 150;
-                        }
-                    });
-                    
-                    // Add remaining content as last page
-                    if (currentPage.length > 0) {
-                        const pageDiv = document.createElement('div');
-                        pageDiv.className = 'docx-page';
-                        pageDiv.style.minHeight = '800px';
-                        pageDiv.style.padding = '40px';
-                        pageDiv.style.marginBottom = '20px';
-                        pageDiv.style.background = 'white';
-                        pageDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                        pageDiv.style.borderRadius = '4px';
-                        
-                        currentPage.forEach(el => pageDiv.appendChild(el));
-                        pages.push(pageDiv);
-                    }
-                    
-                    // If no pages were created (no children), create one page with all content
-                    if (pages.length === 0 && children.length > 0) {
-                        const pageDiv = document.createElement('div');
-                        pageDiv.className = 'docx-page';
-                        pageDiv.style.minHeight = '800px';
-                        pageDiv.style.padding = '40px';
-                        pageDiv.style.marginBottom = '20px';
-                        pageDiv.style.background = 'white';
-                        pageDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                        pageDiv.style.borderRadius = '4px';
-                        
-                        children.forEach(el => pageDiv.appendChild(el));
-                        pages.push(pageDiv);
-                    }
-                    
-                    // Replace wrapper content with pages
-                    if (pages.length > 0) {
-                        wrapper.innerHTML = '';
-                        pages.forEach((page, index) => {
-                            // Limit pages for non-purchased users (0-indexed: 0,1,2 are first 3 pages)
-                            if(!hasPurchased && index >= maxPreviewPages) {
-                                page.classList.add("page-limit-blur");
-                                page.style.filter = "blur(5px) !important";
-                                page.style.opacity = "0.3 !important";
-                                page.style.pointerEvents = "none !important";
-                                page.style.position = "relative !important";
-                                
-                                // Add overlay message
-                                const overlay = document.createElement('div');
-                                overlay.style.position = 'absolute';
-                                overlay.style.top = '50%';
-                                overlay.style.left = '50%';
-                                overlay.style.transform = 'translate(-50%, -50%)';
-                                overlay.style.background = 'rgba(255,255,255,0.95)';
-                                overlay.style.padding = '20px 30px';
-                                overlay.style.borderRadius = '8px';
-                                overlay.style.fontWeight = 'bold';
-                                overlay.style.color = '#333';
-                                overlay.style.zIndex = '100';
-                                overlay.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-                                overlay.style.textAlign = 'center';
-                                overlay.style.fontSize = '16px';
-                                overlay.textContent = 'Mua tài liệu để xem đầy đủ';
-                                page.appendChild(overlay);
-                            }
-                            wrapper.appendChild(page);
-                        });
-                    }
-                }
-                <?php endif; ?>
-                
-            } catch(error) {
-                console.error('DOCX loading error:', error);
-                const docxViewer = document.getElementById("docxViewer");
-                if (docxViewer) {
-                    docxViewer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;">Error loading DOCX file: ' + error.message + '<br><small>Please try downloading the file instead.</small></div>';
-                }
-            }
-        })();
-        <?php endif; ?>
-        
-        // Alert Modal Functions
-        function showAlert(message, iconType = 'info', title = 'Thông Báo') {
-            document.getElementById('alertMessage').textContent = message;
-            const alertIcon = document.getElementById('alertIcon');
-            
-            // Icon mapping
-            const icons = {
-                'info': '<i class="fa-solid fa-circle-info text-6xl text-info"></i>',
-                'warning': '<i class="fa-solid fa-triangle-exclamation text-6xl text-warning"></i>',
-                'success': '<i class="fa-solid fa-circle-check text-6xl text-success"></i>',
-                'error': '<i class="fa-solid fa-circle-xmark text-6xl text-error"></i>',
-                'lock': '<i class="fa-solid fa-lock text-6xl text-warning"></i>'
-            };
-            
-            // Map old emoji to new icon types
-            const emojiMap = {
-                'ℹ️': 'info',
-                '⚠️': 'warning',
-                '✓': 'success',
-                '❌': 'error',
-                '🔒': 'lock'
-            };
-            
-            const iconKey = emojiMap[iconType] || iconType;
-            alertIcon.innerHTML = icons[iconKey] || icons['info'];
-            document.getElementById('alertTitle').textContent = title;
-            document.getElementById('alertModal').showModal();
-        }
-        
-        function closeAlertModal() {
-            document.getElementById('alertModal').close();
-        }
-        
-        // Interaction functions
-        function showGlobalLoader() {
-            document.getElementById('vsdGlobalLoader').classList.add('active');
-        }
-
-        function hideGlobalLoader() {
-            document.getElementById('vsdGlobalLoader').classList.remove('active');
-        }
-
-        function toggleReaction(type) {
-            if (!<?= $is_logged_in ? 'true' : 'false' ?>) {
-                showAlert('Vui lòng đăng nhập để tương tác', 'lock', 'Yêu Cầu Đăng Nhập');
-                return;
-            }
-            
-            const params = new URLSearchParams();
-            params.append('action', type);
-
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Update counts
-                    const likeBtn = document.querySelector('[onclick="toggleReaction(\'like\')"]');
-                    const dislikeBtn = document.querySelector('[onclick="toggleReaction(\'dislike\')"]');
-                    
-                    likeBtn.innerHTML = `<i class="fa-${data.user_reaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up"></i> ${data.likes}`;
-                    dislikeBtn.innerHTML = `<i class="fa-${data.user_reaction === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down"></i> ${data.dislikes}`;
-                    
-                    // Update classes
-                    likeBtn.classList.toggle('text-primary', data.user_reaction === 'like');
-                    dislikeBtn.classList.toggle('text-error', data.user_reaction === 'dislike');
-                }
-            })
-            .catch(err => showAlert('Lỗi kết nối', 'error'));
-        }
-        
-        function toggleSave() {
-            if (!<?= $is_logged_in ? 'true' : 'false' ?>) {
-                showAlert('Vui lòng đăng nhập để lưu tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
-                return;
-            }
-            
-            const params = new URLSearchParams();
-            params.append('action', 'save');
-
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const saveBtn = document.querySelector('[onclick="toggleSave()"]');
-                    saveBtn.innerHTML = `<i class="fa-${data.saved ? 'solid' : 'regular'} fa-bookmark"></i>`;
-                    saveBtn.classList.toggle('text-primary', data.saved);
-                    
-                    if(data.saved) {
-                        // Optional: subtle toast or animation
-                    }
-                }
-            })
-            .catch(err => showAlert('Lỗi kết nối', 'error'));
-        }
-        
-        function openShareModal() {
-            document.getElementById('shareModal').showModal();
-        }
-        
-        function closeShareModal() {
-            document.getElementById('shareModal').close();
-        }
-        
-        function openReportModal() {
-            if (!<?= $is_logged_in ? 'true' : 'false' ?>) {
-                showAlert('Vui lòng đăng nhập để báo cáo tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
-                return;
-            }
-            document.getElementById('reportModal').showModal();
-        }
-        
-        function closeReportModal() {
-            document.getElementById('reportModal').close();
-        }
-        
-        function copyLink() {
-            const link = document.getElementById('docLink');
-            link.select();
-            document.execCommand('copy');
-            showAlert('Đã sao chép liên kết vào clipboard!', 'success', 'Thành Công');
-        }
-        
-        function submitReport(e) {
-            e.preventDefault();
-            
-            const reason = document.getElementById('reportReason').value;
-            const description = document.getElementById('reportDescription').value;
-            
-            if (!reason) {
-                showAlert('Vui lòng chọn lý do báo cáo', 'triangle-exclamation', 'Thiếu Thông Tin');
-                return;
-            }
-            
-            // Disable submit button to prevent double submission
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang gửi...';
-            
-            fetch('/handler/report_handler.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_id: <?= $doc_id ?>,
-                    reason: reason,
-                    description: description
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Gửi Báo Cáo';
-                
-                if (data.success) {
-                    closeReportModal();
-                    document.getElementById('reportForm').reset();
-                    showAlert(data.message, 'circle-check', 'Thành Công');
-                } else {
-                    showAlert(data.message, 'triangle-exclamation', 'Lỗi');
-                }
-            })
-            .catch(error => {
-                console.error('Report error:', error);
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Gửi Báo Cáo';
-                showAlert('Có lỗi xảy ra khi gửi báo cáo. Vui lòng thử lại sau.', 'triangle-exclamation', 'Lỗi');
-            });
-        }
-        
-        function downloadDoc() {
-            <?php if(!$is_logged_in): ?>
-                showAlert('Vui lòng đăng nhập để tải xuống tài liệu', 'lock', 'Yêu Cầu Đăng Nhập');
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
-                return;
-            <?php endif; ?>
-            <?php if(!$has_purchased): ?>
-                // Mở modal mua tài liệu
-                const price = <?= $price ?>;
-                openPurchaseModal(<?= $doc_id ?>, price);
-                return;
-            <?php endif; ?>
-            
-            // Show download queue widget
-            showDownloadQueue();
-            
-            // Start download with progress tracking
-            const downloadUrl = '../handler/download.php?id=<?= $doc_id ?>';
-            const fileName = '<?= htmlspecialchars($doc['original_name'], ENT_QUOTES) ?>';
-            
-            downloadWithProgress(downloadUrl, fileName);
-        }
-        
-        // Download with progress tracking
-        function downloadWithProgress(url, fileName) {
-            if (currentDownloadXhr) {
-                currentDownloadXhr.abort();
-            }
-
-            const xhr = new XMLHttpRequest();
-            currentDownloadXhr = xhr;
-            xhr.open('GET', url, true);
-            xhr.responseType = 'blob';
-            
-            let startTime = Date.now();
-            let lastLoaded = 0;
-            let lastTime = startTime;
-            
-            xhr.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    const currentTime = Date.now();
-                    const elapsedSeconds = (currentTime - startTime) / 1000;
-                    const loaded = e.loaded;
-                    const total = e.total;
-                    const percent = Math.round((loaded / total) * 100);
-                    
-                    // Calculate average speed (total bytes / total time)
-                    // This is more stable for UI display
-                    const speedBps = elapsedSeconds > 0 ? loaded / elapsedSeconds : 0;
-                    
-                    // Update UI
-                    updateDownloadProgress(percent, speedBps, loaded, total);
-                    
-                    lastLoaded = loaded;
-                    lastTime = currentTime;
-                }
-            };
-            
-            xhr.onabort = function() {
-                currentDownloadXhr = null;
-                hideDownloadQueue();
-            };
-            
-            xhr.onload = function() {
-                currentDownloadXhr = null;
-                if (xhr.status === 200) {
-                    // Create blob and download
-                    const blob = xhr.response;
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(downloadUrl);
-                    
-                    // Hide download queue after a delay
-                    setTimeout(() => {
-                        hideDownloadQueue();
-                    }, 1000);
-                } else {
-                    currentDownloadXhr = null;
-                    hideDownloadQueue();
-                    showAlert('Lỗi khi tải xuống tài liệu', 'error', 'Lỗi');
-                }
-            };
-            
-            xhr.onerror = function() {
-                hideDownloadQueue();
-                showAlert('Lỗi kết nối khi tải xuống', 'error', 'Lỗi');
-            };
-            
-            xhr.send();
-        }
-        
-        // Show download queue widget
-        function showDownloadQueue() {
-            const widget = document.getElementById('downloadQueueWidget');
-            if (widget) {
-                widget.classList.remove('hidden');
-                widget.classList.add('show');
-            }
-        }
-        
-        // Cancel ongoing download
-        function cancelDownload() {
-            if (currentDownloadXhr) {
-                currentDownloadXhr.abort();
-                currentDownloadXhr = null;
-                showAlert('Đã hủy tải xuống tài liệu', 'info', 'Đã Hủy');
-            }
-            hideDownloadQueue();
-        }
-        
-        // Hide download queue widget
-        function hideDownloadQueue() {
-            const widget = document.getElementById('downloadQueueWidget');
-            if (widget) {
-                widget.classList.remove('show');
-                setTimeout(() => {
-                    widget.classList.add('hidden');
-                }, 300);
-            }
-        }
-        
-        // Update download progress
-        function updateDownloadProgress(percent, speedBps, loaded, total) {
-            const progressBar = document.getElementById('downloadProgressBar');
-            const progressPercent = document.getElementById('downloadProgressPercent');
-            const downloadSpeed = document.getElementById('downloadSpeed');
-            const speedIcon = document.getElementById('downloadSpeedIcon');
-            
-            if (progressBar) {
-                if (total > 0) {
-                    progressBar.value = percent;
-                } else {
-                    // Nếu không có total, cho thanh chạy lặp (indeterminate)
-                    progressBar.removeAttribute('value');
-                }
-            }
-            
-            if (progressPercent) {
-                progressPercent.textContent = total > 0 ? percent + '%' : 'Đang nhận dữ liệu...';
-            }
-            
-            if (downloadSpeed) {
-                const speedKBps = (speedBps / 1024).toFixed(1);
-                const speedMBps = (speedBps / (1024 * 1024)).toFixed(2);
-                
-                if (speedBps >= 1024 * 1024) {
-                    downloadSpeed.textContent = speedMBps + ' MB/s';
-                } else {
-                    downloadSpeed.textContent = speedKBps + ' KB/s';
-                }
-                
-                // Update icon and badge based on speed
-                const speedBadge = document.getElementById('downloadSpeedBadge');
-                if (speedIcon && speedBadge) {
-                    if (speedBps >= 200 * 1024) {
-                        speedIcon.className = 'fa-solid fa-bolt';
-                        speedBadge.className = 'badge badge-success badge-sm gap-1 py-3 px-3 text-white';
-                    } else if (speedBps >= 50 * 1024) {
-                        speedIcon.className = 'fa-solid fa-gauge';
-                        speedBadge.className = 'badge badge-warning badge-sm gap-1 py-3 px-3 text-warning-content';
-                    } else {
-                        speedIcon.className = 'fa-solid fa-hourglass-half';
-                        speedBadge.className = 'badge badge-error badge-sm gap-1 py-3 px-3 text-white';
-                    }
-                }
-            }
-        }
-        
-        function goToSaved() {
-            window.location.href = 'saved.php';
-        }
-        
-        // Toggle Document Info Section
-        function toggleDocInfo() {
-            const section = document.getElementById('documentInfoSection');
-            const arrow = document.getElementById('infoToggleArrow');
-            const btn = document.getElementById('infoToggleBtn');
-            
-            if (section.classList.contains('show')) {
-                // Close animation
-                section.classList.remove('show');
-                if(arrow) arrow.classList.remove('rotated');
-                setTimeout(() => {
-                    section.style.display = 'none';
-                }, 400); // Match CSS transition duration
-            } else {
-                // Open animation
-                section.style.display = 'grid';
-                // Force reflow
-                section.offsetHeight;
-                // Add show class to trigger animation
-                section.classList.add('show');
-                if(arrow) arrow.classList.add('rotated');
-                
-                // Smooth scroll to show the section
-                setTimeout(() => {
-                    section.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'nearest' 
-                    });
-                }, 100);
-            }
-        }
-        
-        let currentPurchaseDocId = null;
-        
-        function openPurchaseModal(docId, price) {
-            currentPurchaseDocId = docId;
-            document.getElementById('purchasePrice').textContent = number_format(price) + ' điểm';
-            document.getElementById('purchaseModal').showModal();
-        }
-        
-        function closePurchaseModal() {
-            document.getElementById('purchaseModal').close();
-            currentPurchaseDocId = null;
-        }
-        
-        function confirmPurchase(event) {
-            if(!currentPurchaseDocId) {
-                return;
-            }
-            
-            // Disable button to prevent double submit
-            const confirmBtn = event ? event.target : document.getElementById('confirmPurchaseBtn');
-            if(!confirmBtn) return;
-            
-            const originalText = confirmBtn.textContent;
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = 'Đang xử lý...';
-            confirmBtn.style.opacity = '0.6';
-            confirmBtn.style.cursor = 'not-allowed';
-            
-            fetch('/handler/purchase_handler.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'document_id=' + currentPurchaseDocId
-            })
-            .then(response => {
-                if(!response.ok) {
-                    throw new Error('HTTP error! status: ' + response.status);
-                }
-                return response.text();
-            })
-            .then(text => {
-                try {
-                    // Check if response is empty
-                    if(!text || text.trim() === '') {
-                        throw new Error('Server trả về phản hồi trống');
-                    }
-                    
-                    const data = JSON.parse(text);
-                    
-                    if(data.success) {
-                        closePurchaseModal();
-                        // Show success message
-                        const successMsg = document.createElement('div');
-                        successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; font-weight: 600;';
-                        successMsg.textContent = '✓ ' + (data.message || 'Mua tài liệu thành công! Đang tải lại...');
-                        document.body.appendChild(successMsg);
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        // Re-enable button
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = originalText;
-                        confirmBtn.style.opacity = '1';
-                        confirmBtn.style.cursor = 'pointer';
-                        const errorMsg = data.message || 'Không thể mua tài liệu. Vui lòng thử lại sau.';
-                        console.error('Purchase failed:', errorMsg, data);
-                        showAlert(errorMsg, 'error', 'Lỗi Mua Tài Liệu');
-                    }
-                } catch(e) {
-                    // Re-enable button
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = originalText;
-                    confirmBtn.style.opacity = '1';
-                    confirmBtn.style.cursor = 'pointer';
-                    console.error('Parse error:', e, 'Response:', text);
-                    showAlert('Lỗi xử lý phản hồi từ server. Vui lòng thử lại sau.', 'error', 'Lỗi');
-                }
-            })
-            .catch(error => {
-                // Re-enable button
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = originalText;
-                confirmBtn.style.opacity = '1';
-                confirmBtn.style.cursor = 'pointer';
-                console.error('Fetch error:', error);
-                showAlert('Lỗi kết nối: ' + (error.message || 'Không thể kết nối đến server'), 'error', 'Lỗi Kết Nối');
-            });
-        }
-        
-        function number_format(number) {
-            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-        
-        // DaisyUI modals handle backdrop clicks automatically via dialog element
-    </script>
+<script src="../js/pdf-viewer.js"></script>
+<script src="../js/pages/view.js?v=2.01"></script>
 </body>
 </html>

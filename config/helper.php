@@ -85,9 +85,15 @@ function renderGlobalModal() {
     </dialog>
 
     <!-- Global Alert (Toast) Container -->
-    <div id="vsd_toast_container" class="fixed top-20 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+    <div id="vsd_toast_container" popover="manual" class="fixed top-20 right-6 z-[999999] flex flex-col gap-3 pointer-events-none bg-transparent border-none p-0 m-0 overflow-visible"></div>
 
     <style>
+    #vsd_toast_container:popover-open {
+        display: flex;
+        background: transparent;
+        border: none;
+        inset: 5rem 1.5rem auto auto; /* top-20 right-6 */
+    }
     .vsd-toast {
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(20px);
@@ -104,7 +110,8 @@ function renderGlobalModal() {
         transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         pointer-events: auto;
     }
-    [data-theme="dark"] .vsd-toast {
+    [data-theme="dark"] .vsd-toast,
+    [data-theme="dim"] .vsd-toast {
         background: rgba(15, 23, 42, 0.85);
         border-color: rgba(255, 255, 255, 0.1);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -130,6 +137,11 @@ function renderGlobalModal() {
     window.showAlert = function(message, type = "success") {
         const container = document.getElementById("vsd_toast_container");
         if (!container) return;
+
+        // Ensure container is in the Top Layer using Popover API (if supported)
+        if (container.showPopover && !container.matches(\':popover-open\')) {
+            container.showPopover();
+        }
 
         const toast = document.createElement("div");
         toast.className = `vsd-toast vsd-toast-${type}`;
@@ -157,7 +169,13 @@ function renderGlobalModal() {
 
         setTimeout(() => {
             toast.classList.remove("show");
-            setTimeout(() => toast.remove(), 500);
+            setTimeout(() => {
+                toast.remove();
+                // Close container if no toasts left
+                if (container.children.length === 0 && container.hidePopover) {
+                    container.hidePopover();
+                }
+            }, 500);
         }, 4000);
     };
 
@@ -227,4 +245,383 @@ function renderGlobalModal() {
     };
     </script>
     ';
+}
+
+/**
+ * Handles all background actions for the view.php page (likes, saving, comments)
+ * Replaces a large block of logic that was previously in the view.php file.
+ * 
+ * @param DB $VSD Database object
+ * @param int $doc_id Document ID
+ * @param int|null $user_id Current User ID
+ * @param array $doc Document Row
+ */
+function handleViewDocumentActions($VSD, $doc_id, $user_id, $doc) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['action'])) {
+        return;
+    }
+
+    $action = $_POST['action'];
+    $is_logged_in = (bool)$user_id;
+
+    // Actions that require login
+    $restricted_actions = ['like', 'dislike', 'save', 'comment', 'like_comment', 'delete_comment', 'pin_comment', 'unpin_comment', 'edit_comment', 'report_comment'];
+    if (in_array($action, $restricted_actions)) {
+        if (!$is_logged_in) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Vui lòng đăng nhập để thực hiện']);
+            exit;
+        }
+    }
+
+    switch ($action) {
+        case 'like':
+        case 'dislike':
+            // Check existing reaction
+            $check = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id = $doc_id AND user_id = $user_id AND type IN ('like', 'dislike')");
+            if ($check) {
+                if ($check['type'] === $action) {
+                    $VSD->query("DELETE FROM document_interactions WHERE id = " . $check['id']);
+                    $user_reaction = null;
+                } else {
+                    $VSD->query("UPDATE document_interactions SET type = '$action' WHERE id = " . $check['id']);
+                    $user_reaction = $action;
+                }
+            } else {
+                $VSD->insert('document_interactions', [
+                    'document_id' => $doc_id,
+                    'user_id' => $user_id,
+                    'type' => $action
+                ]);
+                $user_reaction = $action;
+            }
+            
+            $likes = intval($VSD->num_rows("SELECT id FROM document_interactions WHERE document_id = $doc_id AND type = 'like'"));
+            $dislikes = intval($VSD->num_rows("SELECT id FROM document_interactions WHERE document_id = $doc_id AND type = 'dislike'"));
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true, 
+                'likes' => $likes, 
+                'dislikes' => $dislikes, 
+                'user_reaction' => $user_reaction
+            ]);
+            exit;
+
+        case 'save':
+            $check = $VSD->get_row("SELECT * FROM document_interactions WHERE document_id = $doc_id AND user_id = $user_id AND type = 'save'");
+            if ($check) {
+                $VSD->query("DELETE FROM document_interactions WHERE id = " . $check['id']);
+                $saved = false;
+            } else {
+                $VSD->insert('document_interactions', [
+                    'document_id' => $doc_id,
+                    'user_id' => $user_id,
+                    'type' => 'save'
+                ]);
+                $saved = true;
+            }
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'saved' => $saved]);
+            exit;
+
+        case 'comment':
+            $content = trim($_POST['content'] ?? '');
+            $parent_id = isset($_POST['parent_id']) && !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null;
+            
+            if (empty($content)) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Nội dung bình luận không được để trống']);
+                exit;
+            }
+
+            // Anti-spam emojis
+            if (substr_count($content, ':') > 40) { // Approx 20 emojis
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Bình luận chứa quá nhiều emoji']);
+                exit;
+            }
+            
+            $data = [
+                'document_id' => $doc_id,
+                'user_id' => $user_id,
+                'content' => $content
+            ];
+            if ($parent_id) $data['parent_id'] = $parent_id;
+            
+            $VSD->insert('document_comments', $data);
+            $new_comment_id = $VSD->insert_id();
+
+            // Fetch newly created comment to render HTML
+            $new_comment = $VSD->get_row("
+                SELECT c.*, u.username, u.avatar 
+                FROM document_comments c 
+                JOIN users u ON c.user_id = u.id 
+                WHERE c.id = $new_comment_id
+            ");
+
+            if ($new_comment) {
+                // Initialize avatar URL
+                $avatar_url = !empty($new_comment['avatar']) && file_exists(__DIR__ . '/../uploads/avatars/' . $new_comment['avatar']) 
+                    ? '../uploads/avatars/' . $new_comment['avatar'] 
+                    : null;
+                $user_initial = strtoupper(substr($new_comment['username'], 0, 1));
+                $is_author = ($new_comment['user_id'] == $doc['user_id']);
+                $created_at = date('H:i d/m/Y', strtotime($new_comment['created_at']));
+                $rendered_content = render_comment_content($new_comment['content']); // Use helper function
+                
+                ob_start();
+                if ($parent_id) {
+                    // Render Reply HTML
+                    ?>
+                    <div class="flex gap-4 animate-fade-in" id="comment-<?= $new_comment['id'] ?>">
+                        <div class="shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+                                <?php if($avatar_url): ?>
+                                    <img src="<?= $avatar_url ?>" class="w-full h-full object-cover">
+                                <?php else: ?>
+                                    <div class="bg-primary/10 w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                                        <?= $user_initial ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm"><?= htmlspecialchars($new_comment['username']) ?></span>
+                                <?php if($is_author): ?>
+                                    <span class="badge badge-xs badge-primary font-bold">Tác giả</span>
+                                <?php endif; ?>
+                                <span class="text-xs text-base-content/50"><?= $created_at ?></span>
+                            </div>
+                            
+                            <div class="group relative">
+                                <p class="text-sm text-base-content/80 leading-relaxed" id="comment-content-<?= $new_comment['id'] ?>"><?= $rendered_content ?></p>
+                                <!-- Edit Form -->
+                                <div id="edit-form-<?= $new_comment['id'] ?>" class="hidden mt-2">
+                                    <textarea id="edit-input-<?= $new_comment['id'] ?>" class="textarea textarea-bordered w-full text-sm min-h-[60px]"></textarea>
+                                    <div class="flex justify-end gap-2 mt-2">
+                                        <button onclick="cancelEdit('<?= $new_comment['id'] ?>')" class="btn btn-xs btn-ghost">Hủy</button>
+                                        <button onclick="saveEdit('<?= $new_comment['id'] ?>')" class="btn btn-xs btn-primary">Lưu</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-4 pt-1 items-center">
+                                <button id="like-btn-<?= $new_comment['id'] ?>" onclick="likeComment('<?= $new_comment['id'] ?>')" class="flex items-center gap-1 text-xs font-bold transition-colors text-base-content/40 hover:text-error">
+                                    <i class="fa-solid fa-heart"></i>
+                                    <span id="like-count-<?= $new_comment['id'] ?>"></span>
+                                </button>
+                                <div class="dropdown dropdown-end">
+                                    <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base-content/30"><i class="fa-solid fa-ellipsis"></i></div>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-xs">
+                                        <li><a onclick="startEdit('<?= $new_comment['id'] ?>')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</a></li>
+                                        <li><a onclick="actionComment('delete', <?= $new_comment['id'] ?>)" class="text-error"><i class="fa-solid fa-trash"></i> Xóa</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php
+                } else {
+                    // Render Parent Comment HTML
+                    ?>
+                    <div class="flex gap-4 animate-fade-in" id="comment-<?= $new_comment['id'] ?>">
+                        <div class="shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center overflow-hidden ring-2 ring-base-content/5">
+                                <?php if($avatar_url): ?>
+                                    <img src="<?= $avatar_url ?>" class="w-full h-full object-cover">
+                                <?php else: ?>
+                                    <div class="bg-primary/10 w-full h-full flex items-center justify-center text-primary font-bold">
+                                        <?= $user_initial ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <div class="bg-base-200/50 rounded-2xl p-4 relative group hover:bg-base-200 transition-colors">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-bold text-sm font-outfit"><?= htmlspecialchars($new_comment['username']) ?></span>
+                                    <?php if($is_author): ?>
+                                        <span class="badge badge-xs badge-primary font-bold">Tác giả</span>
+                                    <?php endif; ?>
+                                    <span class="text-xs text-base-content/50"><?= $created_at ?></span>
+                                </div>
+                                <div class="group relative">
+                                    <p class="text-sm text-base-content/80 leading-relaxed whitespace-pre-line" id="comment-content-<?= $new_comment['id'] ?>"><?= $rendered_content ?></p>
+                                    <!-- Edit Form -->
+                                    <div id="edit-form-<?= $new_comment['id'] ?>" class="hidden mt-2">
+                                        <textarea id="edit-input-<?= $new_comment['id'] ?>" class="textarea textarea-bordered w-full text-sm min-h-[60px]"></textarea>
+                                        <div class="flex justify-end gap-2 mt-2">
+                                            <button onclick="cancelEdit('<?= $new_comment['id'] ?>')" class="btn btn-xs btn-ghost">Hủy</button>
+                                            <button onclick="saveEdit('<?= $new_comment['id'] ?>')" class="btn btn-xs btn-primary">Lưu</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-4 mt-3 border-t border-base-content/5 pt-2">
+                                    <button id="like-btn-<?= $new_comment['id'] ?>" onclick="likeComment('<?= $new_comment['id'] ?>')" class="flex items-center gap-1 text-xs font-bold transition-colors text-base-content/40 hover:text-error">
+                                        <i class="fa-solid fa-heart"></i>
+                                        <span id="like-count-<?= $new_comment['id'] ?>"></span>
+                                    </button>
+                                    <button class="text-xs font-bold text-base-content/40 hover:text-primary transition-colors" onclick="toggleReply('<?= $new_comment['id'] ?>')">Trả lời</button>
+                                    
+                                    <div class="dropdown dropdown-end ml-auto">
+                                        <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base-content/30"><i class="fa-solid fa-ellipsis"></i></div>
+                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-xs">
+                                            <li><a onclick="actionComment('pin', <?= $new_comment['id'] ?>)"><i class="fa-solid fa-thumbtack"></i> Ghim bình luận</a></li>
+                                            <li><a onclick="startEdit('<?= $new_comment['id'] ?>')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</a></li>
+                                            <li><a onclick="actionComment('delete', <?= $new_comment['id'] ?>)" class="text-error"><i class="fa-solid fa-trash"></i> Xóa</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div id="reply-form-<?= $new_comment['id'] ?>" class="hidden mt-3 pl-4 animate-fade-in relative">
+                                    <div class="flex gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center shrink-0">
+                                            <i class="fa-solid fa-reply text-xs text-base-content/40"></i>
+                                        </div>
+                                        <div class="flex-1 relative">
+                                            <div class="comment-input-area mb-2 relative flex flex-col">
+                                                <textarea id="reply-content-<?= $new_comment['id'] ?>" class="textarea textarea-ghost w-full focus:bg-transparent focus:outline-none min-h-[44px] max-h-[200px] overflow-y-auto text-sm" placeholder="Viết câu trả lời..." oninput="updateCommentUI(this)"></textarea>
+                                                <div class="flex justify-between items-center px-3 pb-2">
+                                                    <button onclick="toggleEmojiPicker('reply-content-<?= $new_comment['id'] ?>')" class="vsd-emoji-btn vsd-emoji-btn-sm" title="Chèn Emoji">
+                                                        <i class="fa-regular fa-face-smile"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="flex justify-end gap-2">
+                                                <button onclick="toggleReply('<?= $new_comment['id'] ?>')" class="btn btn-ghost btn-xs">Hủy</button>
+                                                <button onclick="handlePostComment('<?= $new_comment['id'] ?>')" class="btn btn-primary btn-xs">Gửi</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pl-14 space-y-4 mt-4" id="replies-<?= $new_comment['id'] ?>"></div>
+                        </div>
+                    </div>
+                    <?php
+                }
+                $html = ob_get_clean();
+                
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'html' => $html]);
+                exit;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Lỗi không xác định khi tạo bình luận']);
+            exit;
+
+        case 'like_comment':
+            $comment_id = intval($_POST['comment_id'] ?? 0);
+            $check = $VSD->get_row("SELECT * FROM comment_likes WHERE comment_id = $comment_id AND user_id = $user_id");
+            if ($check) {
+                $VSD->query("DELETE FROM comment_likes WHERE id = " . $check['id']);
+            } else {
+                $VSD->insert('comment_likes', [
+                    'comment_id' => $comment_id,
+                    'user_id' => $user_id
+                ]);
+            }
+            $count = intval($VSD->num_rows("SELECT id FROM comment_likes WHERE comment_id = $comment_id"));
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'count' => $count]);
+            exit;
+
+        case 'delete_comment':
+            $comment_id = intval($_POST['comment_id'] ?? 0);
+            $comment = $VSD->get_row("SELECT * FROM document_comments WHERE id = $comment_id");
+            if ($comment && ($comment['user_id'] == $user_id || $doc['user_id'] == $user_id)) {
+                $VSD->query("DELETE FROM document_comments WHERE id = $comment_id OR parent_id = $comment_id");
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Bạn không có quyền xóa bình luận này']);
+            }
+            exit;
+
+        case 'pin_comment':
+        case 'unpin_comment':
+            if ($doc['user_id'] != $user_id) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Bạn không có quyền thực hiện']);
+                exit;
+            }
+            $comment_id = intval($_POST['comment_id'] ?? 0);
+            $is_pinned = ($action === 'pin_comment' ? 1 : 0);
+            
+            if ($is_pinned) {
+                 // Option: Unpin all others
+                 $VSD->query("UPDATE document_comments SET is_pinned = 0 WHERE document_id = $doc_id");
+            }
+            
+            $VSD->update('document_comments', ['is_pinned' => $is_pinned], "id = $comment_id");
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+
+        case 'edit_comment':
+            $comment_id = intval($_POST['comment_id'] ?? 0);
+            $content = trim($_POST['content'] ?? '');
+            $comment = $VSD->get_row("SELECT * FROM document_comments WHERE id = $comment_id");
+            if ($comment && $comment['user_id'] == $user_id) {
+                $VSD->update('document_comments', ['content' => $content], "id = $comment_id");
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'content' => $content]);
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Bạn không có quyền chỉnh sửa']);
+            }
+            exit;
+
+        case 'report_comment':
+            $comment_id = intval($_POST['comment_id'] ?? 0);
+            $reason = trim($_POST['reason'] ?? '');
+            $VSD->insert('comment_reports', [
+                'comment_id' => $comment_id,
+                'user_id' => $user_id,
+                'reason' => $reason
+            ]);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+    }
+}
+
+/**
+ * Renders comment content with newlines and custom emojis
+ * @param string $content
+ * @param array $emoji_map (Optional) Array of name => path
+ * @return string
+ */
+function render_comment_content($content, $emoji_map = null) {
+    if (!$emoji_map) {
+        global $VSD;
+        static $cached_emojis = null;
+        if ($cached_emojis === null) {
+            $cached_emojis = [];
+            $res = $VSD->get_results("SELECT name, file_path FROM emojis WHERE is_active = 1") ?: [];
+            foreach ($res as $e) {
+                $cached_emojis[$e['name']] = $e['file_path'];
+            }
+        }
+        $emoji_map = $cached_emojis;
+    }
+
+    $content = htmlspecialchars($content);
+    
+    // Replace shortcodes :emoji_name: with <img> tags
+    $content = preg_replace_callback('/:([a-z0-9_]+):/', function($matches) use ($emoji_map) {
+        $name = $matches[1];
+        if (isset($emoji_map[$name])) {
+            $path = htmlspecialchars($emoji_map[$name]);
+            return "<img src=\"$path\" class=\"inline-block w-[18px] h-[18px] align-text-bottom mx-[2px]\" alt=\":$name:\" loading=\"lazy\">";
+        }
+        return $matches[0];
+    }, $content);
+
+    return nl2br($content);
 }

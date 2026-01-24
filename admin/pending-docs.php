@@ -22,11 +22,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
-            $doc_info = $VSD->get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
-            if($doc_info) {
-                $VSD->insert('notifications', ['user_id' => $doc_info['user_id'], 'title' => 'Tài liệu đã được duyệt', 'message' => "Tài liệu '{$doc_info['original_name']}' được duyệt. +{$points} điểm.", 'type' => 'document_approved', 'ref_id' => $document_id]);
-                sendPushToUser($doc_info['user_id'], ['title' => 'Tài liệu đã được duyệt! 🎉', 'body' => "Bạn nhận được {$points} điểm.", 'url' => '/history.php?tab=notifications']);
-            }
             header("Location: pending-docs.php?status=approved"); exit;
         }
     } elseif($action === 'reject') {

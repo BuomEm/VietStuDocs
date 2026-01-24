@@ -76,7 +76,8 @@ function getSettingsByCategory($category) {
             'shop_pkg2_price', 'shop_pkg2_topup', 'shop_pkg2_bonus', 'shop_pkg2_popular',
             'shop_pkg3_price', 'shop_pkg3_topup', 'shop_pkg3_bonus', 'shop_pkg3_popular',
             'shop_pkg4_price', 'shop_pkg4_topup', 'shop_pkg4_bonus', 'shop_pkg4_popular',
-            'shop_pkg5_price', 'shop_pkg5_topup', 'shop_pkg5_bonus', 'shop_pkg5_popular'
+            'shop_pkg5_price', 'shop_pkg5_topup', 'shop_pkg5_bonus', 'shop_pkg5_popular',
+            'reward_points_on_approval'
         ],
         'notifications' => [
             'notify_browser_push_enabled', 'notify_telegram_enabled',
@@ -84,6 +85,9 @@ function getSettingsByCategory($category) {
             'notify_document_sold_browser', 'notify_document_sold_telegram',
             'notify_system_alert_browser', 'notify_system_alert_telegram',
             'notify_report_browser', 'notify_report_telegram'
+        ],
+        'streak' => [
+            'streak_reward_1_3', 'streak_reward_4', 'streak_reward_5_6', 'streak_reward_7'
         ]
     ];
     

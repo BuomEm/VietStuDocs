@@ -533,6 +533,16 @@ require_once __DIR__ . '/../includes/admin-header.php';
                                     </div>
                                     <label class="label"><span class="label-text-alt opacity-60">Dùng để tính toán khi người dùng nạp tiền</span></label>
                                 </div>
+
+                                <div class="form-control bg-base-200/30 p-4 rounded-xl border border-base-300/50">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="label-text font-bold text-base">Thưởng điểm khi duyệt</span>
+                                            <p class="text-[10px] opacity-60 leading-tight mt-1">Người dùng nhận ngay số điểm định giá khi tài liệu được duyệt thành công.</p>
+                                        </div>
+                                        <input type="checkbox" class="toggle toggle-success" id="reward_points_on_approval" <?= isSettingEnabled('reward_points_on_approval') ? 'checked' : '' ?>>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div class="divider"></div>

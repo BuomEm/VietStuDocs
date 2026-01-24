@@ -177,6 +177,18 @@ function getUserStreakInfo($user_id) {
 }
 
 /**
+ * Automatically update/check streak status on login
+ * Checks if the streak is broken and resets it if necessary.
+ */
+function updateLoginStreak($user_id) {
+    $info = getUserStreakInfo($user_id);
+    if ($info && $info['streak_status'] === 'broken' && $info['current_streak'] > 0) {
+        $user_id = intval($user_id);
+        db_query("UPDATE users SET current_streak = 0 WHERE id = $user_id");
+    }
+}
+
+/**
  * Get streak badge/tier based on current streak
  */
 function getStreakBadge($streak) {

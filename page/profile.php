@@ -12,12 +12,11 @@ $user = getUserInfo($user_id);
 $is_premium = isPremium($user_id);
 $premium_info = getPremiumInfo($user_id);
 
-/*
 // Get streak information
 require_once '../config/streak.php';
 $streak_info = getUserStreakInfo($user_id);
 $streak_badge = getStreakBadge($streak_info['current_streak']);
-*/
+
 
 // Calculate days remaining for Premium
 $days_remaining = 0;
@@ -121,14 +120,13 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
 $my_docs_count = intval($VSD->num_rows("SELECT id FROM documents WHERE user_id=$user_id") ?: 0);
 $saved_docs_count = intval($VSD->num_rows("SELECT DISTINCT d.id FROM documents d JOIN document_interactions di ON d.id = di.document_id WHERE di.user_id=$user_id AND di.type='save'") ?: 0);
 
-/*
 // Handle Admin Streak Reset (TESTING ONLY)
 if(isset($_GET['reset_streak']) && isAdmin($user_id)) {
     db_query("UPDATE users SET current_streak = 0, longest_streak = 0, streak_freezes = 2, last_streak_date = NULL WHERE id = $user_id");
     header("Location: profile?msg=streak_reset");
     exit;
 }
-*/
+
 
 include '../includes/head.php'; 
 ?>
@@ -346,7 +344,6 @@ include '../includes/head.php';
         letter-spacing: 0.1em;
     }
 
-    /* 
     .streak-week-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -419,7 +416,7 @@ include '../includes/head.php';
         50% { transform: scale(0.95) rotate(-2deg); opacity: 1; }
         75% { transform: scale(1.05) rotate(1deg); opacity: 0.95; }
     }
-    */
+
 
 </style>
 
@@ -533,7 +530,6 @@ include '../includes/head.php';
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-                <?php /* ?>
                 <!-- Login Streak Section -->
                 <div class="glass-card">
                     <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
@@ -647,7 +643,7 @@ include '../includes/head.php';
                         </div>
                     <?php endif; ?>
                 </div>
-                <?php */ ?>
+
 
                 <!-- Toast Container -->
                 <div id="vsd-toast-container"></div>
@@ -763,7 +759,6 @@ include '../includes/head.php';
             }
         }
 
-        /*
         // Show reset message if exists
         <?php if(isset($_GET['msg']) && $_GET['msg'] == 'streak_reset'): ?>
         document.addEventListener('DOMContentLoaded', () => {
@@ -799,7 +794,7 @@ include '../includes/head.php';
                 btn.innerHTML = originalContent;
             }
         }
-        */
+
     </script>
 </body>
 </html>

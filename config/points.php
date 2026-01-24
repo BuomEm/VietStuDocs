@@ -318,17 +318,28 @@ function approveDocument($document_id, $admin_id, $points, $notes = '') {
         return false;
     }
 
+    // Check if reward points on approval is enabled
+    require_once __DIR__ . '/settings.php';
+    $reward_enabled = isSettingEnabled('reward_points_on_approval');
+    $reward_msg = "";
+    
+    if($reward_enabled && $points > 0) {
+        $doc_name = db_get_row("SELECT original_name FROM documents WHERE id=$document_id")['original_name'] ?? 'tài liệu';
+        addPoints($owner_id, $points, "Thưởng điểm khi tài liệu được duyệt: " . $doc_name, $document_id, 'bonus');
+        $reward_msg = " và bạn được tặng " . number_format($points) . " điểm";
+    }
+
     // Notify user
     global $VSD;
     $VSD->insert('notifications', [
         'user_id' => $owner_id,
         'type' => 'document_approved',
         'ref_id' => $document_id,
-        'message' => "Tài liệu của bạn đã được duyệt thành công và định giá $points điểm."
+        'message' => "Tài liệu của bạn đã được duyệt thành công" . ($reward_enabled ? "$reward_msg." : " và định giá " . number_format($points) . " điểm.")
     ]);
     sendPushToUser($owner_id, [
-        'title' => 'Tài liệu đã được duyệt',
-        'body' => "Tài liệu của bạn đã được duyệt và định giá $points điểm.",
+        'title' => 'Tài liệu đã được duyệt! 🎉',
+        'body' => "Tài liệu của bạn đã được duyệt" . ($reward_enabled ? ", + " . number_format($points) . " điểm." : "."),
         'url' => '/history.php?tab=notifications'
     ]);
 

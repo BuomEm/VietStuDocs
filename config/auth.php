@@ -32,11 +32,10 @@ function loginUser($identifier, $password) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             
-            /*
             // Update login streak
             require_once __DIR__ . '/streak.php';
             updateLoginStreak($user['id']);
-            */
+
             
             return true;
         }

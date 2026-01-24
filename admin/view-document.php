@@ -25,11 +25,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $notes = db_escape($_POST['notes'] ?? '');
         if($points > 0) {
             approveDocument($document_id, $admin_id, $points, $notes);
-            $doc_info = db_get_row("SELECT user_id, original_name FROM documents WHERE id=$document_id");
-            if($doc_info) {
-                db_query("INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES ({$doc_info['user_id']}, 'Tài liệu đã được duyệt', 'Tài liệu \'{$doc_info['original_name']}\' được duyệt. +{$points} điểm.', 'document_approved', $document_id)");
-                sendPushToUser($doc_info['user_id'], ['title' => 'Tài liệu đã được duyệt! 🎉', 'body' => "Bạn nhận được {$points} điểm.", 'url' => '/history.php?tab=notifications']);
-            }
             header("Location: view-document.php?id=$document_id&msg=approved"); exit;
         }
     } 

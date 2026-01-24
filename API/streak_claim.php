@@ -11,10 +11,8 @@ if (!isUserLoggedIn()) {
     exit;
 }
 
-/*
 $user_id = getCurrentUserId();
 $result = claimDailyStreak($user_id);
 
 echo json_encode($result);
-*/
-echo json_encode(['success' => false, 'message' => 'Tính năng hiện đang tạm khóa.']);
+

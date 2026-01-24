@@ -56,6 +56,7 @@ $menu_items = [
         ['id' => 'tutor_requests', 'icon' => 'fa-solid fa-comments', 'label' => 'Hỏi đáp & Dispute', 'href' => 'tutor_requests.php', 'badge' => $disputed_requests, 'badge_type' => 'error'],
         ['id' => 'withdrawals', 'icon' => 'fa-solid fa-money-bill-transfer', 'label' => 'Duyệt Rút tiền', 'href' => 'withdrawals.php', 'badge' => $pending_withdrawals, 'badge_type' => 'warning'],
         ['id' => 'users', 'icon' => 'fa-solid fa-users', 'label' => 'Người dùng', 'href' => 'users.php', 'badge' => null],
+        ['id' => 'emojis', 'icon' => 'fa-solid fa-face-smile', 'label' => 'Emoji tùy chỉnh', 'href' => 'emojis.php', 'badge' => null],
         ['id' => 'categories', 'icon' => 'fa-solid fa-tags', 'label' => 'Danh mục', 'href' => 'categories.php', 'badge' => null],
     ],
     'ai' => [
