@@ -82,6 +82,14 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['register']) || isset($
                     $user_id = $result['user_id'];
                     $VSD->query("UPDATE users SET avatar = '" . $VSD->escape($avatar_filename) . "' WHERE id = $user_id");
                 }
+                
+                // Send Telegram Notification
+                $msg = "<b>🔔 Người dùng mới đăng ký!</b>\n";
+                $msg .= "👤 Username: " . $_POST['username'] . "\n";
+                $msg .= "📧 Email: " . $_POST['email'] . "\n";
+                $msg .= "⏰ Thời gian: " . date('H:i d/m/Y');
+                sendTelegramNotification($msg);
+
                 $success = "Đăng ký thành công! Hãy đăng nhập.";
             } else {
                 $error = $result['message'];

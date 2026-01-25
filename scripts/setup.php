@@ -157,5 +157,23 @@ foreach ($new_settings as $setting) {
     }
 }
 
+// 6. Update Users table for Streak
+echo "Phase 6: Updating 'users' table for Streak...\n";
+$user_streak_cols = [
+    'last_streak_date' => "date DEFAULT NULL",
+    'current_streak' => "int(11) DEFAULT 0",
+    'longest_streak' => "int(11) DEFAULT 0",
+    'streak_freezes' => "int(11) DEFAULT 0"
+];
+
+foreach ($user_streak_cols as $col => $definition) {
+    if (!columnExists($VSD, 'users', $col)) {
+        $VSD->query("ALTER TABLE `users` ADD COLUMN `$col` $definition");
+        echo "[+] Added '$col' to 'users'.\n";
+    } else {
+        echo "[-] '$col' already exists in 'users'.\n";
+    }
+}
+
 echo "--- MASTER SETUP COMPLETED SUCCESSFULLY ---\n";
 ?>

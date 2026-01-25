@@ -184,3 +184,41 @@ function getTelegramChatId() {
     return $chat_id;
 }
 
+/**
+ * Gửi thông báo qua Telegram
+ * @param string $message Nội dung tin nhắn
+ * @return bool Thành công hay thất bại
+ */
+function sendTelegramNotification($message) {
+    // Check global telegram enabled setting
+    if (!isSettingEnabled('telegram_enabled')) {
+        return false;
+    }
+
+    $token = getTelegramBotToken();
+    $chat_id = getTelegramChatId();
+
+    if (empty($token) || empty($chat_id)) {
+        return false;
+    }
+
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    $data = [
+        'chat_id' => $chat_id,
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    
+    $result = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return $http_code === 200;
+}

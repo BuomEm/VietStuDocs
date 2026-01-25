@@ -29,6 +29,17 @@ switch ($action) {
         }
 
         $result = registerTutor($user_id, $subjects, $bio, $prices);
+        
+        if ($result['success']) {
+            require_once __DIR__ . '/../config/settings.php';
+            $user_info = getUserInfo($user_id);
+            $msg = "<b>🎓 Đăng ký Gia sư mới!</b>\n";
+            $msg .= "👤 User: " . ($user_info['username'] ?? "ID: $user_id") . "\n";
+            $msg .= "📚 Môn dạy: " . $subjects . "\n";
+            $msg .= "⏰ Thời gian: " . date('H:i d/m/Y');
+            sendTelegramNotification($msg);
+        }
+
         echo json_encode($result);
         break;
 
