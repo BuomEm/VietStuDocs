@@ -1019,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return response.blob();
                     })
                     .then(blob => {
-                        docx.renderAsync(blob, docxContainer, null, {
+                        return docx.renderAsync(blob, docxContainer, null, {
                             className: "docx",
                             inWrapper: false,
                             ignoreWidth: false,
@@ -1027,9 +1027,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             ignoreFonts: false,
                             breakPageHasIndent: false,
                             debug: false
-                        }).then(() => {
-                            hideGlobalLoader();
                         });
+                    })
+                    .then(() => {
+                        hideGlobalLoader();
                     })
                     .catch(error => {
                         hideGlobalLoader();

@@ -30,20 +30,20 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
 
 <div class="navbar bg-base-100/80 backdrop-blur-md border-b border-base-200 sticky top-0 z-50 transition-all duration-300 shadow-sm" id="main-navbar">
     <!-- Left: Mobile Menu & Logo -->
-    <div class="navbar-start w-auto lg:w-1/4">
-        <label for="drawer-toggle" class="btn btn-ghost btn-circle mr-1">
+    <div class="navbar-start flex-1 lg:flex-none lg:w-1/4">
+        <label for="drawer-toggle" class="btn btn-ghost btn-circle mr-1 lg:hidden">
             <i class="fa-solid fa-bars text-xl"></i>
         </label>
         
-        <a href="/dashboard" class="flex items-center gap-2 group transition-all duration-300 hover:scale-105">
+        <a href="/dashboard" class="flex items-center gap-2 group transition-all duration-300 hover:scale-105 shrink-0">
             <?php if (!empty($site_logo)): ?>
-                <img src="<?= htmlspecialchars($site_logo) ?>" loading="lazy" alt="Logo" class="h-9 w-9 object-contain drop-shadow-sm">
+                <img src="<?= htmlspecialchars($site_logo) ?>" loading="lazy" alt="Logo" class="h-8 w-8 sm:h-9 sm:w-9 object-contain drop-shadow-sm">
             <?php else: ?>
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-focus flex items-center justify-center text-primary-content shadow-lg shadow-primary/20">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-primary to-primary-focus flex items-center justify-center text-primary-content shadow-lg shadow-primary/20">
                     <i class="fa-solid fa-graduation-cap text-lg"></i>
                 </div>
             <?php endif; ?>
-            <span class="font-black text-xl text-[#b91c1c] hidden sm:inline-block tracking-tight">
+            <span class="font-black text-lg sm:text-xl text-[#b91c1c] tracking-tight">
                 <?= htmlspecialchars($site_name) ?>
             </span>
         </a>
@@ -79,9 +79,9 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
     </div>
     
     <!-- Right: Actions & User -->
-    <div class="navbar-end w-auto lg:flex-1 gap-2 sm:gap-3">
+    <div class="navbar-end flex-none w-auto gap-1 sm:gap-2">
         <!-- Search Mobile Toggle -->
-        <button class="btn btn-ghost btn-circle lg:hidden text-base-content/70">
+        <button class="btn btn-ghost btn-circle lg:hidden text-base-content/70" onclick="toggleMobileSearch()">
             <i class="fa-solid fa-magnifying-glass text-lg"></i>
         </button>
 
@@ -326,6 +326,32 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
         `;
     }
     
+    // Mobile Search Toggle Logic
+    function toggleMobileSearch() {
+        const overlay = document.getElementById('mobileSearchOverlay');
+        const input = overlay.querySelector('input');
+        if (overlay.classList.contains('hidden')) {
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.add('active');
+                input.focus();
+            }, 10);
+        } else {
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+    }
+
+    function closeMobileSearch() {
+        const overlay = document.getElementById('mobileSearchOverlay');
+        overlay.classList.remove('active');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 300);
+    }
+
     // Smooth Navbar on scroll
     window.addEventListener('scroll', () => {
         const nav = document.getElementById('main-navbar');
@@ -338,3 +364,44 @@ $site_logo = function_exists('getSetting') ? getSetting('site_logo') : '';
         }
     });
 </script>
+
+<!-- Mobile Search Overlay UI -->
+<div id="mobileSearchOverlay" class="fixed inset-0 z-[200] bg-base-100 hidden opacity-0 transition-opacity duration-300 [&.active]:opacity-100">
+    <div class="flex flex-col h-full">
+        <div class="p-4 border-b border-base-200 flex items-center gap-3 bg-base-100">
+            <button onclick="closeMobileSearch()" class="btn btn-ghost btn-circle btn-sm">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <form action="/search" method="GET" class="flex-1">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        placeholder="Tìm kiếm tài liệu..." 
+                        class="input input-bordered w-full rounded-2xl bg-base-200 border-none h-11 focus:bg-base-100 focus:ring-2 focus:ring-primary/20 transition-all pr-12"
+                        autocomplete="off"
+                    >
+                    <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-primary font-bold">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 bg-base-200/20">
+            <div class="text-xs font-black uppercase tracking-widest opacity-30 mb-4 px-2">Tìm kiếm gần đây</div>
+            <!-- Recent searches could be injected here -->
+            <div class="space-y-1">
+                <div class="p-4 text-center opacity-40 text-sm">Nhập từ khóa để bắt đầu tìm kiếm</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #mobileSearchOverlay {
+        transition-property: opacity, visibility;
+    }
+    #mobileSearchOverlay.active {
+        visibility: visible;
+    }
+</style>

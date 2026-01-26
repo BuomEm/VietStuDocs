@@ -415,16 +415,16 @@ include __DIR__ . '/../includes/admin-header.php';
                                         case 'docx':
                                         case 'doc':
                                             // Check if converted PDF exists
-                                            $converted_path = !empty($doc['converted_pdf_path']) ? $doc['converted_pdf_path'] : null;
-                                            $converted_file_path = $converted_path ? ltrim($converted_path, '/') : null;
+                                            $converted_path = $doc['converted_pdf_path'] ?? '';
+                                            $abs_converted_path = __DIR__ . '/../' . ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $converted_path), DIRECTORY_SEPARATOR);
                                             
-                                            if ($converted_file_path && file_exists(__DIR__ . '/../' . $converted_file_path)) {
+                                            if (!empty($converted_path) && file_exists($abs_converted_path)) {
                                                 echo '<div class="pdf-viewer shadow-2xl mx-auto rounded-lg overflow-hidden bg-white/5" id="pdfViewer"></div>';
                                                 // Nếu converted_pdf_path trong uploads, sử dụng handler
-                                                if (strpos($converted_file_path, 'uploads/') === 0) {
+                                                if (strpos($converted_path, 'uploads/') === 0 || strpos($converted_path, '/uploads/') !== false || strpos($converted_path, '\\uploads\\') !== false) {
                                                     $pdf_path_for_preview = '../handler/file.php?doc_id=' . $doc_id;
                                                 } else {
-                                                    $pdf_path_for_preview = '../' . $converted_file_path;
+                                                    $pdf_path_for_preview = '../' . ltrim($converted_path, '/');
                                                 }
                                             } else {
                                                 echo '<div class="docx-viewer bg-white shadow-2xl mx-auto rounded-lg p-8 min-h-[800px]" id="docxViewer"></div>';

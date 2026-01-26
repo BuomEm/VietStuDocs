@@ -417,12 +417,28 @@
   color: #334155;
 }
 
-.docx-viewer {
+.docx-viewer,
+.docx-mode {
   width: 100%;
   padding: 40px;
   background: oklch(var(--b2) / 0.3);
   border-radius: 2rem;
   min-height: 500px;
+}
+
+.docx-mode {
+  background: white !important;
+  color: #333;
+}
+
+.docx-mode .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.docx-mode .docx-wrapper > section {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 30px !important;
 }
 
 .page-loader {
@@ -649,11 +665,11 @@
 #commentContent,
 [id^="reply-content-"],
 [id^="edit-input-"] {
-  background: transparent !important;
+  background: none !important;
   position: relative;
-  z-index: 1;
-  color: transparent !important;
-  caret-color: oklch(var(--bc));
+  z-index: 10;
+  color: oklch(var(--bc) / 0.6) !important;
+  caret-color: oklch(var(--bc)) !important;
   padding: 12px 16px !important;
   margin: 0 !important;
   font-size: 0.875rem !important;

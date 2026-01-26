@@ -39,9 +39,9 @@ loadEnv($env_path);
 
 // Database configuration from environment variables
 define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
-define('DB_USER', $_ENV['DB_USER'] ?? 'root');
-define('DB_PASS', $_ENV['DB_PASS'] ?? '');
-define('DB_NAME', $_ENV['DB_NAME'] ?? 'docshare');
+define('DB_USER', $_ENV['DB_USER'] ?? $_ENV['DB_USERNAME'] ?? 'root');
+define('DB_PASS', $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? '');
+define('DB_NAME', $_ENV['DB_NAME'] ?? $_ENV['DB_DATABASE'] ?? 'docshare');
 
 // Telegram configuration from environment variables (optional, can be overridden by settings table)
 define('TELEGRAM_BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? '');

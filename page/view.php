@@ -117,11 +117,11 @@ if ($file_ext === 'pdf') {
     $pdf_path_js = '../handler/file.php?doc_id=' . $doc_id;
 } elseif (in_array($file_ext, ['docx', 'doc'])) {
     $converted_path = $doc['converted_pdf_path'] ?? '';
-    if (!empty($converted_path) && file_exists($converted_path)) {
-        if (strpos($converted_path, '../uploads/') === 0 || strpos($converted_path, '\\uploads\\') !== false) {
-             $pdf_path_js = '../handler/file.php?doc_id=' . $doc_id;
-        } else {
-             $pdf_path_js = $converted_path;
+    if (!empty($converted_path)) {
+        // Build absolute path to check existence
+        $abs_converted_path = __DIR__ . '/../' . ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $converted_path), DIRECTORY_SEPARATOR);
+        if (file_exists($abs_converted_path)) {
+            $pdf_path_js = '../handler/file.php?doc_id=' . $doc_id;
         }
     }
 }
@@ -646,7 +646,8 @@ include '../includes/sidebar.php';
                 case 'doc':
                     // Check if converted PDF exists - use it for preview instead of DOCX
                     $converted_path = $doc['converted_pdf_path'] ?? '';
-                    if (!empty($converted_path) && file_exists($converted_path)) {
+                    $abs_converted_path = __DIR__ . '/../' . ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $converted_path), DIRECTORY_SEPARATOR);
+                    if (!empty($converted_path) && file_exists($abs_converted_path)) {
                         // Use PDF preview from converted PDF
                         echo '<div class="pdf-viewer-wrapper relative">
                                 <div class="pdf-viewer" id="pdfViewer"></div>
@@ -662,9 +663,10 @@ include '../includes/sidebar.php';
                             $pdf_path_for_preview = $converted_path;
                         }
                     } else {
-                        // Fallback to DOCX viewer if PDF conversion failed or pending
-                        $file_url = '../handler/file.php?doc_id=' . $doc_id;
-                        echo '<div class="docx-viewer" id="docxViewer"></div>';
+                        // Fallback to DOCX viewer but use a consistent container
+                        echo '<div class="pdf-viewer-wrapper relative">
+                                <div class="pdf-viewer docx-mode" id="docxViewer"></div>
+                              </div>';
                         $pdf_path_for_preview = null;
                     }
                     break;
@@ -729,7 +731,7 @@ include '../includes/sidebar.php';
                     </div>
                     <div class="flex-1 relative">
                         <div class="comment-input-wrapper relative flex items-center bg-base-200/50 rounded-[2rem] border border-base-content/10 px-2 py-1 transition-all focus-within:bg-base-100 focus-within:border-primary/50 focus-within:shadow-lg focus-within:shadow-primary/5">
-                            <textarea id="commentContent" class="textarea textarea-ghost bg-transparent border-none outline-none focus:bg-transparent shadow-none w-full text-sm resize-none min-h-[44px] py-3 pl-4 leading-tight placeholder:text-base-content/40" placeholder="Bạn thấy tài liệu này thế nào?" rows="1" oninput="updateCommentUI(this)"></textarea>
+                            <textarea id="commentContent" class="textarea textarea-ghost bg-transparent border-none outline-none focus:bg-transparent shadow-none w-full text-sm resize-none min-h-[44px] py-3 pl-4 leading-tight placeholder:text-base-content/60 !text-base-content/60 focus:!text-base-content " placeholder="Bạn thấy tài liệu này thế nào?" rows="1" oninput="updateCommentUI(this)"></textarea>
                             
                             <div class="flex items-center gap-2 pr-1 shrink-0">
                                 <button onclick="toggleEmojiPicker('commentContent')" class="btn btn-circle btn-ghost btn-sm h-9 w-9 text-base-content/60 hover:text-primary hover:bg-base-content/5 transition-colors" title="Chèn Emoji">
@@ -737,8 +739,8 @@ include '../includes/sidebar.php';
                                 </button>
                                 
                                 <button onclick="handlePostComment()" class="btn btn-circle btn-primary btn-sm h-9 w-9 text-white shadow-md shadow-primary/30 grid place-items-center transition-all" id="postCommentBtn">
-    <i class="fa-solid fa-paper-plane text-xs pr-0.5 pt-px"></i>
-</button>
+                                    <i class="fa-solid fa-paper-plane text-xs pr-0.5 pt-px"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -841,7 +843,7 @@ include '../includes/sidebar.php';
                                             </div>
                                             <div class="flex-1 relative">
                                                 <div class="comment-input-area mb-2 relative flex flex-col">
-                                                    <textarea id="reply-content-<?= $comment['id'] ?>" class="textarea textarea-ghost w-full focus:bg-transparent focus:outline-none min-h-[44px] max-h-[200px] overflow-y-auto text-sm" placeholder="Viết câu trả lời..." oninput="updateCommentUI(this)"></textarea>
+                                                    <textarea id="reply-content-<?= $comment['id'] ?>" class="textarea textarea-ghost w-full focus:bg-transparent focus:outline-none min-h-[44px] max-h-[200px] overflow-y-auto text-sm placeholder:text-base-content/60" placeholder="Viết câu trả lời..." oninput="updateCommentUI(this)"></textarea>
                                                     <div class="flex justify-between items-center px-3 pb-2">
                                                         <button onclick="toggleEmojiPicker('reply-content-<?= $comment['id'] ?>')" class="vsd-emoji-btn vsd-emoji-btn-sm" title="Chèn Emoji">
                                                             <i class="fa-regular fa-face-smile"></i>
@@ -1283,6 +1285,6 @@ include '../includes/sidebar.php';
 
 
 <script src="../js/pdf-viewer.js"></script>
-<script src="../js/pages/view.js?v=2.01"></script>
+<script src="../js/pages/view.js?v=2.02"></script>
 </body>
 </html>

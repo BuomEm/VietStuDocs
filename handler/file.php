@@ -1,4 +1,8 @@
 <?php
+ob_start();
+error_reporting(0);
+set_time_limit(0);
+ini_set('memory_limit', '512M');
 /**
  * Secure File View Handler
  * Xử lý xem file (preview) với kiểm tra quyền
@@ -116,8 +120,8 @@ $mime_types = [
 ];
 $content_type = $mime_types[$actual_file_ext] ?? 'application/octet-stream';
 
-// Tắt output buffering
-if (ob_get_level()) {
+// Xóa SẠCH tất cả buffer để đảm bảo không có khoảng trắng thừa làm hỏng file binary
+while (ob_get_level() > 0) {
     ob_end_clean();
 }
 
@@ -188,7 +192,7 @@ if ($start > 0) {
 }
 
 // Send file in chunks
-$chunk_size = 8192; // 8KB chunks
+$chunk_size = 1024 * 1024; // 1MB chunks
 $remaining = $end - $start + 1;
 
 while ($remaining > 0 && !feof($file)) {
