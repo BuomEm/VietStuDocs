@@ -9,6 +9,7 @@ if(isset($_SESSION['user_id'])) {
 require_once '../config/db.php';
 require_once '../config/auth.php';
 require_once '../config/settings.php';
+require_once '../config/telegram_notifications.php';
 
 $site_name = getSetting('site_name', 'VietStuDocs');
 $site_logo = getSetting('site_logo', '');

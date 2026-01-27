@@ -20,7 +20,7 @@ function getCurrentUsername() {
     return $_SESSION['username'] ?? null;
 }
 
-function loginUser($identifier, $password) {
+function loginUser($identifier, $password, $remember = false) {
     $identifier = db_escape($identifier);
     
     // Support login via email or username
@@ -29,8 +29,29 @@ function loginUser($identifier, $password) {
     
     if($user) {
         if(password_verify($password, $user['password'])) {
+            // Regenerate session ID to reduce session fixation risk
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
+
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
+
+            // Remember login by extending the session cookie lifetime
+            if ($remember && session_status() === PHP_SESSION_ACTIVE) {
+                $params = session_get_cookie_params();
+                $lifetime = 60 * 60 * 24 * 30; // 30 days
+                $expires = time() + $lifetime;
+
+                setcookie(session_name(), session_id(), [
+                    'expires' => $expires,
+                    'path' => $params['path'] ?? '/',
+                    'domain' => $params['domain'] ?? '',
+                    'secure' => $params['secure'] ?? false,
+                    'httponly' => $params['httponly'] ?? true,
+                    'samesite' => 'Lax'
+                ]);
+            }
             
             // Update login streak
             require_once __DIR__ . '/streak.php';

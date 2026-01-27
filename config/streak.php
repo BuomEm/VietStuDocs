@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/points.php';
+require_once __DIR__ . '/../push/send_push.php';
 
 /**
  * Handle manual daily check-in
@@ -88,6 +89,29 @@ function claimDailyStreak($user_id) {
     
     // Use points system to add points
     addPoints($user_id, $reward_points, $reason, null, 'bonus');
+
+    // Notify user about claimed reward and current streak
+    try {
+        global $VSD;
+        $notif_message = "Bạn đã nhận +" . intval($reward_points) . " VSD điểm danh. Streak hiện tại: " . intval($new_streak) . " ngày.";
+
+        if (isset($VSD)) {
+            $VSD->insert('notifications', [
+                'user_id' => $user_id,
+                'type' => 'streak_claim',
+                'ref_id' => null,
+                'message' => $notif_message
+            ]);
+        }
+
+        sendPushToUser($user_id, [
+            'title' => 'Điểm danh thành công 🔥',
+            'body' => "+" . intval($reward_points) . " VSD • Streak " . intval($new_streak) . " ngày",
+            'url' => '/profile.php#streak'
+        ]);
+    } catch (Exception $e) {
+        error_log("Streak notification error: " . $e->getMessage());
+    }
     
     $success_msg = "🎉 Chuỗi +1! Bạn đã giữ lửa hôm nay";
     if ($freeze_used) {

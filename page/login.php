@@ -21,8 +21,9 @@ $success = '';
 if($_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST['login']) || isset($_POST['email']))) {
     $email = $_POST['email'];
     $password = $_POST['password'];
+    $remember = isset($_POST['remember']) && $_POST['remember'] === 'on';
     
-    if(loginUser($email, $password)) {
+    if(loginUser($email, $password, $remember)) {
         header("Location: dashboard");
         exit();
     } else {
@@ -85,6 +86,13 @@ include '../includes/head.php';
 
     .form-fade {
         animation: fadeIn 0.5s ease forwards;
+    }
+
+    /* Match the site's primary maroon color */
+    .checkbox-vsd {
+        --chkbg: #800000;
+        --chkfg: #ffffff;
+        border-color: #800000;
     }
 
     @keyframes fadeIn {
@@ -154,7 +162,7 @@ include '../includes/head.php';
 
                     <div class="flex items-center justify-between px-1">
                         <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="remember" class="checkbox checkbox-sm border-gray-300" />
+                            <input type="checkbox" name="remember" class="checkbox checkbox-sm checkbox-vsd" />
                             <span class="label-text text-gray-500 text-xs">Ghi nhớ đăng nhập</span>
                         </label>
                     </div>

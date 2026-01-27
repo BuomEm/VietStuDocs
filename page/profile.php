@@ -531,7 +531,7 @@ include '../includes/head.php';
                     </div>
                 <?php endif; ?>
                 <!-- Login Streak Section -->
-                <div class="glass-card">
+                <div class="glass-card" id="streak">
                     <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
                         <div>
                             <h2 class="section-title !mb-1"><i class="fa-solid fa-fire text-red-500"></i> Chuỗi Đăng Nhập</h2>

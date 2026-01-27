@@ -271,6 +271,33 @@ function createTutorRequest($student_id, $tutor_id, $data) {
         $stmt->execute([$transaction_id, $sla_deadline, $request_id]);
 
         $pdo->commit();
+
+        // Notify Admins of New Tutor Request
+        try {
+            require_once __DIR__ . '/notifications.php';
+
+            $student_stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+            $student_stmt->execute([$student_id]);
+            $student_name = $student_stmt->fetchColumn() ?: "Học viên #$student_id";
+
+            $tutor_stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+            $tutor_stmt->execute([$tutor_id]);
+            $tutor_name = $tutor_stmt->fetchColumn() ?: "Gia sư #$tutor_id";
+
+            $admin_message = "Yêu cầu gia sư mới: " . $data['title'];
+            $extra_data = [
+                'request_id' => intval($request_id),
+                'student_name' => $student_name,
+                'tutor_name' => $tutor_name,
+                'points' => intval($cost),
+                'package_type' => $db_package_type,
+                'title' => $data['title']
+            ];
+
+            sendNotificationToAllAdmins('new_tutor_request', $admin_message, $request_id, $extra_data);
+        } catch (Exception $e) {
+            error_log("Tutor request admin notification error: " . $e->getMessage());
+        }
         
         // Notify Tutor of New Request
         global $VSD;
@@ -927,6 +954,30 @@ function requestWithdrawal($tutor_id, $points, $bank_info) {
                   WHERE user_id=$tutor_id");
 
         $pdo->commit();
+
+        // Notify Admins of New Withdrawal Request
+        try {
+            require_once __DIR__ . '/notifications.php';
+
+            $user_stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+            $user_stmt->execute([$tutor_id]);
+            $username = $user_stmt->fetchColumn() ?: "Gia sư #$tutor_id";
+
+            $admin_message = "Yêu cầu rút tiền mới: {$username}";
+            $extra_data = [
+                'request_id' => intval($request_id),
+                'username' => $username,
+                'user_id' => intval($tutor_id),
+                'points' => intval($points),
+                'amount_vnd' => intval($amount_vnd),
+                'transaction_id' => intval($transaction_id)
+            ];
+
+            sendNotificationToAllAdmins('withdrawal_request', $admin_message, $request_id, $extra_data);
+        } catch (Exception $e) {
+            error_log("Withdrawal request admin notification error: " . $e->getMessage());
+        }
+
         return ['success' => true, 'message' => 'Yêu cầu rút tiền đặt thành công. Admin sẽ duyệt trong 24-48h.'];
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -977,6 +1028,29 @@ function approveWithdrawal($request_id, $admin_id, $note = '') {
         'type' => 'withdrawal_approved',
         'ref_id' => $request_id
     ]);
+
+    // Notify other admins for audit visibility
+    try {
+        require_once __DIR__ . '/notifications.php';
+
+        $user_info = db_get_row("SELECT username FROM users WHERE id = $user_id");
+        $username = $user_info['username'] ?? "Gia sư #$user_id";
+
+        $admin_message = "Đã duyệt rút tiền: {$username}";
+        $extra_data = [
+            'request_id' => intval($request_id),
+            'username' => $username,
+            'user_id' => intval($user_id),
+            'points' => intval($points),
+            'amount_vnd' => intval($request['amount_vnd'] ?? 0),
+            'admin_id' => intval($admin_id),
+            'admin_note' => $note
+        ];
+
+        sendNotificationToAllAdmins('withdrawal_approved', $admin_message, $request_id, $extra_data);
+    } catch (Exception $e) {
+        error_log("Withdrawal approved admin notification error: " . $e->getMessage());
+    }
     
     return ['success' => true, 'message' => 'Đã duyệt yêu cầu rút tiền thành công.'];
 }
@@ -1025,6 +1099,29 @@ function rejectWithdrawal($request_id, $admin_id, $reason = '') {
         'type' => 'withdrawal_rejected',
         'ref_id' => $request_id
     ]);
+
+    // Notify other admins for audit visibility
+    try {
+        require_once __DIR__ . '/notifications.php';
+
+        $user_info = db_get_row("SELECT username FROM users WHERE id = $user_id");
+        $username = $user_info['username'] ?? "Gia sư #$user_id";
+
+        $admin_message = "Đã từ chối rút tiền: {$username}";
+        $extra_data = [
+            'request_id' => intval($request_id),
+            'username' => $username,
+            'user_id' => intval($user_id),
+            'points' => intval($points),
+            'amount_vnd' => intval($request['amount_vnd'] ?? 0),
+            'admin_id' => intval($admin_id),
+            'admin_note' => $reason
+        ];
+
+        sendNotificationToAllAdmins('withdrawal_rejected', $admin_message, $request_id, $extra_data);
+    } catch (Exception $e) {
+        error_log("Withdrawal rejected admin notification error: " . $e->getMessage());
+    }
     
     return ['success' => true, 'message' => 'Đã từ chối yêu cầu rút tiền. Điểm đã được hoàn lại cho gia sư.'];
 }

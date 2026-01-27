@@ -173,6 +173,28 @@ function settleEscrow($transaction_id, $tutor_id, $admin_share_percent) {
     // 4. Record Admin Commission (if needed for reporting)
     // We could have an admin_vault table or just log it
     db_query("INSERT INTO admin_earnings (amount, source_type, source_id) VALUES ($admin_points, 'tutor_request', {$tx['related_id']})");
+
+    // 5. Notify admins about escrow settlement
+    try {
+        require_once __DIR__ . '/notifications.php';
+
+        $request_id = intval($tx['related_id'] ?? 0);
+        $message = "Escrow đã được tất toán cho yêu cầu #{$request_id}";
+        $extra_data = [
+            'request_id' => $request_id,
+            'related_id' => $request_id,
+            'student_id' => intval($user_id),
+            'tutor_id' => intval($tutor_id),
+            'total_points' => intval($total_points),
+            'tutor_points' => intval($tutor_points),
+            'admin_points' => intval($admin_points),
+            'transaction_id' => intval($transaction_id)
+        ];
+
+        sendNotificationToAllAdmins('escrow_settled', $message, $request_id, $extra_data);
+    } catch (Exception $e) {
+        error_log("Escrow settled notification error: " . $e->getMessage());
+    }
     
     return true;
 }
@@ -197,8 +219,31 @@ function refundEscrow($transaction_id, $reason = 'Yêu cầu bị hủy') {
               topup_points = topup_points + $topup_refund,
               locked_points = locked_points - $total_points
               WHERE user_id=$user_id";
-    
-    return db_query($update);
+
+    $result = db_query($update);
+
+    if ($result) {
+        try {
+            require_once __DIR__ . '/notifications.php';
+
+            $request_id = intval($tx['related_id'] ?? 0);
+            $message = "Escrow đã được hoàn lại cho yêu cầu #{$request_id}";
+            $extra_data = [
+                'request_id' => $request_id,
+                'related_id' => $request_id,
+                'student_id' => intval($user_id),
+                'total_points' => intval($total_points),
+                'reason' => $reason,
+                'transaction_id' => intval($transaction_id)
+            ];
+
+            sendNotificationToAllAdmins('escrow_refunded', $message, $request_id, $extra_data);
+        } catch (Exception $e) {
+            error_log("Escrow refunded notification error: " . $e->getMessage());
+        }
+    }
+
+    return $result;
 }
 
 // ============ DOCUMENT POINTS FUNCTIONS ============

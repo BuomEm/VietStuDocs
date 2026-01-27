@@ -64,13 +64,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $reporter_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE id=$user_id"));
         $reporter_name = $reporter_info['username'] ?? "Người dùng #$user_id";
+
+        // Determine severity and human-readable reason
+        $reason_labels = [
+            'inappropriate' => 'Nội dung không phù hợp',
+            'copyright' => 'Vi phạm bản quyền',
+            'spam' => 'Spam / Quảng cáo',
+            'misleading' => 'Tiêu đề gây hiểu lầm',
+            'low_quality' => 'Chất lượng kém',
+            'duplicate' => 'Trùng lặp nội dung',
+            'other' => 'Lý do khác'
+        ];
+        $reason_label = $reason_labels[$data['reason'] ?? ''] ?? ($data['reason'] ?? $reason);
+        $is_severe = in_array($data['reason'] ?? '', ['copyright', 'inappropriate'], true);
+        $severity_label = $is_severe ? 'HIGH' : 'NORMAL';
         
-        $notification_message = "Báo cáo mới cho tài liệu: $doc_name";
+        $notification_message = ($is_severe ? "[{$severity_label}] " : "") . "Báo cáo mới cho tài liệu: $doc_name";
         $extra_data = [
             'report_id' => $report_id,
-            'reason' => $reason,
+            'reason' => $reason_label,
             'description' => $description,
-            'reporter_name' => $reporter_name
+            'reporter_name' => $reporter_name,
+            'severity' => $severity_label
         ];
         
         sendNotificationToAllAdmins('report', $notification_message, $document_id, $extra_data);

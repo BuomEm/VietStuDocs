@@ -7,12 +7,31 @@ require_once '../config/auth.php';
 require_once '../config/premium.php';
 require_once '../config/points.php';
 require_once '../config/categories.php';
+require_once '../config/settings.php';
+require_once '../config/streak.php';
 
 // Cho phép xem dashboard khi chưa đăng nhập
 $is_logged_in = isset($_SESSION['user_id']);
 $user_id = $is_logged_in ? getCurrentUserId() : 0;
 $is_premium = $is_logged_in ? isPremium($user_id) : false;
 $premium_info = $is_logged_in ? getPremiumInfo($user_id) : null;
+$streak_info = $is_logged_in ? getUserStreakInfo($user_id) : null;
+$streak_next_points = 0;
+
+if ($is_logged_in && $streak_info && $streak_info['can_claim']) {
+    $next_streak = intval($streak_info['current_streak']) + 1;
+    $cycle_day = (($next_streak - 1) % 7) + 1;
+
+    if ($cycle_day >= 1 && $cycle_day <= 3) {
+        $streak_next_points = intval(getSetting('streak_reward_1_3', 1));
+    } elseif ($cycle_day == 4) {
+        $streak_next_points = intval(getSetting('streak_reward_4', 2));
+    } elseif ($cycle_day >= 5 && $cycle_day <= 6) {
+        $streak_next_points = intval(getSetting('streak_reward_5_6', 1));
+    } elseif ($cycle_day == 7) {
+        $streak_next_points = intval(getSetting('streak_reward_7', 3));
+    }
+}
 $page_title = "Dashboard - VietStuDocs";
 $page_description = "Quản lý tài liệu cá nhân, theo dõi thống kê và khám phá kho tài liệu khổng lồ trên VietStuDocs.";
 $page_keywords = "dashboard, quản lý tài liệu, thống kê, thư viện cá nhân";
@@ -345,6 +364,66 @@ if(isset($_GET['download']) && $is_logged_in) {
                 }
             }, 1000);
         });
+        </script>
+        <?php endif; ?>
+
+        <?php if($is_logged_in && $streak_info && $streak_info['can_claim']): ?>
+        <!-- Daily Streak Reminder -->
+        <section class="mb-10">
+            <div class="rounded-[2rem] p-[2px] bg-gradient-to-r from-primary/40 via-secondary/40 to-primary/40 shadow-xl shadow-primary/10">
+                <div class="rounded-[1.9rem] bg-base-100 dark:bg-base-300 p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                            <i class="fa-solid fa-fire text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl lg:text-2xl font-black text-base-content mb-1">
+                                Hôm nay bạn chưa điểm danh 🔥
+                            </h3>
+                            <p class="text-base-content/60 text-sm font-medium">
+                                Nhận ngay +<?= intval($streak_next_points) ?> VSD. Streak hiện tại: <span class="font-black text-primary"><?= intval($streak_info['current_streak']) ?></span> ngày.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 w-full lg:w-auto">
+                        <button onclick="claimStreakDashboard(this)"
+                                class="btn btn-primary rounded-2xl px-8 h-12 flex-1 lg:flex-none font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+                            <i class="fa-solid fa-gift mr-2"></i>
+                            ĐIỂM DANH NGAY
+                        </button>
+                        <a href="profile#streak"
+                           class="btn btn-ghost rounded-2xl px-6 h-12 flex-1 lg:flex-none font-bold border border-base-300">
+                            Xem chi tiết
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <script>
+        async function claimStreakDashboard(btn) {
+            if (!btn) return;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('../api/streak_claim.php');
+                const data = await res.json();
+
+                if (data.success) {
+                    alert((data.message || 'Điểm danh thành công!') + "\n+" + (data.points_earned ?? 0) + " VSD • Streak " + (data.new_streak ?? 0) + " ngày");
+                    window.location.reload();
+                    return;
+                }
+
+                alert(data.message || 'Không thể điểm danh lúc này.');
+            } catch (err) {
+                console.error('Streak claim error:', err);
+                alert('Có lỗi xảy ra khi điểm danh.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
         </script>
         <?php endif; ?>
 

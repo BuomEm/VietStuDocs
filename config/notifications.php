@@ -26,7 +26,19 @@ function sendAdminNotification($admin_id, $type, $message, $document_id = null, 
     $document_id = $document_id && $document_id !== 'NULL' ? intval($document_id) : 'NULL';
     
     // Validate notification type
-    $valid_types = ['new_document', 'document_sold', 'system_alert', 'report', 'new_tutor'];
+    $valid_types = [
+        'new_document',
+        'document_sold',
+        'system_alert',
+        'report',
+        'new_tutor',
+        'new_tutor_request',
+        'withdrawal_request',
+        'withdrawal_approved',
+        'withdrawal_rejected',
+        'escrow_settled',
+        'escrow_refunded'
+    ];
     if (!in_array($type, $valid_types)) {
         error_log("Invalid notification type: $type");
         return ['success' => false, 'notification_id' => null, 'telegram_sent' => false];
@@ -114,6 +126,67 @@ function buildRichTelegramMessage($type, $default_message, $document_id, $extra_
             $buttons[] = ['text' => '✅ Kích hoạt', 'callback_data' => "approve_tutor:{$tutor['id']}"];
             $buttons[] = ['text' => '❌ Từ chối', 'callback_data' => "reject_tutor:{$tutor['id']}"];
         }
+    } elseif ($type === 'new_tutor_request' && $document_id) {
+        $req_query = "SELECT r.id, r.title, r.points_used, r.package_type,
+                             s.username AS student_name, t.username AS tutor_name
+                      FROM tutor_requests r
+                      JOIN users s ON r.student_id = s.id
+                      JOIN users t ON r.tutor_id = t.id
+                      WHERE r.id = $document_id";
+        $req = mysqli_fetch_assoc(mysqli_query($conn, $req_query));
+
+        if ($req) {
+            $data['request_id'] = $req['id'];
+            $data['title'] = $req['title'];
+            $data['student'] = $req['student_name'];
+            $data['tutor'] = $req['tutor_name'];
+            $data['points'] = intval($req['points_used']) . " VSD";
+            $data['package'] = $req['package_type'];
+            $data['url'] = "/admin/tutor_requests.php";
+
+            $buttons[] = ['text' => '🎯 Xem yêu cầu', 'url' => getBaseUrl() . "/admin/tutor_requests.php?id=" . $req['id']];
+        }
+    } elseif (in_array($type, ['withdrawal_request', 'withdrawal_approved', 'withdrawal_rejected'], true) && $document_id) {
+        $withdraw_query = "SELECT wr.id, wr.points, wr.amount_vnd, wr.status, wr.admin_note, u.username
+                           FROM withdrawal_requests wr
+                           JOIN users u ON wr.user_id = u.id
+                           WHERE wr.id = $document_id";
+        $withdraw = mysqli_fetch_assoc(mysqli_query($conn, $withdraw_query));
+
+        if ($withdraw) {
+            $data['request_id'] = $withdraw['id'];
+            $data['user'] = $withdraw['username'];
+            $data['points'] = intval($withdraw['points']) . " VSD";
+            $data['amount'] = number_format(intval($withdraw['amount_vnd'])) . "đ";
+            if (!empty($withdraw['admin_note'])) {
+                $data['note'] = $withdraw['admin_note'];
+            }
+            $data['url'] = "/admin/withdrawals.php";
+
+            $buttons[] = ['text' => '💸 Xem rút tiền', 'url' => getBaseUrl() . "/admin/withdrawals.php"];
+        }
+    } elseif ($type === 'escrow_settled' && is_array($extra_data)) {
+        $data = array_merge($data, [
+            'request_id' => $extra_data['request_id'] ?? ($extra_data['related_id'] ?? null),
+            'student_id' => $extra_data['student_id'] ?? null,
+            'tutor_id' => $extra_data['tutor_id'] ?? null,
+            'total_points' => isset($extra_data['total_points']) ? intval($extra_data['total_points']) . " VSD" : null,
+            'tutor_points' => isset($extra_data['tutor_points']) ? intval($extra_data['tutor_points']) . " VSD" : null,
+            'admin_points' => isset($extra_data['admin_points']) ? intval($extra_data['admin_points']) . " VSD" : null,
+            'transaction_id' => $extra_data['transaction_id'] ?? null,
+            'url' => "/admin/tutor_requests.php"
+        ]);
+        $buttons[] = ['text' => '📊 Xem yêu cầu', 'url' => getBaseUrl() . "/admin/tutor_requests.php"];
+    } elseif ($type === 'escrow_refunded' && is_array($extra_data)) {
+        $data = array_merge($data, [
+            'request_id' => $extra_data['request_id'] ?? ($extra_data['related_id'] ?? null),
+            'student_id' => $extra_data['student_id'] ?? null,
+            'total_points' => isset($extra_data['total_points']) ? intval($extra_data['total_points']) . " VSD" : null,
+            'reason' => $extra_data['reason'] ?? null,
+            'transaction_id' => $extra_data['transaction_id'] ?? null,
+            'url' => "/admin/tutor_requests.php"
+        ]);
+        $buttons[] = ['text' => '↩️ Xem yêu cầu', 'url' => getBaseUrl() . "/admin/tutor_requests.php"];
     } elseif ($type === 'report' && $document_id) {
         // Lấy report_id từ extra_data nếu có
         $report_id = $extra_data['report_id'] ?? null;
@@ -122,6 +195,7 @@ function buildRichTelegramMessage($type, $default_message, $document_id, $extra_
         $data['document'] = $doc_info['original_name'] ?? "Tài liệu #$document_id";
         if (isset($extra_data['reason'])) $data['reason'] = $extra_data['reason'];
         if (isset($extra_data['reporter_name'])) $data['reporter'] = $extra_data['reporter_name'];
+        if (isset($extra_data['severity'])) $data['severity'] = $extra_data['severity'];
         $data['url'] = "/admin/reports.php";
 
         if ($report_id) {
